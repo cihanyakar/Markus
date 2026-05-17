@@ -7,33 +7,41 @@
         x:Class="Markus.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings"
-        Width="760" Height="520"
-        MinWidth="640" MinHeight="440"
+        Width="780" Height="540"
+        MinWidth="640" MinHeight="460"
         CanResize="True"
         ShowInTaskbar="False"
         Icon="/Assets/markus.png"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="Transparent"
+        TransparencyLevelHint="AcrylicBlur,Blur,None">
 
   <Window.Styles>
+    <Style Selector="Border.glass-bar">
+      <Setter Property="Background" Value="#33FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+    </Style>
     <Style Selector="Border.sidebar">
-      <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
       <Setter Property="BorderThickness" Value="0,0,1,0"/>
+    </Style>
+    <Style Selector="Border.footer">
+      <Setter Property="BorderThickness" Value="0,1,0,0"/>
+      <Setter Property="Padding" Value="20,12"/>
     </Style>
     <Style Selector="ListBox.sidebar">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="6,12"/>
+      <Setter Property="Padding" Value="8,16,8,12"/>
     </Style>
     <Style Selector="ListBox.sidebar ListBoxItem">
       <Setter Property="Padding" Value="12,8"/>
-      <Setter Property="Margin" Value="4,1"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="Margin" Value="2,1"/>
+      <Setter Property="CornerRadius" Value="8"/>
     </Style>
     <Style Selector="ListBox.sidebar ListBoxItem PathIcon">
       <Setter Property="Width" Value="15"/>
       <Setter Property="Height" Value="15"/>
-      <Setter Property="Opacity" Value="0.85"/>
+      <Setter Property="Opacity" Value="0.9"/>
     </Style>
     <Style Selector="TextBlock.title">
       <Setter Property="FontSize" Value="22"/>
@@ -51,138 +59,155 @@
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
+    <Style Selector="ComboBox.glass">
+      <Setter Property="Background" Value="#22FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#33FFFFFF"/>
+      <Setter Property="CornerRadius" Value="8"/>
+    </Style>
   </Window.Styles>
 
-  <DockPanel>
+  <Panel>
+    <ExperimentalAcrylicBorder IsHitTestVisible="False">
+      <ExperimentalAcrylicBorder.Material>
+        <ExperimentalAcrylicMaterial
+            BackgroundSource="Digger"
+            TintColor="{DynamicResource SystemBaseLowColor}"
+            TintOpacity="0.5"
+            MaterialOpacity="0.8"/>
+      </ExperimentalAcrylicBorder.Material>
+    </ExperimentalAcrylicBorder>
 
-    <!-- ============ Footer (Restore defaults + Done) ============ -->
-    <Border DockPanel.Dock="Bottom"
-            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-            BorderThickness="0,1,0,0"
-            Padding="16,10">
-      <Grid ColumnDefinitions="*,Auto,Auto">
-        <TextBlock Grid.Column="0"
-                   Classes="hint"
-                   VerticalAlignment="Center"
-                   Text="{Binding SettingsDirectory, StringFormat='Saved to {0}'}"
-                   TextTrimming="CharacterEllipsis"/>
-        <Button Grid.Column="1"
-                Content="Restore defaults"
-                Command="{Binding RestoreDefaultsCommand}"
-                Margin="0,0,8,0"/>
-        <Button Grid.Column="2"
-                Content="Done"
-                Classes="accent"
-                Click="Done_Click"/>
-      </Grid>
-    </Border>
+    <DockPanel>
 
-    <!-- ============ Sidebar + Content ============ -->
-    <Grid ColumnDefinitions="220,*">
-
-      <Border Grid.Column="0" Classes="sidebar">
-        <ListBox Classes="sidebar"
-                 ItemsSource="{x:Static vm:SettingsViewModel.Categories}"
-                 SelectedItem="{Binding SelectedCategory}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:SettingsCategoryItem">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <PathIcon Data="{Binding Icon}"/>
-                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-              </StackPanel>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+      <!-- ============ Footer (glass) ============ -->
+      <Border DockPanel.Dock="Bottom" Classes="glass-bar footer">
+        <Grid ColumnDefinitions="*,Auto,Auto">
+          <TextBlock Grid.Column="0"
+                     Classes="hint"
+                     VerticalAlignment="Center"
+                     Text="{Binding SettingsDirectory, StringFormat='Saved to {0}'}"
+                     TextTrimming="CharacterEllipsis"/>
+          <Button Grid.Column="1"
+                  Content="Restore defaults"
+                  Command="{Binding RestoreDefaultsCommand}"
+                  Margin="0,0,8,0"/>
+          <Button Grid.Column="2"
+                  Content="Done"
+                  Classes="accent"
+                  Click="Done_Click"/>
+        </Grid>
       </Border>
 
-      <ScrollViewer Grid.Column="1" Padding="40,32">
-        <StackPanel>
+      <!-- ============ Sidebar + Content ============ -->
+      <Grid ColumnDefinitions="220,*">
 
-        <!-- ====== Appearance ====== -->
-        <StackPanel IsVisible="{Binding IsAppearanceSelected}" Spacing="0">
-          <TextBlock Classes="title" Text="Appearance"/>
-          <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="14">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Theme"/>
-            <ComboBox Grid.Row="0" Grid.Column="1"
-                      MaxWidth="320"
-                      HorizontalAlignment="Left"
-                      ItemsSource="{x:Static vm:SettingsViewModel.AvailableThemes}"
-                      SelectedValueBinding="{Binding Key}"
-                      SelectedValue="{Binding Theme}"
-                      DisplayMemberBinding="{Binding Display}"/>
+        <Border Grid.Column="0" Classes="glass-bar sidebar">
+          <ListBox Classes="sidebar"
+                   ItemsSource="{x:Static vm:SettingsViewModel.Categories}"
+                   SelectedItem="{Binding SelectedCategory}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:SettingsCategoryItem">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <PathIcon Data="{Binding Icon}"/>
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Border>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Font size"/>
-            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="12">
-              <Slider Width="240"
-                      Minimum="10" Maximum="28"
-                      TickFrequency="1"
-                      IsSnapToTickEnabled="True"
-                      Value="{Binding FontSize}"/>
-              <TextBlock VerticalAlignment="Center"
-                         Text="{Binding FontSize, StringFormat='{}{0:0} pt'}"/>
+        <ScrollViewer Grid.Column="1" Padding="44,32">
+          <StackPanel>
+
+            <!-- ====== Appearance ====== -->
+            <StackPanel IsVisible="{Binding IsAppearanceSelected}" Spacing="0">
+              <TextBlock Classes="title" Text="Appearance"/>
+              <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="16">
+                <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Theme"/>
+                <ComboBox Grid.Row="0" Grid.Column="1"
+                          Classes="glass"
+                          MaxWidth="320"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{x:Static vm:SettingsViewModel.AvailableThemes}"
+                          SelectedValueBinding="{Binding Key}"
+                          SelectedValue="{Binding Theme}"
+                          DisplayMemberBinding="{Binding Display}"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Font size"/>
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                  <Slider Width="240"
+                          Minimum="10" Maximum="28"
+                          TickFrequency="1"
+                          IsSnapToTickEnabled="True"
+                          Value="{Binding FontSize}"/>
+                  <TextBlock VerticalAlignment="Center"
+                             Text="{Binding FontSize, StringFormat='{}{0:0} pt'}"/>
+                </StackPanel>
+              </Grid>
+              <TextBlock Classes="hint"
+                         Margin="0,20,0,0"
+                         MaxWidth="400"
+                         HorizontalAlignment="Left"
+                         Text="Themes restyle the rendered preview. Bundled themes ship with the app; user themes can be dropped into the settings directory."/>
             </StackPanel>
-          </Grid>
-          <TextBlock Classes="hint"
-                     Margin="0,18,0,0"
-                     MaxWidth="380"
-                     HorizontalAlignment="Left"
-                     Text="Themes restyle the rendered preview. Bundled themes ship with the app; user themes can be dropped into the settings directory."/>
-        </StackPanel>
 
-        <!-- ====== View ====== -->
-        <StackPanel IsVisible="{Binding IsViewSelected}" Spacing="0">
-          <TextBlock Classes="title" Text="View"/>
-          <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="14">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Default view"/>
-            <ComboBox Grid.Row="0" Grid.Column="1"
-                      MaxWidth="320"
-                      HorizontalAlignment="Left"
-                      ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
-                      SelectedItem="{Binding DefaultViewMode}"/>
+            <!-- ====== View ====== -->
+            <StackPanel IsVisible="{Binding IsViewSelected}" Spacing="0">
+              <TextBlock Classes="title" Text="View"/>
+              <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="16">
+                <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Default view"/>
+                <ComboBox Grid.Row="0" Grid.Column="1"
+                          Classes="glass"
+                          MaxWidth="320"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
+                          SelectedItem="{Binding DefaultViewMode}"/>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Outline"/>
-            <CheckBox Grid.Row="1" Grid.Column="1"
-                      Content="Show outline panel by default"
-                      IsChecked="{Binding ShowOutline}"/>
-          </Grid>
-          <TextBlock Classes="hint"
-                     Margin="0,18,0,0"
-                     MaxWidth="380"
-                     HorizontalAlignment="Left"
-                     Text="Default view applies the next time you open a document. Detached mode shows source and preview in separate windows."/>
-        </StackPanel>
+                <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Outline"/>
+                <CheckBox Grid.Row="1" Grid.Column="1"
+                          Content="Show outline panel by default"
+                          IsChecked="{Binding ShowOutline}"/>
+              </Grid>
+              <TextBlock Classes="hint"
+                         Margin="0,20,0,0"
+                         MaxWidth="400"
+                         HorizontalAlignment="Left"
+                         Text="Default view applies the next time you open a document. Detached mode shows source and preview in separate windows."/>
+            </StackPanel>
 
-        <!-- ====== General ====== -->
-        <StackPanel IsVisible="{Binding IsGeneralSelected}" Spacing="0">
-          <TextBlock Classes="title" Text="General"/>
-          <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="14">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Renderer"/>
-            <ComboBox Grid.Row="0" Grid.Column="1"
-                      MaxWidth="320"
-                      HorizontalAlignment="Left"
-                      ItemsSource="{x:Static vm:SettingsViewModel.AvailableRenderers}"
-                      SelectedItem="{Binding Renderer}"/>
+            <!-- ====== General ====== -->
+            <StackPanel IsVisible="{Binding IsGeneralSelected}" Spacing="0">
+              <TextBlock Classes="title" Text="General"/>
+              <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="16">
+                <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Renderer"/>
+                <ComboBox Grid.Row="0" Grid.Column="1"
+                          Classes="glass"
+                          MaxWidth="320"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{x:Static vm:SettingsViewModel.AvailableRenderers}"
+                          SelectedItem="{Binding Renderer}"/>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Language"/>
-            <ComboBox Grid.Row="1" Grid.Column="1"
-                      MaxWidth="320"
-                      HorizontalAlignment="Left"
-                      ItemsSource="{x:Static vm:SettingsViewModel.AvailableLanguages}"
-                      SelectedValueBinding="{Binding Code}"
-                      SelectedValue="{Binding Language}"
-                      DisplayMemberBinding="{Binding Display}"/>
-          </Grid>
-          <TextBlock Classes="hint"
-                     Margin="0,18,0,0"
-                     MaxWidth="380"
-                     HorizontalAlignment="Left"
-                     Text="The Native renderer parses with Markdig and emits Avalonia controls. Placeholder renders source as plain text. Language other than English is wired but not yet translated."/>
-        </StackPanel>
+                <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Language"/>
+                <ComboBox Grid.Row="1" Grid.Column="1"
+                          Classes="glass"
+                          MaxWidth="320"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{x:Static vm:SettingsViewModel.AvailableLanguages}"
+                          SelectedValueBinding="{Binding Code}"
+                          SelectedValue="{Binding Language}"
+                          DisplayMemberBinding="{Binding Display}"/>
+              </Grid>
+              <TextBlock Classes="hint"
+                         Margin="0,20,0,0"
+                         MaxWidth="400"
+                         HorizontalAlignment="Left"
+                         Text="The Native renderer parses with Markdig and emits Avalonia controls. Placeholder renders source as plain text. Language other than English is wired but not yet translated."/>
+            </StackPanel>
 
-        </StackPanel>
-      </ScrollViewer>
-    </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
 
-  </DockPanel>
+    </DockPanel>
+  </Panel>
 </Window>

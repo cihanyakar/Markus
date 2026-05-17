@@ -11,222 +11,248 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/markus.png"
         MinWidth="640" MinHeight="420"
-        Title="{Binding DocumentTitle, StringFormat='{}{0} — Markus'}">
+        Title="{Binding DocumentTitle, StringFormat='{}{0} — Markus'}"
+        Background="Transparent"
+        TransparencyLevelHint="AcrylicBlur,Blur,None">
 
   <Design.DataContext>
     <vm:MainWindowViewModel/>
   </Design.DataContext>
 
   <Window.Styles>
+    <!-- Tool / toggle buttons in toolbar -->
     <Style Selector="Button.tool, ToggleButton.tool">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Padding" Value="10,6"/>
       <Setter Property="Margin" Value="1,0"/>
       <Setter Property="MinHeight" Value="30"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="CornerRadius" Value="8"/>
     </Style>
     <Style Selector="Button.tool:pointerover /template/ ContentPresenter, ToggleButton.tool:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource ButtonBackgroundPointerOver}"/>
+      <Setter Property="Background" Value="#22FFFFFF"/>
     </Style>
     <Style Selector="Button.tool:pressed /template/ ContentPresenter, ToggleButton.tool:checked /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource ButtonBackgroundPressed}"/>
+      <Setter Property="Background" Value="#33FFFFFF"/>
     </Style>
     <Style Selector="Button.tool PathIcon, ToggleButton.tool PathIcon">
       <Setter Property="Width" Value="15"/>
       <Setter Property="Height" Value="15"/>
+      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
     </Style>
-    <Style Selector="Border.statusbar">
-      <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
-      <Setter Property="BorderThickness" Value="0,1,0,0"/>
-      <Setter Property="Padding" Value="14,6"/>
+
+    <!-- Glass panels -->
+    <Style Selector="Border.glass-bar">
+      <Setter Property="Background" Value="#33FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#22FFFFFF"/>
     </Style>
     <Style Selector="Border.toolbar">
-      <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
       <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="Padding" Value="8,6"/>
+      <Setter Property="Padding" Value="14,10"/>
     </Style>
+    <Style Selector="Border.statusbar">
+      <Setter Property="BorderThickness" Value="0,1,0,0"/>
+      <Setter Property="Padding" Value="16,7"/>
+    </Style>
+    <Style Selector="Border.sidebar">
+      <Setter Property="BorderThickness" Value="1,0,0,0"/>
+    </Style>
+
+    <!-- Transparent text inputs so the blur shows through -->
+    <Style Selector="TextBox.source">
+      <Setter Property="Background" Value="#08000000"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="20,16"/>
+      <Setter Property="AcceptsReturn" Value="True"/>
+      <Setter Property="AcceptsTab" Value="True"/>
+      <Setter Property="TextWrapping" Value="NoWrap"/>
+      <Setter Property="FontFamily" Value="Consolas,Menlo,Monaco,JetBrains Mono,monospace"/>
+      <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style Selector="TextBox.source /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
     <Style Selector="TextBlock.muted">
-      <Setter Property="Opacity" Value="0.75"/>
+      <Setter Property="Opacity" Value="0.7"/>
       <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <!-- ComboBox tweaks for glass look -->
+    <Style Selector="ComboBox.glass">
+      <Setter Property="Background" Value="#22FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#33FFFFFF"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="12,4"/>
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="Auto,*,Auto">
+  <Panel>
+    <!-- Acrylic backdrop (Apple-Liquid-Glass approximation) -->
+    <ExperimentalAcrylicBorder IsHitTestVisible="False">
+      <ExperimentalAcrylicBorder.Material>
+        <ExperimentalAcrylicMaterial
+            BackgroundSource="Digger"
+            TintColor="{DynamicResource SystemBaseLowColor}"
+            TintOpacity="0.5"
+            MaterialOpacity="0.8"/>
+      </ExperimentalAcrylicBorder.Material>
+    </ExperimentalAcrylicBorder>
 
-    <!-- ============ Toolbar ============ -->
-    <Border Grid.Row="0" Classes="toolbar">
-      <DockPanel LastChildFill="False">
-        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2">
-          <Button Classes="tool" Click="Open_Click">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{x:Static views:IconData.Folder}"/>
-              <TextBlock Text="Open" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Button>
-          <Button Classes="tool" Command="{Binding ReloadCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{x:Static views:IconData.Refresh}"/>
-              <TextBlock Text="Reload" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Button>
-        </StackPanel>
+    <Grid RowDefinitions="Auto,*,Auto">
 
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-          <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
-              <TextBlock Text="Outline" VerticalAlignment="Center"/>
-            </StackPanel>
-          </ToggleButton>
-
-          <TextBlock VerticalAlignment="Center"
-                     Margin="14,0,6,0"
-                     Classes="muted"
-                     Text="View"/>
-          <ComboBox SelectedItem="{Binding CurrentViewMode}"
-                    ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
-                    MinWidth="160"/>
-
-          <Button Classes="tool" Margin="12,0,0,0" Click="Settings_Click">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{x:Static views:IconData.Settings}"/>
-              <TextBlock Text="Settings" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Button>
-        </StackPanel>
-      </DockPanel>
-    </Border>
-
-    <!-- ============ Content ============ -->
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,260">
-
-      <!-- Main viewer area (mode-dependent) -->
-      <Grid Grid.Column="0">
-
-        <!-- Source only -->
-        <TextBox Name="SourceOnlyEditor"
-                 IsVisible="{Binding IsSourceOnly}"
-                 AcceptsReturn="True"
-                 AcceptsTab="True"
-                 TextWrapping="NoWrap"
-                 FontFamily="Consolas,Menlo,Monaco,JetBrains Mono,monospace"
-                 FontSize="14"
-                 BorderThickness="0"
-                 Padding="16,12"
-                 Text="{Binding SourceText, Mode=TwoWay}"/>
-
-        <!-- Preview only -->
-        <views:MarkdownPreviewControl IsVisible="{Binding IsPreviewOnly}"
-                                       Source="{Binding SourceText}"/>
-
-        <!-- Split vertical: source | preview -->
-        <Grid ColumnDefinitions="*,5,*" IsVisible="{Binding IsSplitVerticalActive}">
-          <TextBox Grid.Column="0"
-                   Text="{Binding SourceText, Mode=TwoWay}"
-                   AcceptsReturn="True"
-                   AcceptsTab="True"
-                   TextWrapping="NoWrap"
-                   FontFamily="Consolas,Menlo,Monaco,JetBrains Mono,monospace"
-                   FontSize="14"
-                   BorderThickness="0"
-                   Padding="16,12"/>
-          <GridSplitter Grid.Column="1"
-                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                        ResizeDirection="Columns"/>
-          <views:MarkdownPreviewControl Grid.Column="2"
-                                         Source="{Binding SourceText}"/>
-        </Grid>
-
-        <!-- Split horizontal: source / preview -->
-        <Grid RowDefinitions="*,5,*" IsVisible="{Binding IsSplitHorizontalActive}">
-          <TextBox Grid.Row="0"
-                   Text="{Binding SourceText, Mode=TwoWay}"
-                   AcceptsReturn="True"
-                   AcceptsTab="True"
-                   TextWrapping="NoWrap"
-                   FontFamily="Consolas,Menlo,Monaco,JetBrains Mono,monospace"
-                   FontSize="14"
-                   BorderThickness="0"
-                   Padding="16,12"/>
-          <GridSplitter Grid.Row="1"
-                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                        ResizeDirection="Rows"/>
-          <views:MarkdownPreviewControl Grid.Row="2"
-                                         Source="{Binding SourceText}"/>
-        </Grid>
-
-        <!-- Detached: main window is just a placeholder while two child windows show source/preview -->
-        <Grid IsVisible="{Binding IsDetached}">
-          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-            <TextBlock Text="View detached"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       HorizontalAlignment="Center"/>
-            <TextBlock Text="Source and preview are shown in separate windows."
-                       Classes="muted"
-                       HorizontalAlignment="Center"/>
-            <TextBlock Text="(detached windows arrive in the next PR)"
-                       Classes="muted"
-                       HorizontalAlignment="Center"
-                       FontStyle="Italic"/>
+      <!-- ============ Toolbar (glass) ============ -->
+      <Border Grid.Row="0" Classes="glass-bar toolbar">
+        <DockPanel LastChildFill="False">
+          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2">
+            <Button Classes="tool" Click="Open_Click">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{x:Static views:IconData.Folder}"/>
+                <TextBlock Text="Open" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+            <Button Classes="tool" Command="{Binding ReloadCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{x:Static views:IconData.Refresh}"/>
+                <TextBlock Text="Reload" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Button>
           </StackPanel>
+
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+            <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
+                <TextBlock Text="Outline" VerticalAlignment="Center"/>
+              </StackPanel>
+            </ToggleButton>
+
+            <TextBlock VerticalAlignment="Center"
+                       Margin="14,0,6,0"
+                       Classes="muted"
+                       Text="View"/>
+            <ComboBox Classes="glass"
+                      SelectedItem="{Binding CurrentViewMode}"
+                      ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
+                      MinWidth="160"/>
+
+            <Button Classes="tool" Margin="12,0,0,0" Click="Settings_Click">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{x:Static views:IconData.Settings}"/>
+                <TextBlock Text="Settings" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- ============ Content ============ -->
+      <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto">
+
+        <Grid Grid.Column="0">
+
+          <!-- Source only -->
+          <TextBox Name="SourceOnlyEditor"
+                   Classes="source"
+                   IsVisible="{Binding IsSourceOnly}"
+                   Text="{Binding SourceText, Mode=TwoWay}"/>
+
+          <!-- Preview only -->
+          <views:MarkdownPreviewControl IsVisible="{Binding IsPreviewOnly}"
+                                         Source="{Binding SourceText}"/>
+
+          <!-- Split vertical -->
+          <Grid ColumnDefinitions="*,5,*" IsVisible="{Binding IsSplitVerticalActive}">
+            <TextBox Grid.Column="0" Classes="source"
+                     Text="{Binding SourceText, Mode=TwoWay}"/>
+            <GridSplitter Grid.Column="1"
+                          Background="#22FFFFFF"
+                          ResizeDirection="Columns"/>
+            <views:MarkdownPreviewControl Grid.Column="2"
+                                           Source="{Binding SourceText}"/>
+          </Grid>
+
+          <!-- Split horizontal -->
+          <Grid RowDefinitions="*,5,*" IsVisible="{Binding IsSplitHorizontalActive}">
+            <TextBox Grid.Row="0" Classes="source"
+                     Text="{Binding SourceText, Mode=TwoWay}"/>
+            <GridSplitter Grid.Row="1"
+                          Background="#22FFFFFF"
+                          ResizeDirection="Rows"/>
+            <views:MarkdownPreviewControl Grid.Row="2"
+                                           Source="{Binding SourceText}"/>
+          </Grid>
+
+          <!-- Detached placeholder -->
+          <Grid IsVisible="{Binding IsDetached}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+              <TextBlock Text="View detached"
+                         FontSize="20"
+                         FontWeight="SemiBold"
+                         HorizontalAlignment="Center"/>
+              <TextBlock Text="Source and preview are shown in separate windows."
+                         Classes="muted"
+                         HorizontalAlignment="Center"/>
+              <TextBlock Text="(detached windows arrive in the next PR)"
+                         Classes="muted"
+                         HorizontalAlignment="Center"
+                         FontStyle="Italic"/>
+            </StackPanel>
+          </Grid>
+
         </Grid>
+
+        <GridSplitter Grid.Column="1"
+                      Background="#22FFFFFF"
+                      ResizeDirection="Columns"
+                      IsVisible="{Binding IsOutlineVisible}"/>
+
+        <!-- Outline (glass sidebar). Width=280 + IsVisible=false → Auto collapses to 0. -->
+        <Border Grid.Column="2"
+                Classes="glass-bar sidebar"
+                Width="280"
+                IsVisible="{Binding IsOutlineVisible}">
+          <Grid RowDefinitions="Auto,*">
+            <Border Grid.Row="0"
+                    BorderBrush="#22FFFFFF"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,12">
+              <TextBlock Text="Outline" FontWeight="SemiBold" FontSize="13"/>
+            </Border>
+
+            <TreeView Grid.Row="1"
+                      ItemsSource="{Binding OutlineNodes}"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      Padding="8,10">
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}"
+                                  DataType="{x:Type models:OutlineNode}">
+                  <TextBlock Text="{Binding Text}"
+                             TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center"/>
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+          </Grid>
+        </Border>
 
       </Grid>
 
-      <!-- Splitter for outline -->
-      <GridSplitter Grid.Column="1"
-                    Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                    ResizeDirection="Columns"
-                    IsVisible="{Binding IsOutlineVisible}"/>
-
-      <!-- Outline panel -->
-      <Border Grid.Column="2"
-              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-              BorderThickness="1,0,0,0"
-              Padding="0"
-              IsVisible="{Binding IsOutlineVisible}">
-        <Grid RowDefinitions="Auto,*">
-          <Border Grid.Row="0"
-                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                  BorderThickness="0,0,0,1"
-                  Padding="14,10">
-            <TextBlock Text="Outline" FontWeight="SemiBold"/>
-          </Border>
-
-          <TreeView Grid.Row="1"
-                    ItemsSource="{Binding OutlineNodes}"
-                    BorderThickness="0"
-                    Padding="6,8">
-            <TreeView.ItemTemplate>
-              <TreeDataTemplate ItemsSource="{Binding Children}"
-                                DataType="{x:Type models:OutlineNode}">
-                <TextBlock Text="{Binding Text}"
-                           TextTrimming="CharacterEllipsis"
-                           VerticalAlignment="Center"/>
-              </TreeDataTemplate>
-            </TreeView.ItemTemplate>
-          </TreeView>
-        </Grid>
+      <!-- ============ Status bar (glass) ============ -->
+      <Border Grid.Row="2" Classes="glass-bar statusbar">
+        <DockPanel LastChildFill="False">
+          <TextBlock DockPanel.Dock="Left"
+                     Classes="muted"
+                     Text="{Binding StatusText}"/>
+          <TextBlock DockPanel.Dock="Right"
+                     Classes="muted"
+                     Text="{Binding CurrentViewMode, StringFormat='view: {0}'}"/>
+        </DockPanel>
       </Border>
 
     </Grid>
-
-    <!-- ============ Status bar ============ -->
-    <Border Grid.Row="2" Classes="statusbar">
-      <DockPanel LastChildFill="False">
-        <TextBlock DockPanel.Dock="Left"
-                   Classes="muted"
-                   Text="{Binding StatusText}"/>
-        <TextBlock DockPanel.Dock="Right"
-                   Classes="muted"
-                   Text="{Binding CurrentViewMode, StringFormat='view: {0}'}"/>
-      </DockPanel>
-    </Border>
-
-  </Grid>
+  </Panel>
 
 </Window>
