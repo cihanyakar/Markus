@@ -59,6 +59,10 @@
                frosted glass, not as bare blur. -->
           <SolidColorBrush x:Key="WindowTint" Color="#59FFFFFF"/>
 
+          <!-- Opaque-ish surface for floating popovers (search overlay, etc.). -->
+          <SolidColorBrush x:Key="OverlayBg" Color="#F5F5F5F7"/>
+          <SolidColorBrush x:Key="OverlayBorder" Color="#2E000000"/>
+
           <!-- Liquid Glass platters: tokens from rdev/liquid-glass-react (Tahoe).
                Alpha bumped to ~40/55/70/55% for legibility over Sidebar vibrancy. -->
           <SolidColorBrush x:Key="PlatterBg" Color="#66FFFFFF"/>
@@ -110,6 +114,10 @@
 
           <!-- Translucent dark tint over the system vibrancy. -->
           <SolidColorBrush x:Key="WindowTint" Color="#73000000"/>
+
+          <!-- Opaque-ish surface for floating popovers. -->
+          <SolidColorBrush x:Key="OverlayBg" Color="#F525252A"/>
+          <SolidColorBrush x:Key="OverlayBorder" Color="#3DFFFFFF"/>
 
           <!-- Liquid Glass platters, dark variant. Bumped to 25/35/45/35% white. -->
           <SolidColorBrush x:Key="PlatterBg" Color="#40FFFFFF"/>

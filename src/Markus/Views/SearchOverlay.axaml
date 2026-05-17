@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="using:Markus.Views"
+             mc:Ignorable="d"
+             x:Class="Markus.Views.SearchOverlay"
+             x:Name="Root"
+             d:DesignWidth="500" d:DesignHeight="84">
+
+  <Border CornerRadius="12"
+          Background="{DynamicResource OverlayBg}"
+          BorderBrush="{DynamicResource OverlayBorder}"
+          BorderThickness="1"
+          Padding="10,8">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="22" OffsetX="0" OffsetY="6" Color="Black" Opacity="0.28"/>
+    </Border.Effect>
+    <StackPanel Spacing="6">
+
+      <!-- Row 1: Find -->
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+        <TextBox Grid.Column="0"
+                 Name="SearchInput"
+                 MinWidth="240"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 PlaceholderText="Find"
+                 FontSize="13"
+                 Text="{Binding #Root.SearchText, Mode=TwoWay}"
+                 Foreground="{DynamicResource TextHigh}"/>
+
+        <TextBlock Grid.Column="1"
+                   Name="Counter"
+                   VerticalAlignment="Center"
+                   Margin="0,0,4,0"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextLow}"
+                   Text="0 / 0"/>
+
+        <ToggleButton Grid.Column="2" Classes="tool" Name="CaseToggle"
+                      ToolTip.Tip="Match case (Aa)"
+                      Padding="6,4" MinHeight="24"
+                      IsChecked="{Binding #Root.CaseSensitive, Mode=TwoWay}">
+          <TextBlock Text="Aa" FontSize="11" FontWeight="SemiBold"/>
+        </ToggleButton>
+
+        <Button Grid.Column="3" Classes="tool" Name="PrevButton" ToolTip.Tip="Previous (⇧⌘G)" Padding="6,4" MinHeight="24">
+          <PathIcon Data="{x:Static views:IconData.ArrowUp}" Width="12" Height="12"/>
+        </Button>
+        <Button Grid.Column="4" Classes="tool" Name="NextButton" ToolTip.Tip="Next (⌘G)" Padding="6,4" MinHeight="24">
+          <PathIcon Data="{x:Static views:IconData.ArrowDown}" Width="12" Height="12"/>
+        </Button>
+
+        <ToggleButton Grid.Column="5" Classes="tool" Name="ReplaceToggle"
+                      ToolTip.Tip="Toggle replace (⌘⌥F)"
+                      Padding="6,4" MinHeight="24"
+                      IsVisible="{Binding #Root.SupportsReplace}"
+                      IsChecked="{Binding #Root.IsReplaceVisible, Mode=TwoWay}">
+          <PathIcon Data="{x:Static views:IconData.ChevronDown}" Width="12" Height="12"/>
+        </ToggleButton>
+
+        <Button Grid.Column="6" Classes="tool" Name="CloseButton" ToolTip.Tip="Close (Esc)" Padding="6,4" MinHeight="24">
+          <PathIcon Data="{x:Static views:IconData.Close}" Width="12" Height="12"/>
+        </Button>
+      </Grid>
+
+      <!-- Row 2: Replace (visible only in source mode and when toggled on) -->
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6"
+            IsVisible="{Binding #Root.IsReplaceVisible}">
+        <TextBox Grid.Column="0"
+                 Name="ReplaceInput"
+                 MinWidth="240"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 PlaceholderText="Replace with"
+                 FontSize="13"
+                 Text="{Binding #Root.ReplaceText, Mode=TwoWay}"
+                 Foreground="{DynamicResource TextHigh}"/>
+
+        <Button Grid.Column="1" Classes="tool" Name="ReplaceButton" ToolTip.Tip="Replace"
+                Padding="10,4" MinHeight="24">
+          <TextBlock Text="Replace" FontSize="11" FontWeight="Medium"/>
+        </Button>
+        <Button Grid.Column="2" Classes="tool" Name="ReplaceAllButton" ToolTip.Tip="Replace all"
+                Padding="10,4" MinHeight="24">
+          <TextBlock Text="All" FontSize="11" FontWeight="Medium"/>
+        </Button>
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

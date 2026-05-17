@@ -380,11 +380,10 @@ internal static class MarkdownRenderer
         if (em.DelimiterCount >= 2)
         {
             span.FontWeight = FontWeight.Bold;
+            FillInlines(span.Inlines, em);
+            return span;
         }
-        else
-        {
-            span.FontStyle = FontStyle.Italic;
-        }
+        span.FontStyle = FontStyle.Italic;
         FillInlines(span.Inlines, em);
         return span;
     }

@@ -24,15 +24,8 @@ internal static class OutlineBuilder
                 stack.Pop();
             }
 
-            if (stack.Count == 0)
-            {
-                roots.Add(node);
-            }
-            else
-            {
-                stack.Peek().Children.Add(node);
-            }
-
+            IList<OutlineNode> bucket = stack.Count == 0 ? roots : stack.Peek().Children;
+            bucket.Add(node);
             stack.Push(node);
         }
 

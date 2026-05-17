@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="using:Markus.Models"
+             mc:Ignorable="d"
+             x:Class="Markus.Views.CommandPalette"
+             x:Name="Root"
+             Width="560"
+             MaxHeight="440"
+             d:DesignWidth="560" d:DesignHeight="440">
+
+  <UserControl.Styles>
+    <Style Selector="ListBox.palette">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="4"/>
+    </Style>
+    <Style Selector="ListBox.palette ListBoxItem">
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="Margin" Value="2,1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="ListBox.palette ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+    </Style>
+    <Style Selector="ListBox.palette ListBoxItem:selected TextBlock.commandTitle">
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+    </Style>
+    <Style Selector="TextBlock.commandTitle">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+    </Style>
+    <Style Selector="TextBlock.commandGroup">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
+    </Style>
+    <Style Selector="TextBlock.commandKey">
+      <Setter Property="FontFamily" Value="Iosevka,JetBrains Mono,Consolas,monospace"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Border CornerRadius="14"
+          Background="{DynamicResource OverlayBg}"
+          BorderBrush="{DynamicResource OverlayBorder}"
+          BorderThickness="1"
+          ClipToBounds="True">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="32" OffsetX="0" OffsetY="10" Color="Black" Opacity="0.32"/>
+    </Border.Effect>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+      <!-- Query input -->
+      <Border Grid.Row="0" BorderThickness="0,0,0,1"
+              BorderBrush="{DynamicResource OverlayBorder}"
+              Padding="16,12">
+        <TextBox Name="QueryInput"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 PlaceholderText="Type a command"
+                 FontSize="14"
+                 Foreground="{DynamicResource TextHigh}"
+                 Text="{Binding #Root.Query, Mode=TwoWay}"/>
+      </Border>
+
+      <!-- Results list -->
+      <ListBox Grid.Row="1"
+               Classes="palette"
+               Name="ResultsList"
+               ItemsSource="{Binding #Root.FilteredItems}"
+               SelectedIndex="{Binding #Root.SelectedIndex, Mode=TwoWay}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="models:CommandItem">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="1">
+                <TextBlock Classes="commandTitle" Text="{Binding Title}"/>
+                <TextBlock Classes="commandGroup" Text="{Binding Group}"/>
+              </StackPanel>
+              <TextBlock Grid.Column="1" Classes="commandKey" Text="{Binding KeyHint}"/>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <!-- Footer hint -->
+      <Border Grid.Row="2"
+              BorderThickness="0,1,0,0"
+              BorderBrush="{DynamicResource OverlayBorder}"
+              Padding="14,6">
+        <TextBlock FontSize="10"
+                   Foreground="{DynamicResource TextLow}"
+                   Text="↑ ↓ to navigate · ↵ to run · esc to close"/>
+      </Border>
+
+    </Grid>
+  </Border>
+</UserControl>

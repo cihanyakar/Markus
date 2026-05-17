@@ -3,6 +3,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
+using AvaloniaEdit.Search;
 using AvaloniaEdit.TextMate;
 using TextMateSharp.Grammars;
 
@@ -29,6 +30,7 @@ internal sealed class MarkdownTextEditor : TextEditor
 
     private RegistryOptions? _registry;
     private TextMate.Installation? _textMate;
+    private SearchPanel? _searchPanel;
     private bool _syncing;
 
     public MarkdownTextEditor()
@@ -52,16 +54,86 @@ internal sealed class MarkdownTextEditor : TextEditor
         set => SetValue(GrammarLanguageProperty, value);
     }
 
+    public string SearchPattern
+    {
+        get => _searchPanel?.SearchPattern ?? string.Empty;
+        set
+        {
+            if (EnsureSearchPanel() is { } panel)
+            {
+                panel.SearchPattern = value;
+            }
+        }
+    }
+
+    public bool SearchMatchCase
+    {
+        get => _searchPanel?.MatchCase ?? false;
+        set
+        {
+            if (EnsureSearchPanel() is { } panel)
+            {
+                panel.MatchCase = value;
+            }
+        }
+    }
+
     // Avalonia matches control styles by exact type. Without this override
     // the inherited TextEditor template isn't applied to MarkdownTextEditor,
     // so the control measures to zero and renders blank.
     protected override Type StyleKeyOverride => typeof(TextEditor);
+
+    public void FindNextMatch()
+    {
+        EnsureSearchPanel()?.FindNext();
+    }
+
+    public void FindPreviousMatch()
+    {
+        EnsureSearchPanel()?.FindPrevious();
+    }
+
+    public void Replace(string replacement)
+    {
+        if (EnsureSearchPanel() is { } panel)
+        {
+            panel.ReplacePattern = replacement;
+            panel.ReplaceNext();
+        }
+    }
+
+    public void ReplaceAll(string replacement)
+    {
+        if (EnsureSearchPanel() is { } panel)
+        {
+            panel.ReplacePattern = replacement;
+            panel.ReplaceAll();
+        }
+    }
+
+    public void CloseSearch()
+    {
+        _searchPanel?.Close();
+        SearchPattern = string.Empty;
+    }
+
+    public int CountMatches(string term, bool caseSensitive)
+    {
+        return Markus.Services.TextSearchMath.CountMatches(Document.Text, term, caseSensitive);
+    }
+
+    public int CurrentMatchIndex(string term, bool caseSensitive)
+    {
+        var anchor = SelectionStart >= 0 ? SelectionStart : CaretOffset;
+        return Markus.Services.TextSearchMath.CurrentMatchIndex(Document.Text, term, anchor, caseSensitive);
+    }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         InstallTextMate();
         ApplyBoundText(BoundText);
+        EnsureSearchPanel();
 
         if (Application.Current is { } app)
         {
@@ -86,8 +158,9 @@ internal sealed class MarkdownTextEditor : TextEditor
         if (change.Property == BoundTextProperty)
         {
             ApplyBoundText(change.GetNewValue<string?>());
+            return;
         }
-        else if (change.Property == GrammarLanguageProperty && _textMate is not null)
+        if (change.Property == GrammarLanguageProperty && _textMate is not null)
         {
             ApplyGrammar();
         }
@@ -104,6 +177,21 @@ internal sealed class MarkdownTextEditor : TextEditor
             return;
         }
         apply(new SolidColorBrush(color));
+    }
+
+    private SearchPanel? EnsureSearchPanel()
+    {
+        _searchPanel ??= SearchPanel.Install(this);
+        if (_searchPanel is { } panel)
+        {
+            // Open() activates the search engine + colorizer; without it,
+            // setting SearchPattern silently no-ops. We hide its built-in UI
+            // afterwards so our SearchOverlay is the only one on screen.
+            panel.Open();
+            panel.IsVisible = false;
+            return panel;
+        }
+        return null;
     }
 
     private void OnApplicationPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)

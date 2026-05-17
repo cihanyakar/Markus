@@ -296,9 +296,26 @@
 
         <Grid Grid.Column="0">
 
-          <!-- Source only -->
+          <!-- Floating in-document search bar for the preview side. -->
+          <views:SearchOverlay Name="PreviewSearch"
+                                IsVisible="False"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,18,18,0"
+                                ZIndex="10"/>
+
+          <!-- Command palette (Cmd+K) -->
+          <views:CommandPalette Name="CommandPalette"
+                                 IsVisible="False"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Top"
+                                 Margin="0,72,0,0"
+                                 ZIndex="20"/>
+
+          <!-- Source view: shown in Source-only mode and in Detached mode (the
+               preview floats out to its own window in detached, source stays here). -->
           <views:MarkdownTextEditor Name="SourceOnlyEditor"
-                                     IsVisible="{Binding IsSourceOnly}"
+                                     IsVisible="{Binding IsSourceVisibleInMain}"
                                      FontFamily="{Binding MonoFontFamily}"
                                      BoundText="{Binding SourceText, Mode=TwoWay}"/>
 
@@ -333,18 +350,6 @@
                                            Source="{Binding SourceText}"/>
           </Grid>
 
-          <!-- Detached: main window stays as a hint while children carry the work -->
-          <Grid IsVisible="{Binding IsDetached}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-              <TextBlock Classes="display" Text="Detached" HorizontalAlignment="Center"/>
-              <TextBlock Classes="meta"
-                         HorizontalAlignment="Center"
-                         Text="Source and preview live in separate windows."/>
-              <TextBlock Classes="meta"
-                         HorizontalAlignment="Center"
-                         Text="Switch view mode to bring them back."/>
-            </StackPanel>
-          </Grid>
 
         </Grid>
 
