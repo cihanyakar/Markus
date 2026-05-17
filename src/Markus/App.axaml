@@ -54,6 +54,29 @@
           <!-- Content surface -->
           <SolidColorBrush x:Key="ContentBg" Color="#80FFFFFF"/>
           <SolidColorBrush x:Key="ContentInk" Color="#1D1D1F"/>
+
+          <!-- Translucent tint over the system vibrancy so chrome reads as
+               frosted glass, not as bare blur. -->
+          <SolidColorBrush x:Key="WindowTint" Color="#59FFFFFF"/>
+
+          <!-- Liquid Glass platters: tokens from rdev/liquid-glass-react (Tahoe).
+               Alpha bumped to ~40/55/70/55% for legibility over Sidebar vibrancy. -->
+          <SolidColorBrush x:Key="PlatterBg" Color="#66FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterHoverBg" Color="#8CFFFFFF"/>
+          <SolidColorBrush x:Key="PlatterPressedBg" Color="#B3FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterCheckedBg" Color="#8CFFFFFF"/>
+          <!-- Vertical edge gradient: bright top to faint dark bottom.
+               Replaces inset BoxShadow which renders with pixelated edges in
+               Avalonia 12. The BorderBrush + 1px BorderThickness gives a
+               crisp glass rim at any corner radius. -->
+          <LinearGradientBrush x:Key="PlatterBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Color="#99FFFFFF" Offset="0"/>
+            <GradientStop Color="#10000000" Offset="1"/>
+          </LinearGradientBrush>
+          <BoxShadows x:Key="ToolbarShadow">0 1 0 0 #14000000</BoxShadows>
+          <SolidColorBrush x:Key="ToolbarSurface" Color="#00FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterIcon" Color="#D9000000"/>
+          <SolidColorBrush x:Key="PlatterLabel" Color="#1D1D1F"/>
         </ResourceDictionary>
 
         <!-- ============ Dark ============ -->
@@ -84,6 +107,24 @@
           <!-- Content surface -->
           <SolidColorBrush x:Key="ContentBg" Color="#0D0D14"/>
           <SolidColorBrush x:Key="ContentInk" Color="#F5F5F7"/>
+
+          <!-- Translucent dark tint over the system vibrancy. -->
+          <SolidColorBrush x:Key="WindowTint" Color="#73000000"/>
+
+          <!-- Liquid Glass platters, dark variant. Bumped to 25/35/45/35% white. -->
+          <SolidColorBrush x:Key="PlatterBg" Color="#40FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterHoverBg" Color="#59FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterPressedBg" Color="#73FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterCheckedBg" Color="#59FFFFFF"/>
+          <!-- Vertical edge gradient, dark variant. -->
+          <LinearGradientBrush x:Key="PlatterBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Color="#55FFFFFF" Offset="0"/>
+            <GradientStop Color="#33000000" Offset="1"/>
+          </LinearGradientBrush>
+          <BoxShadows x:Key="ToolbarShadow">0 1 0 0 #20FFFFFF</BoxShadows>
+          <SolidColorBrush x:Key="ToolbarSurface" Color="#00FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterIcon" Color="#F2FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterLabel" Color="#F5F5F7"/>
         </ResourceDictionary>
 
       </ResourceDictionary.ThemeDictionaries>

@@ -1,9 +1,13 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using Markus.Services;
 using Markus.ViewModels;
+using Markus.Views.Platform;
 
 namespace Markus.Views;
 
@@ -21,6 +25,58 @@ internal sealed partial class MainWindow : Window
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
         DragDrop.SetAllowDrop(this, true);
+
+        ConfigureExtendedTitleBar();
+        Opened += OnWindowOpened;
+    }
+
+    private void OnWindowOpened(object? sender, EventArgs e)
+    {
+        // Avalonia's AcrylicBlur already inserts an NSVisualEffectView into the
+        // window's contentView, but it picks the Big-Sur-deprecated
+        // NSVisualEffectMaterialLight. We patch the material so Tahoe applies
+        // its current Liquid Glass tint and saturation instead.
+        NSVisualEffectInstaller.Patch(this, NSVisualEffectInstaller.Material.HeaderView);
+    }
+
+    private void ConfigureExtendedTitleBar()
+    {
+        // On macOS we fold the system title bar into the glass toolbar so the
+        // traffic-light buttons float over the toolbar's leading edge. Windows
+        // and Linux keep their native chrome until per-platform polish lands.
+        if (!OperatingSystem.IsMacOS())
+        {
+            return;
+        }
+        // Avalonia 12 removed the ChromeHints enum; ExtendClientAreaToDecorationsHint
+        // alone hides system chrome while macOS still floats its traffic-light buttons
+        // over the leading edge of the client area.
+        ExtendClientAreaToDecorationsHint = true;
+        ExtendClientAreaTitleBarHeightHint = -1;
+        WindowControlsInset.Width = 72;
+    }
+
+    private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Only start a window drag when the user grabs an empty toolbar area;
+        // buttons and combos must keep their own click semantics.
+        if (e.Source is Visual source && IsInteractiveChild(source))
+        {
+            return;
+        }
+        BeginMoveDrag(e);
+    }
+
+    private static bool IsInteractiveChild(Visual source)
+    {
+        for (Visual? cursor = source; cursor is not null; cursor = cursor.GetVisualParent())
+        {
+            if (cursor is Button or ToggleButton or ComboBox or TextBox or Slider or CheckBox)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void OnDragOver(object? sender, DragEventArgs e)

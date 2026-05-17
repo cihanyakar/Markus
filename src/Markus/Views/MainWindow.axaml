@@ -13,7 +13,9 @@
         Icon="/Assets/markus.png"
         MinWidth="720" MinHeight="480"
         Title="{Binding DocumentTitle, StringFormat='{}{0} — Markus'}"
-        Background="{DynamicResource AppBackground}">
+        Background="Transparent"
+        TransparencyLevelHint="AcrylicBlur"
+        WindowDecorations="Full">
 
   <Design.DataContext>
     <vm:MainWindowViewModel/>
@@ -96,34 +98,46 @@
   </NativeMenu.Menu>
 
   <Window.Styles>
-    <!-- Tool / toggle buttons -->
+    <!-- ============ Liquid Glass tool platters (BorderBrush gradient edge) ============ -->
     <Style Selector="Button.tool, ToggleButton.tool">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="11,7"/>
-      <Setter Property="Margin" Value="1,0"/>
-      <Setter Property="MinHeight" Value="32"/>
-      <Setter Property="CornerRadius" Value="9"/>
-      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+      <Setter Property="Background" Value="{DynamicResource PlatterBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource PlatterBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="Margin" Value="3,0"/>
+      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
       <Setter Property="Transitions">
         <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.12"/>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.tool:pointerover /template/ ContentPresenter, ToggleButton.tool:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
+    <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PlatterHoverBg}"/>
     </Style>
-    <Style Selector="Button.tool:pressed /template/ ContentPresenter, ToggleButton.tool:checked /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource GlassPressed}"/>
+    <Style Selector="ToggleButton.tool:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PlatterHoverBg}"/>
+    </Style>
+    <Style Selector="Button.tool:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PlatterPressedBg}"/>
+    </Style>
+    <Style Selector="ToggleButton.tool:checked /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PlatterCheckedBg}"/>
     </Style>
     <Style Selector="Button.tool PathIcon, ToggleButton.tool PathIcon">
-      <Setter Property="Width" Value="15"/>
-      <Setter Property="Height" Value="15"/>
-      <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
+      <Setter Property="Width" Value="14"/>
+      <Setter Property="Height" Value="14"/>
+      <Setter Property="Foreground" Value="{DynamicResource PlatterIcon}"/>
     </Style>
     <Style Selector="ToggleButton.tool:checked PathIcon">
       <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Button.tool TextBlock, ToggleButton.tool TextBlock">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
     </Style>
 
     <!-- Glass panel base -->
@@ -133,10 +147,12 @@
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
 
+    <!-- Toolbar: no hairline divider in Tahoe; the per-item platters carry the depth. -->
     <Style Selector="Border.toolbar">
-      <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="Padding" Value="14,10"/>
-      <Setter Property="BoxShadow" Value="0 1 0 0 #14000000"/>
+      <Setter Property="Background" Value="{DynamicResource ToolbarSurface}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="16,11,16,9"/>
+      <Setter Property="BoxShadow" Value="{DynamicResource ToolbarShadow}"/>
     </Style>
     <Style Selector="Border.statusbar">
       <Setter Property="BorderThickness" Value="0,1,0,0"/>
@@ -163,14 +179,19 @@
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
 
-    <!-- ComboBox tweak -->
+    <!-- ComboBox: simplified glass surface (template too deep to inject inset BoxShadow). -->
     <Style Selector="ComboBox.glass">
-      <Setter Property="Background" Value="{DynamicResource GlassBg}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
-      <Setter Property="CornerRadius" Value="9"/>
-      <Setter Property="MinHeight" Value="32"/>
-      <Setter Property="Padding" Value="14,5"/>
-      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+      <Setter Property="Background" Value="{DynamicResource PlatterBg}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="Padding" Value="12,4"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
+    </Style>
+    <Style Selector="ComboBox.glass:pointerover /template/ Border#Background">
+      <Setter Property="Background" Value="{DynamicResource PlatterHoverBg}"/>
     </Style>
 
     <!-- GridSplitter slim hairline -->
@@ -181,9 +202,13 @@
 
   <Panel>
 
-    <!-- ============ Atmosphere: layered radial mesh ============ -->
+    <!-- Translucent tint over the system NSVisualEffectView so chrome
+         reads as frosted glass, not as bare desktop blur. -->
+    <Rectangle IsHitTestVisible="False" Fill="{DynamicResource WindowTint}"/>
+
+    <!-- ============ Atmosphere: subtle mesh over system vibrancy ============ -->
     <Panel ZIndex="-1">
-      <Rectangle IsHitTestVisible="False">
+      <Rectangle IsHitTestVisible="False" Opacity="0.22">
         <Rectangle.Fill>
           <RadialGradientBrush Center="18%,12%" GradientOrigin="18%,12%"
                                RadiusX="0.65" RadiusY="0.7">
@@ -192,7 +217,7 @@
           </RadialGradientBrush>
         </Rectangle.Fill>
       </Rectangle>
-      <Rectangle IsHitTestVisible="False" Opacity="0.85">
+      <Rectangle IsHitTestVisible="False" Opacity="0.18">
         <Rectangle.Fill>
           <RadialGradientBrush Center="84%,86%" GradientOrigin="84%,86%"
                                RadiusX="0.7" RadiusY="0.75">
@@ -201,7 +226,7 @@
           </RadialGradientBrush>
         </Rectangle.Fill>
       </Rectangle>
-      <Rectangle IsHitTestVisible="False" Opacity="0.65">
+      <Rectangle IsHitTestVisible="False" Opacity="0.14">
         <Rectangle.Fill>
           <RadialGradientBrush Center="82%,18%" GradientOrigin="82%,18%"
                                RadiusX="0.5" RadiusY="0.55">
@@ -214,10 +239,15 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
 
-      <!-- ============ Toolbar (glass) ============ -->
-      <Border Grid.Row="0" Classes="glass toolbar">
-        <DockPanel LastChildFill="False">
-          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2">
+      <!-- ============ Toolbar (glass, also serves as draggable title bar) ============ -->
+      <Border Grid.Row="0" Classes="glass toolbar"
+              Name="TitleBarRegion"
+              PointerPressed="OnTitleBarPointerPressed">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+
+          <!-- Leading: traffic-light reservation + primary actions -->
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+            <Border Name="WindowControlsInset" Width="0"/>
             <Button Classes="tool" Click="Open_Click">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Folder}"/>
@@ -232,7 +262,8 @@
             </Button>
           </StackPanel>
 
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+          <!-- Trailing: outline / view / settings -->
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
             <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
@@ -256,7 +287,8 @@
               </StackPanel>
             </Button>
           </StackPanel>
-        </DockPanel>
+
+        </Grid>
       </Border>
 
       <!-- ============ Content ============ -->
