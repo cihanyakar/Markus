@@ -18,37 +18,38 @@
   </Design.DataContext>
 
   <Window.Styles>
-    <Style Selector="Button.tool">
+    <Style Selector="Button.tool, ToggleButton.tool">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Padding" Value="10,6"/>
-      <Setter Property="Margin" Value="2,0"/>
-      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="Margin" Value="1,0"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="CornerRadius" Value="6"/>
     </Style>
-    <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+    <Style Selector="Button.tool:pointerover /template/ ContentPresenter, ToggleButton.tool:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonBackgroundPointerOver}"/>
     </Style>
-    <Style Selector="ToggleButton.tool">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="10,6"/>
-      <Setter Property="Margin" Value="2,0"/>
-      <Setter Property="MinHeight" Value="28"/>
+    <Style Selector="Button.tool:pressed /template/ ContentPresenter, ToggleButton.tool:checked /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonBackgroundPressed}"/>
+    </Style>
+    <Style Selector="Button.tool PathIcon, ToggleButton.tool PathIcon">
+      <Setter Property="Width" Value="15"/>
+      <Setter Property="Height" Value="15"/>
     </Style>
     <Style Selector="Border.statusbar">
-      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
       <Setter Property="BorderThickness" Value="0,1,0,0"/>
-      <Setter Property="Padding" Value="12,4"/>
+      <Setter Property="Padding" Value="14,6"/>
     </Style>
     <Style Selector="Border.toolbar">
-      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
       <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="Padding" Value="6,4"/>
+      <Setter Property="Padding" Value="8,6"/>
     </Style>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Opacity" Value="0.65"/>
+      <Setter Property="Opacity" Value="0.75"/>
       <Setter Property="FontSize" Value="11"/>
     </Style>
   </Window.Styles>
@@ -59,25 +60,42 @@
     <Border Grid.Row="0" Classes="toolbar">
       <DockPanel LastChildFill="False">
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2">
-          <Button Classes="tool" Content="📂  Open"   Click="Open_Click"/>
-          <Button Classes="tool" Content="↻  Reload"
-                  Command="{Binding ReloadCommand}"/>
+          <Button Classes="tool" Click="Open_Click">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{x:Static views:IconData.Folder}"/>
+              <TextBlock Text="Open" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button Classes="tool" Command="{Binding ReloadCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{x:Static views:IconData.Refresh}"/>
+              <TextBlock Text="Reload" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-          <ToggleButton Classes="tool"
-                       Content="📑  Outline"
-                       IsChecked="{Binding IsOutlineVisible}"/>
+          <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
+              <TextBlock Text="Outline" VerticalAlignment="Center"/>
+            </StackPanel>
+          </ToggleButton>
 
           <TextBlock VerticalAlignment="Center"
-                     Margin="12,0,6,0"
+                     Margin="14,0,6,0"
                      Classes="muted"
                      Text="View"/>
           <ComboBox SelectedItem="{Binding CurrentViewMode}"
                     ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
                     MinWidth="160"/>
 
-          <Button Classes="tool" Content="⚙  Settings" Margin="12,0,0,0" Click="Settings_Click"/>
+          <Button Classes="tool" Margin="12,0,0,0" Click="Settings_Click">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{x:Static views:IconData.Settings}"/>
+              <TextBlock Text="Settings" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
         </StackPanel>
       </DockPanel>
     </Border>

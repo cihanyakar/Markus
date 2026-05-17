@@ -1,7 +1,9 @@
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Markus.Models;
 using Markus.Services;
+using Markus.Views;
 
 namespace Markus.ViewModels;
 
@@ -40,9 +42,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     public static readonly IReadOnlyList<SettingsCategoryItem> Categories = new SettingsCategoryItem[]
     {
-        new SettingsCategoryItem(SettingsCategory.Appearance, "Appearance", "🎨"),
-        new SettingsCategoryItem(SettingsCategory.View, "View", "📐"),
-        new SettingsCategoryItem(SettingsCategory.General, "General", "⚙"),
+        new SettingsCategoryItem(SettingsCategory.Appearance, "Appearance", IconData.Palette),
+        new SettingsCategoryItem(SettingsCategory.View, "View", IconData.ViewQuilt),
+        new SettingsCategoryItem(SettingsCategory.General, "General", IconData.Tune),
     };
 
     [ObservableProperty]
@@ -160,11 +162,11 @@ internal sealed record ThemeOption(string key, string display, bool isDark)
     public bool IsDark => isDark;
 }
 
-internal sealed record SettingsCategoryItem(SettingsCategory kind, string name, string glyph)
+internal sealed record SettingsCategoryItem(SettingsCategory kind, string name, StreamGeometry icon)
 {
     public SettingsCategory Kind => kind;
 
     public string Name => name;
 
-    public string Glyph => glyph;
+    public StreamGeometry Icon => icon;
 }
