@@ -67,6 +67,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsService.Changed += OnSettingsChanged;
 
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
+        Rendering.MarkdownRenderer.Theme = Rendering.MarkdownThemes.Resolve(Settings.Theme);
         RebuildOutline(_sourceText);
     }
 
@@ -150,12 +151,27 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         Settings = e.Settings;
         ThemeApplicator.Apply(e.Settings.ThemeMode);
+
         var fontStack = MonoFontStack.Build(e.Settings.MonoFont);
-        if (!string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal))
+        var fontChanged = !string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal);
+
+        var newTheme = Rendering.MarkdownThemes.Resolve(e.Settings.Theme);
+        var themeChanged = !ReferenceEquals(newTheme, Rendering.MarkdownRenderer.Theme);
+
+        if (fontChanged)
         {
             MonoFontFamily = fontStack;
             Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(fontStack);
-            // Force preview to re-render with the new font by nudging the source.
+        }
+
+        if (themeChanged)
+        {
+            Rendering.MarkdownRenderer.Theme = newTheme;
+        }
+
+        if (fontChanged || themeChanged)
+        {
+            // Nudge SourceText so preview re-renders with the new look.
             var current = SourceText;
             SourceText = string.Empty;
             SourceText = current;

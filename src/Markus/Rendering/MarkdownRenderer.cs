@@ -16,6 +16,8 @@ internal static class MarkdownRenderer
     public static FontFamily MonoFamily { get; set; } =
         new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
 
+    public static MarkdownTheme Theme { get; set; } = MarkdownThemes.GitHubDark;
+
     public static IEnumerable<RenderedBlock> Render(MarkdownDocument? document)
     {
         if (document is null)
@@ -131,41 +133,30 @@ internal static class MarkdownRenderer
 
     private static Control RenderFencedCode(FencedCodeBlock code)
     {
-        var text = code.Lines.ToString();
-        return new Border
-        {
-            Background = new SolidColorBrush(Color.FromArgb(28, 128, 128, 128)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(14, 10),
-            Margin = new Thickness(0, 6, 0, 10),
-            Child = new SelectableTextBlock
-            {
-                Text = text,
-                FontFamily = MonoFamily,
-                FontSize = 13,
-                TextWrapping = TextWrapping.NoWrap,
-            },
-        };
+        return BuildCodeCard(code.Lines.ToString());
     }
 
     private static Control RenderCodeBlock(CodeBlock code)
     {
-        var text = code.Lines.ToString();
+        return BuildCodeCard(code.Lines.ToString());
+    }
+
+    private static Border BuildCodeCard(string text)
+    {
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(28, 128, 128, 128)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)),
+            Background = new SolidColorBrush(Theme.CodeBackground),
+            BorderBrush = new SolidColorBrush(Theme.CodeBorder),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(14, 10),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(16, 12),
             Margin = new Thickness(0, 6, 0, 10),
             Child = new SelectableTextBlock
             {
                 Text = text,
                 FontFamily = MonoFamily,
                 FontSize = 13,
+                Foreground = new SolidColorBrush(Theme.CodeForeground),
                 TextWrapping = TextWrapping.NoWrap,
             },
         };
@@ -185,7 +176,7 @@ internal static class MarkdownRenderer
 
         return new Border
         {
-            BorderBrush = new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
+            BorderBrush = new SolidColorBrush(Theme.QuoteAccent),
             BorderThickness = new Thickness(3, 0, 0, 0),
             Padding = new Thickness(14, 4, 0, 4),
             Margin = new Thickness(0, 6, 0, 10),
@@ -401,7 +392,8 @@ internal static class MarkdownRenderer
         {
             FontFamily = MonoFamily,
             FontSize = 13,
-            Background = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)),
+            Foreground = new SolidColorBrush(Theme.CodeForeground),
+            Background = new SolidColorBrush(Theme.CodeBackground),
         };
     }
 
@@ -411,7 +403,7 @@ internal static class MarkdownRenderer
         return new Run(label ?? string.Empty)
         {
             TextDecorations = TextDecorations.Underline,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x58, 0xa6, 0xff)),
+            Foreground = new SolidColorBrush(Theme.Accent),
         };
     }
 
@@ -420,7 +412,7 @@ internal static class MarkdownRenderer
         return new Run(auto.Url)
         {
             TextDecorations = TextDecorations.Underline,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x58, 0xa6, 0xff)),
+            Foreground = new SolidColorBrush(Theme.Accent),
         };
     }
 
