@@ -78,9 +78,10 @@ dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
 # -----------------------------------------------------------------------------
 
 # var preferences: only when type is apparent
-# Note: when "apparent" and "built-in" conflict (e.g. `var s = something.Replace(...)`),
-# we let "apparent" win so the rule stays consistent. Built-in rule is warning, not error.
-csharp_style_var_for_built_in_types = false:warning
+# The "var for built-in types" rule is deliberately omitted: it conflicts with
+# "var when type is apparent" on chains like `something.Replace(...)`, where
+# Roslyn sees the call as apparent (string method) but the result type as
+# built-in (string). Apparent wins; built-in rule and its IDE0008 are off.
 csharp_style_var_when_type_is_apparent = true:error
 csharp_style_var_elsewhere = false:error
 
@@ -236,7 +237,7 @@ dotnet_naming_style.camel_case.capitalization = camel_case
 # --- Code style / IDE ---
 dotnet_diagnostic.IDE0005.severity = error          # Unnecessary using directive
 dotnet_diagnostic.IDE0007.severity = error          # Use 'var' (when apparent)
-dotnet_diagnostic.IDE0008.severity = suggestion     # Built-in type rule yields to apparent rule (no warning, IDE-only hint)
+dotnet_diagnostic.IDE0008.severity = none           # Disabled entirely: conflicts with IDE0007 on built-in types
 dotnet_diagnostic.IDE0011.severity = error          # Add braces
 dotnet_diagnostic.IDE0044.severity = error          # Make field readonly
 dotnet_diagnostic.IDE0079.severity = error          # Remove unnecessary suppression
