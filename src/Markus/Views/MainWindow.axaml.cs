@@ -29,30 +29,6 @@ internal sealed partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private static void ShowRecentFlyout(Button anchor, MainWindowViewModel vm)
-    {
-        var menu = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedLeft };
-        if (vm.Settings.RecentFiles.Count == 0)
-        {
-            menu.Items.Add(new MenuItem { Header = "No recent files", IsEnabled = false });
-        }
-        else
-        {
-            foreach (var path in vm.Settings.RecentFiles)
-            {
-                var item = new MenuItem
-                {
-                    Header = System.IO.Path.GetFileName(path),
-                    Command = vm.OpenRecentCommand,
-                    CommandParameter = path,
-                };
-                ToolTip.SetTip(item, path);
-                menu.Items.Add(item);
-            }
-        }
-        menu.ShowAt(anchor);
-    }
-
     private async void OnDrop(object? sender, DragEventArgs e)
     {
         try
@@ -83,7 +59,34 @@ internal sealed partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm)
         {
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.OpenRequested += OnOpenRequested;
+            vm.SettingsRequested += OnSettingsRequested;
             UpdateDetachedWindows(vm);
+            RefreshRecentMenu();
+        }
+    }
+
+    private async void OnOpenRequested(object? sender, EventArgs e)
+    {
+        try
+        {
+            await OpenFileAsync();
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Open failed: {ex.Message}");
+        }
+    }
+
+    private async void OnSettingsRequested(object? sender, EventArgs e)
+    {
+        try
+        {
+            await OpenSettingsAsync();
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Settings failed: {ex.Message}");
         }
     }
 
@@ -95,6 +98,11 @@ internal sealed partial class MainWindow : Window
         )
         {
             UpdateDetachedWindows(vm);
+        }
+        else if (string.Equals(e.PropertyName, nameof(MainWindowViewModel.DocumentTitle), StringComparison.Ordinal))
+        {
+            // Title change implies a fresh open; refresh the recent menu.
+            RefreshRecentMenu();
         }
     }
 
@@ -144,13 +152,54 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    private void Recent_Click(object? sender, RoutedEventArgs e)
+    private void RefreshRecentMenu()
     {
-        if (DataContext is not MainWindowViewModel vm || sender is not Button button)
+        var openRecent = FindOpenRecentMenuItem();
+        if (openRecent?.Menu is not NativeMenu menu || DataContext is not MainWindowViewModel vm)
         {
             return;
         }
-        ShowRecentFlyout(button, vm);
+        menu.Items.Clear();
+        if (vm.Settings.RecentFiles.Count == 0)
+        {
+            menu.Items.Add(new NativeMenuItem { Header = "No recent files", IsEnabled = false });
+            return;
+        }
+        foreach (var path in vm.Settings.RecentFiles)
+        {
+            var item = new NativeMenuItem
+            {
+                Header = System.IO.Path.GetFileName(path),
+                ToolTip = path,
+                Command = vm.OpenRecentCommand,
+                CommandParameter = path,
+            };
+            menu.Items.Add(item);
+        }
+    }
+
+    private NativeMenuItem? FindOpenRecentMenuItem()
+    {
+        var top = NativeMenu.GetMenu(this);
+        if (top is null)
+        {
+            return null;
+        }
+        foreach (var item in top.Items.OfType<NativeMenuItem>())
+        {
+            if (item.Menu is null)
+            {
+                continue;
+            }
+            foreach (var child in item.Menu.Items.OfType<NativeMenuItem>())
+            {
+                if (string.Equals(child.Header, "Open Recent", StringComparison.Ordinal))
+                {
+                    return child;
+                }
+            }
+        }
+        return null;
     }
 
     private async void Settings_Click(object? sender, RoutedEventArgs e)
@@ -171,6 +220,8 @@ internal sealed partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm)
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
+            vm.OpenRequested -= OnOpenRequested;
+            vm.SettingsRequested -= OnSettingsRequested;
             vm.Dispose();
         }
     }

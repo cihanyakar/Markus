@@ -18,6 +18,85 @@
     <vm:MainWindowViewModel/>
   </Design.DataContext>
 
+  <NativeMenu.Menu>
+    <NativeMenu>
+      <NativeMenuItem Header="File">
+        <NativeMenuItem.Menu>
+          <NativeMenu>
+            <NativeMenuItem Header="Open…" Gesture="Cmd+O"
+                            Command="{Binding OpenFileCommand}"/>
+            <NativeMenuItem Header="Open Recent">
+              <NativeMenuItem.Menu>
+                <NativeMenu/>
+              </NativeMenuItem.Menu>
+            </NativeMenuItem>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Reload" Gesture="Cmd+R"
+                            Command="{Binding ReloadCommand}"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Settings…" Gesture="Cmd+,"
+                            Command="{Binding OpenSettingsCommand}"/>
+          </NativeMenu>
+        </NativeMenuItem.Menu>
+      </NativeMenuItem>
+
+      <NativeMenuItem Header="Edit">
+        <NativeMenuItem.Menu>
+          <NativeMenu>
+            <NativeMenuItem Header="Undo" Gesture="Cmd+Z"/>
+            <NativeMenuItem Header="Redo" Gesture="Cmd+Shift+Z"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Cut" Gesture="Cmd+X"/>
+            <NativeMenuItem Header="Copy" Gesture="Cmd+C"/>
+            <NativeMenuItem Header="Paste" Gesture="Cmd+V"/>
+            <NativeMenuItem Header="Select All" Gesture="Cmd+A"/>
+          </NativeMenu>
+        </NativeMenuItem.Menu>
+      </NativeMenuItem>
+
+      <NativeMenuItem Header="View">
+        <NativeMenuItem.Menu>
+          <NativeMenu>
+            <NativeMenuItem Header="Source" Gesture="Cmd+1"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="{x:Static models:ViewMode.Source}"/>
+            <NativeMenuItem Header="Preview" Gesture="Cmd+2"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="{x:Static models:ViewMode.Preview}"/>
+            <NativeMenuItem Header="Split Vertical" Gesture="Cmd+3"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="{x:Static models:ViewMode.SplitVertical}"/>
+            <NativeMenuItem Header="Split Horizontal" Gesture="Cmd+4"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="{x:Static models:ViewMode.SplitHorizontal}"/>
+            <NativeMenuItem Header="Detached" Gesture="Cmd+5"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="{x:Static models:ViewMode.Detached}"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Toggle Outline" Gesture="Cmd+B"
+                            Command="{Binding ToggleOutlineCommand}"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Appearance">
+              <NativeMenuItem.Menu>
+                <NativeMenu>
+                  <NativeMenuItem Header="System"
+                                  Command="{Binding SetThemeModeCommand}"
+                                  CommandParameter="System"/>
+                  <NativeMenuItem Header="Light"
+                                  Command="{Binding SetThemeModeCommand}"
+                                  CommandParameter="Light"/>
+                  <NativeMenuItem Header="Dark"
+                                  Command="{Binding SetThemeModeCommand}"
+                                  CommandParameter="Dark"/>
+                </NativeMenu>
+              </NativeMenuItem.Menu>
+            </NativeMenuItem>
+          </NativeMenu>
+        </NativeMenuItem.Menu>
+      </NativeMenuItem>
+    </NativeMenu>
+  </NativeMenu.Menu>
+
   <Window.Styles>
     <!-- Tool / toggle buttons -->
     <Style Selector="Button.tool, ToggleButton.tool">
@@ -147,12 +226,6 @@
                 <TextBlock Text="Open" VerticalAlignment="Center"/>
               </StackPanel>
             </Button>
-            <Button Classes="tool" Click="Recent_Click">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Data="{x:Static views:IconData.History}"/>
-                <PathIcon Data="{x:Static views:IconData.ChevronDown}" Width="10" Height="10"/>
-              </StackPanel>
-            </Button>
             <Button Classes="tool" Command="{Binding ReloadCommand}">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Refresh}"/>
@@ -194,10 +267,11 @@
         <Grid Grid.Column="0">
 
           <!-- Source only -->
-          <views:SourceEditor Name="SourceOnlyEditor"
-                              IsVisible="{Binding IsSourceOnly}"
-                              MonoFontFamily="{Binding MonoFontFamily}"
-                              Text="{Binding SourceText, Mode=TwoWay}"/>
+          <TextBox Name="SourceOnlyEditor"
+                   Classes="source"
+                   IsVisible="{Binding IsSourceOnly}"
+                   FontFamily="{Binding MonoFontFamily}"
+                   Text="{Binding SourceText, Mode=TwoWay}"/>
 
           <!-- Preview only -->
           <views:MarkdownPreviewControl Name="PreviewOnlyView"
@@ -206,9 +280,10 @@
 
           <!-- Split vertical -->
           <Grid ColumnDefinitions="*,4,*" IsVisible="{Binding IsSplitVerticalActive}">
-            <views:SourceEditor Grid.Column="0"
-                                MonoFontFamily="{Binding MonoFontFamily}"
-                                Text="{Binding SourceText, Mode=TwoWay}"/>
+            <TextBox Grid.Column="0"
+                     Classes="source"
+                     FontFamily="{Binding MonoFontFamily}"
+                     Text="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Column="1"
                           Classes="hairline"
                           ResizeDirection="Columns"/>
@@ -219,9 +294,10 @@
 
           <!-- Split horizontal -->
           <Grid RowDefinitions="*,4,*" IsVisible="{Binding IsSplitHorizontalActive}">
-            <views:SourceEditor Grid.Row="0"
-                                MonoFontFamily="{Binding MonoFontFamily}"
-                                Text="{Binding SourceText, Mode=TwoWay}"/>
+            <TextBox Grid.Row="0"
+                     Classes="source"
+                     FontFamily="{Binding MonoFontFamily}"
+                     Text="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Row="1"
                           Classes="hairline"
                           ResizeDirection="Rows"/>

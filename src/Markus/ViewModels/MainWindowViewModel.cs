@@ -71,6 +71,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         RebuildOutline(_sourceText);
     }
 
+    public event EventHandler? OpenRequested;
+
+    public event EventHandler? SettingsRequested;
+
     public AppSettings Settings { get; private set; }
 
     public bool IsSourceOnly => CurrentViewMode is ViewMode.Source;
@@ -176,6 +180,29 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void SetViewMode(ViewMode mode)
     {
         CurrentViewMode = mode;
+    }
+
+    [RelayCommand]
+    private void SetThemeMode(string? mode)
+    {
+        if (string.IsNullOrEmpty(mode))
+        {
+            return;
+        }
+        Settings.ThemeMode = mode;
+        _settingsService.Save(Settings);
+    }
+
+    [RelayCommand]
+    private void OpenFile()
+    {
+        OpenRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        SettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]

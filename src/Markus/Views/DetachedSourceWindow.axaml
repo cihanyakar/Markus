@@ -73,9 +73,10 @@
         </StackPanel>
       </Border>
 
-      <views:SourceEditor Grid.Row="1"
-                          MonoFontFamily="{Binding MonoFontFamily}"
-                          Text="{Binding SourceText, Mode=TwoWay}"/>
+      <TextBox Grid.Row="1"
+               Classes="source"
+               FontFamily="{Binding MonoFontFamily}"
+               Text="{Binding SourceText, Mode=TwoWay}"/>
 
       <Border Grid.Row="2" Classes="glass statusbar">
         <TextBlock Classes="meta" Text="{Binding StatusText}"/>
