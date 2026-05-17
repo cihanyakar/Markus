@@ -30,7 +30,6 @@ internal sealed class SourceEditor : UserControl
     private RegistryOptions? _registry;
     private TextMate.Installation? _textMate;
     private bool _syncing;
-    private bool _textMateReady;
 
     public SourceEditor()
     {
@@ -69,7 +68,8 @@ internal sealed class SourceEditor : UserControl
     {
         base.OnAttachedToVisualTree(e);
         InstallTextMate();
-        ApplyMonoFont(MonoFontFamily);
+        // Re-apply current text *after* TextMate has been installed, in case
+        // installation rebuilt the document.
         ApplyText(Text);
 
         if (Application.Current is { } app)
@@ -94,21 +94,22 @@ internal sealed class SourceEditor : UserControl
         {
             ApplyText(change.GetNewValue<string?>());
         }
-        else if (change.Property == GrammarLanguageProperty && _textMateReady)
-        {
-            ApplyGrammar();
-        }
         else if (change.Property == MonoFontFamilyProperty)
         {
-            ApplyMonoFont(change.GetNewValue<FontFamily>());
+            _editor.FontFamily = change.GetNewValue<FontFamily>();
+        }
+        else if (change.Property == GrammarLanguageProperty && _textMate is not null)
+        {
+            ApplyGrammar();
         }
     }
 
     private void OnApplicationPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property == Application.ActualThemeVariantProperty && _textMateReady)
+        if (e.Property == Application.ActualThemeVariantProperty && _textMate is not null)
         {
             InstallTextMate();
+            ApplyText(Text);
         }
     }
 
@@ -118,7 +119,6 @@ internal sealed class SourceEditor : UserControl
         var themeName = TextMateThemeResolver.Resolve();
         _registry = new RegistryOptions(themeName);
         _textMate = _editor.InstallTextMate(_registry);
-        _textMateReady = true;
         ApplyGrammar();
     }
 
@@ -160,11 +160,6 @@ internal sealed class SourceEditor : UserControl
         _syncing = true;
         Text = _editor.Document.Text;
         _syncing = false;
-    }
-
-    private void ApplyMonoFont(FontFamily family)
-    {
-        _editor.FontFamily = family;
     }
 }
 
