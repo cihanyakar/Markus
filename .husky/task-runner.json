@@ -21,6 +21,19 @@
       ]
     },
     {
+      "name": "test-release",
+      "group": "pre-push",
+      "command": "dotnet",
+      "args": [
+        "test",
+        "Markus.slnx",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--nologo"
+      ]
+    },
+    {
       "name": "csharpier-check-all",
       "group": "pre-push",
       "command": "dotnet",
