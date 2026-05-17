@@ -37,6 +37,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         "Cascadia Code",
     };
 
+    public static readonly IReadOnlyList<string> AvailableThemeModes = new[] { "System", "Light", "Dark" };
+
     public static readonly IReadOnlyList<ThemeOption> AvailableThemes = new ThemeOption[]
     {
         new ThemeOption("GitHubLight", "GitHub Light", false),
@@ -81,6 +83,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _monoFont;
 
+    [ObservableProperty]
+    private string _themeMode;
+
     public SettingsViewModel(SettingsService service, AppSettings settings)
     {
         Service = service;
@@ -92,6 +97,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _showOutline = settings.ShowOutline;
         _fontSize = settings.FontSize;
         _monoFont = settings.MonoFont;
+        _themeMode = settings.ThemeMode;
     }
 
     public SettingsService Service { get; }
@@ -117,6 +123,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         ShowOutline = defaults.ShowOutline;
         FontSize = defaults.FontSize;
         MonoFont = defaults.MonoFont;
+        ThemeMode = defaults.ThemeMode;
     }
 
     // ---- Auto-save on any property change ---------------------------------
@@ -160,6 +167,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnMonoFontChanged(string value)
     {
         Settings.MonoFont = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnThemeModeChanged(string value)
+    {
+        Settings.ThemeMode = value;
         Service.Save(Settings);
     }
 }

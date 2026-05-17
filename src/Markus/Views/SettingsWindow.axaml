@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Markus.ViewModels"
+        xmlns:views="using:Markus.Views"
         mc:Ignorable="d"
         x:Class="Markus.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
@@ -177,9 +178,24 @@
               <TextBlock Classes="title" Text="Appearance"/>
               <TextBlock Classes="subtitle"
                          Text="How Markus looks while you read."/>
-              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="18">
-                <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Theme"/>
-                <ComboBox Grid.Row="0" Grid.Column="1"
+              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="18">
+                <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Mode"/>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                  <RadioButton Content="System"
+                               GroupName="ThemeMode"
+                               IsChecked="{Binding ThemeMode, Mode=TwoWay, Converter={x:Static views:EqualsConverter.Instance}, ConverterParameter=System}"/>
+                  <RadioButton Content="Light"
+                               GroupName="ThemeMode"
+                               Margin="14,0,0,0"
+                               IsChecked="{Binding ThemeMode, Mode=TwoWay, Converter={x:Static views:EqualsConverter.Instance}, ConverterParameter=Light}"/>
+                  <RadioButton Content="Dark"
+                               GroupName="ThemeMode"
+                               Margin="14,0,0,0"
+                               IsChecked="{Binding ThemeMode, Mode=TwoWay, Converter={x:Static views:EqualsConverter.Instance}, ConverterParameter=Dark}"/>
+                </StackPanel>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Theme"/>
+                <ComboBox Grid.Row="1" Grid.Column="1"
                           Classes="glass"
                           MaxWidth="340"
                           HorizontalAlignment="Left"
@@ -188,8 +204,8 @@
                           SelectedValue="{Binding Theme}"
                           DisplayMemberBinding="{Binding Display}"/>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Font size"/>
-                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="14">
+                <TextBlock Grid.Row="2" Grid.Column="0" Classes="row-label" Text="Font size"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="14">
                   <Slider Width="260"
                           Minimum="10" Maximum="28"
                           TickFrequency="1"
@@ -200,8 +216,8 @@
                              Text="{Binding FontSize, StringFormat='{}{0:0} pt'}"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Classes="row-label" Text="Code font"/>
-                <ComboBox Grid.Row="2" Grid.Column="1"
+                <TextBlock Grid.Row="3" Grid.Column="0" Classes="row-label" Text="Code font"/>
+                <ComboBox Grid.Row="3" Grid.Column="1"
                           Classes="glass"
                           MaxWidth="340"
                           HorizontalAlignment="Left"

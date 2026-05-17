@@ -15,6 +15,9 @@ internal sealed partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        var settings = Services.ServiceLocator.Settings.Load();
+        Services.ThemeApplicator.Apply(settings.ThemeMode);
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow { DataContext = new MainWindowViewModel() };

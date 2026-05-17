@@ -149,6 +149,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         Settings = e.Settings;
+        ThemeApplicator.Apply(e.Settings.ThemeMode);
         var fontStack = MonoFontStack.Build(e.Settings.MonoFont);
         if (!string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal))
         {

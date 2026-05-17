@@ -16,6 +16,8 @@ internal sealed class AppSettings
 
     public string MonoFont { get; set; } = "Iosevka";
 
+    public string ThemeMode { get; set; } = "System";
+
     public AppSettings Clone()
     {
         return new AppSettings
@@ -23,6 +25,7 @@ internal sealed class AppSettings
             Renderer = Renderer,
             Language = Language,
             Theme = Theme,
+            ThemeMode = ThemeMode,
             DefaultViewMode = DefaultViewMode,
             ShowOutline = ShowOutline,
             FontSize = FontSize,
