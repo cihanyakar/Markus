@@ -7,80 +7,116 @@
         x:Class="Markus.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings"
-        Width="780" Height="540"
-        MinWidth="640" MinHeight="460"
+        Width="820" Height="580"
+        MinWidth="700" MinHeight="500"
         CanResize="True"
         ShowInTaskbar="False"
         Icon="/Assets/markus.png"
         WindowStartupLocation="CenterOwner"
-        Background="Transparent"
-        TransparencyLevelHint="AcrylicBlur,Blur,None">
+        Background="{DynamicResource AppBackground}">
 
   <Window.Styles>
-    <Style Selector="Border.glass-bar">
-      <Setter Property="Background" Value="#33FFFFFF"/>
-      <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+    <Style Selector="Border.glass">
+      <Setter Property="Background" Value="{DynamicResource GlassBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="Border.sidebar">
       <Setter Property="BorderThickness" Value="0,0,1,0"/>
     </Style>
     <Style Selector="Border.footer">
       <Setter Property="BorderThickness" Value="0,1,0,0"/>
-      <Setter Property="Padding" Value="20,12"/>
+      <Setter Property="Padding" Value="22,14"/>
     </Style>
     <Style Selector="ListBox.sidebar">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="8,16,8,12"/>
+      <Setter Property="Padding" Value="10,18,10,12"/>
     </Style>
     <Style Selector="ListBox.sidebar ListBoxItem">
-      <Setter Property="Padding" Value="12,8"/>
+      <Setter Property="Padding" Value="14,10"/>
       <Setter Property="Margin" Value="2,1"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="CornerRadius" Value="9"/>
     </Style>
     <Style Selector="ListBox.sidebar ListBoxItem PathIcon">
       <Setter Property="Width" Value="15"/>
       <Setter Property="Height" Value="15"/>
-      <Setter Property="Opacity" Value="0.9"/>
+      <Setter Property="Opacity" Value="0.85"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
+    </Style>
+    <Style Selector="ListBox.sidebar ListBoxItem:selected PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="ListBox.sidebar ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+    </Style>
+    <Style Selector="ListBox.sidebar ListBoxItem:selected TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="TextBlock.title">
-      <Setter Property="FontSize" Value="22"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Margin" Value="0,0,0,20"/>
+      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontSize" Value="32"/>
+      <Setter Property="FontWeight" Value="Light"/>
+      <Setter Property="LetterSpacing" Value="-0.5"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.subtitle">
+      <Setter Property="FontFamily" Value="Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
+      <Setter Property="Margin" Value="0,0,0,28"/>
     </Style>
     <Style Selector="TextBlock.row-label">
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="HorizontalAlignment" Value="Right"/>
-      <Setter Property="Margin" Value="0,0,14,0"/>
-      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+      <Setter Property="Margin" Value="0,0,18,0"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
     </Style>
     <Style Selector="TextBlock.hint">
-      <Setter Property="Opacity" Value="0.7"/>
       <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="ComboBox.glass">
-      <Setter Property="Background" Value="#22FFFFFF"/>
-      <Setter Property="BorderBrush" Value="#33FFFFFF"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Background" Value="{DynamicResource GlassBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="MinHeight" Value="34"/>
+      <Setter Property="Padding" Value="14,5"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
     </Style>
   </Window.Styles>
 
   <Panel>
-    <ExperimentalAcrylicBorder IsHitTestVisible="False">
-      <ExperimentalAcrylicBorder.Material>
-        <ExperimentalAcrylicMaterial
-            BackgroundSource="Digger"
-            TintColor="{DynamicResource SystemBaseLowColor}"
-            TintOpacity="0.5"
-            MaterialOpacity="0.8"/>
-      </ExperimentalAcrylicBorder.Material>
-    </ExperimentalAcrylicBorder>
+
+    <!-- ============ Atmosphere ============ -->
+    <Panel ZIndex="-1">
+      <Rectangle IsHitTestVisible="False" Opacity="0.7">
+        <Rectangle.Fill>
+          <RadialGradientBrush Center="14%,18%" RadiusX="0.6" RadiusY="0.65">
+            <GradientStop Color="{DynamicResource MeshAColor}" Offset="0"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+      <Rectangle IsHitTestVisible="False" Opacity="0.6">
+        <Rectangle.Fill>
+          <RadialGradientBrush Center="88%,84%" RadiusX="0.55" RadiusY="0.6">
+            <GradientStop Color="{DynamicResource MeshBColor}" Offset="0"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+    </Panel>
 
     <DockPanel>
 
-      <!-- ============ Footer (glass) ============ -->
-      <Border DockPanel.Dock="Bottom" Classes="glass-bar footer">
+      <!-- ============ Footer ============ -->
+      <Border DockPanel.Dock="Bottom" Classes="glass footer">
         <Grid ColumnDefinitions="*,Auto,Auto">
           <TextBlock Grid.Column="0"
                      Classes="hint"
@@ -90,7 +126,7 @@
           <Button Grid.Column="1"
                   Content="Restore defaults"
                   Command="{Binding RestoreDefaultsCommand}"
-                  Margin="0,0,8,0"/>
+                  Margin="0,0,10,0"/>
           <Button Grid.Column="2"
                   Content="Done"
                   Classes="accent"
@@ -99,34 +135,53 @@
       </Border>
 
       <!-- ============ Sidebar + Content ============ -->
-      <Grid ColumnDefinitions="220,*">
+      <Grid ColumnDefinitions="240,*">
 
-        <Border Grid.Column="0" Classes="glass-bar sidebar">
-          <ListBox Classes="sidebar"
-                   ItemsSource="{x:Static vm:SettingsViewModel.Categories}"
-                   SelectedItem="{Binding SelectedCategory}">
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:SettingsCategoryItem">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <PathIcon Data="{Binding Icon}"/>
-                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+        <Border Grid.Column="0" Classes="glass sidebar">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top"
+                        Margin="22,22,22,12"
+                        Spacing="2">
+              <TextBlock FontFamily="Manrope,Inter,sans-serif"
+                         FontSize="11"
+                         FontWeight="Medium"
+                         LetterSpacing="1.4"
+                         Foreground="{DynamicResource TextLow}"
+                         Text="MARKUS"/>
+              <TextBlock FontFamily="Manrope,Inter,sans-serif"
+                         FontSize="16"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextHigh}"
+                         Text="Settings"/>
+            </StackPanel>
+            <ListBox Classes="sidebar"
+                     ItemsSource="{x:Static vm:SettingsViewModel.Categories}"
+                     SelectedItem="{Binding SelectedCategory}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SettingsCategoryItem">
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <PathIcon Data="{Binding Icon}"/>
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="13"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
         </Border>
 
-        <ScrollViewer Grid.Column="1" Padding="44,32">
+        <ScrollViewer Grid.Column="1" Padding="56,40,56,40">
           <StackPanel>
 
             <!-- ====== Appearance ====== -->
             <StackPanel IsVisible="{Binding IsAppearanceSelected}" Spacing="0">
               <TextBlock Classes="title" Text="Appearance"/>
-              <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="16">
+              <TextBlock Classes="subtitle"
+                         Text="How Markus looks while you read."/>
+              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="18">
                 <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Theme"/>
                 <ComboBox Grid.Row="0" Grid.Column="1"
                           Classes="glass"
-                          MaxWidth="320"
+                          MaxWidth="340"
                           HorizontalAlignment="Left"
                           ItemsSource="{x:Static vm:SettingsViewModel.AvailableThemes}"
                           SelectedValueBinding="{Binding Key}"
@@ -134,31 +189,42 @@
                           DisplayMemberBinding="{Binding Display}"/>
 
                 <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Font size"/>
-                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="12">
-                  <Slider Width="240"
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="14">
+                  <Slider Width="260"
                           Minimum="10" Maximum="28"
                           TickFrequency="1"
                           IsSnapToTickEnabled="True"
                           Value="{Binding FontSize}"/>
                   <TextBlock VerticalAlignment="Center"
+                             Foreground="{DynamicResource TextMedium}"
                              Text="{Binding FontSize, StringFormat='{}{0:0} pt'}"/>
                 </StackPanel>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Classes="row-label" Text="Code font"/>
+                <ComboBox Grid.Row="2" Grid.Column="1"
+                          Classes="glass"
+                          MaxWidth="340"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{x:Static vm:SettingsViewModel.AvailableMonoFonts}"
+                          SelectedItem="{Binding MonoFont}"/>
               </Grid>
               <TextBlock Classes="hint"
-                         Margin="0,20,0,0"
-                         MaxWidth="400"
+                         Margin="0,24,0,0"
+                         MaxWidth="440"
                          HorizontalAlignment="Left"
-                         Text="Themes restyle the rendered preview. Bundled themes ship with the app; user themes can be dropped into the settings directory."/>
+                         Text="Themes restyle the rendered preview. The code font applies to both source view and rendered code blocks."/>
             </StackPanel>
 
             <!-- ====== View ====== -->
             <StackPanel IsVisible="{Binding IsViewSelected}" Spacing="0">
               <TextBlock Classes="title" Text="View"/>
-              <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="16">
+              <TextBlock Classes="subtitle"
+                         Text="Default layout and panels."/>
+              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto" RowSpacing="18">
                 <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Default view"/>
                 <ComboBox Grid.Row="0" Grid.Column="1"
                           Classes="glass"
-                          MaxWidth="320"
+                          MaxWidth="340"
                           HorizontalAlignment="Left"
                           ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
                           SelectedItem="{Binding DefaultViewMode}"/>
@@ -169,8 +235,8 @@
                           IsChecked="{Binding ShowOutline}"/>
               </Grid>
               <TextBlock Classes="hint"
-                         Margin="0,20,0,0"
-                         MaxWidth="400"
+                         Margin="0,24,0,0"
+                         MaxWidth="440"
                          HorizontalAlignment="Left"
                          Text="Default view applies the next time you open a document. Detached mode shows source and preview in separate windows."/>
             </StackPanel>
@@ -178,11 +244,13 @@
             <!-- ====== General ====== -->
             <StackPanel IsVisible="{Binding IsGeneralSelected}" Spacing="0">
               <TextBlock Classes="title" Text="General"/>
-              <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="16">
+              <TextBlock Classes="subtitle"
+                         Text="Renderer and language."/>
+              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto" RowSpacing="18">
                 <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Renderer"/>
                 <ComboBox Grid.Row="0" Grid.Column="1"
                           Classes="glass"
-                          MaxWidth="320"
+                          MaxWidth="340"
                           HorizontalAlignment="Left"
                           ItemsSource="{x:Static vm:SettingsViewModel.AvailableRenderers}"
                           SelectedItem="{Binding Renderer}"/>
@@ -190,7 +258,7 @@
                 <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Language"/>
                 <ComboBox Grid.Row="1" Grid.Column="1"
                           Classes="glass"
-                          MaxWidth="320"
+                          MaxWidth="340"
                           HorizontalAlignment="Left"
                           ItemsSource="{x:Static vm:SettingsViewModel.AvailableLanguages}"
                           SelectedValueBinding="{Binding Code}"
@@ -198,8 +266,8 @@
                           DisplayMemberBinding="{Binding Display}"/>
               </Grid>
               <TextBlock Classes="hint"
-                         Margin="0,20,0,0"
-                         MaxWidth="400"
+                         Margin="0,24,0,0"
+                         MaxWidth="440"
                          HorizontalAlignment="Left"
                          Text="The Native renderer parses with Markdig and emits Avalonia controls. Placeholder renders source as plain text. Language other than English is wired but not yet translated."/>
             </StackPanel>

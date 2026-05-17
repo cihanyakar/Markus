@@ -48,6 +48,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private IReadOnlyList<OutlineNode> _outlineNodes = Array.Empty<OutlineNode>();
 
+    [ObservableProperty]
+    private string _monoFontFamily;
+
     public MainWindowViewModel()
         : this(ServiceLocator.Settings) { }
 
@@ -60,8 +63,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings = settingsService.Load();
         _currentViewMode = Settings.DefaultViewMode;
         _isOutlineVisible = Settings.ShowOutline;
+        _monoFontFamily = MonoFontStack.Build(Settings.MonoFont);
         _settingsService.Changed += OnSettingsChanged;
 
+        Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
         RebuildOutline(_sourceText);
     }
 
@@ -144,6 +149,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         Settings = e.Settings;
+        var fontStack = MonoFontStack.Build(e.Settings.MonoFont);
+        if (!string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal))
+        {
+            MonoFontFamily = fontStack;
+            Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(fontStack);
+            // Force preview to re-render with the new font by nudging the source.
+            var current = SourceText;
+            SourceText = string.Empty;
+            SourceText = current;
+        }
     }
 
     partial void OnSourceTextChanged(string value)

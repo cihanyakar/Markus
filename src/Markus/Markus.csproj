@@ -25,6 +25,10 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Avalonia.AvaloniaEdit" />
     <PackageReference Include="Markdig" />
+    <PackageReference Include="Fonts.Avalonia.Manrope" />
+    <PackageReference Include="Fonts.Avalonia.Iosevka" />
+    <PackageReference Include="Fonts.Avalonia.JetBrainsMono" />
+    <PackageReference Include="Fonts.Avalonia.CascadiaCode" />
     <PackageReference Include="JetBrains.Annotations">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

@@ -3,13 +3,119 @@
              x:Class="Markus.App"
              xmlns:local="using:Markus"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
-    <Application.DataTemplates>
-        <local:ViewLocator/>
-    </Application.DataTemplates>
-  
-    <Application.Styles>
-        <FluentTheme />
-    </Application.Styles>
+  <Application.DataTemplates>
+    <local:ViewLocator/>
+  </Application.DataTemplates>
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+
+        <!-- ============ Light ============ -->
+        <ResourceDictionary x:Key="Light">
+          <!-- Atmosphere -->
+          <SolidColorBrush x:Key="AppBackground" Color="#F5F2EE"/>
+          <Color x:Key="MeshAColor">#FFB199</Color>
+          <Color x:Key="MeshBColor">#A5B4FC</Color>
+          <Color x:Key="MeshCColor">#B2F5EA</Color>
+
+          <!-- Glass -->
+          <SolidColorBrush x:Key="GlassBg" Color="#B8FFFFFF"/>
+          <SolidColorBrush x:Key="GlassBorder" Color="#1F000000"/>
+          <SolidColorBrush x:Key="GlassDivider" Color="#10000000"/>
+          <SolidColorBrush x:Key="GlassHover" Color="#1F000000"/>
+          <SolidColorBrush x:Key="GlassPressed" Color="#33000000"/>
+
+          <!-- Accent -->
+          <SolidColorBrush x:Key="Accent" Color="#FF2D55"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="#33FF2D55"/>
+          <Color x:Key="AccentColor">#FF2D55</Color>
+
+          <!-- Text -->
+          <SolidColorBrush x:Key="TextHigh" Color="#1D1D1F"/>
+          <SolidColorBrush x:Key="TextMedium" Color="#3A3A3C"/>
+          <SolidColorBrush x:Key="TextLow" Color="#6E6E73"/>
+
+          <!-- Content surface -->
+          <SolidColorBrush x:Key="ContentBg" Color="#80FFFFFF"/>
+          <SolidColorBrush x:Key="ContentInk" Color="#1D1D1F"/>
+        </ResourceDictionary>
+
+        <!-- ============ Dark ============ -->
+        <ResourceDictionary x:Key="Dark">
+          <!-- Atmosphere -->
+          <SolidColorBrush x:Key="AppBackground" Color="#08080C"/>
+          <Color x:Key="MeshAColor">#FF3D7F</Color>
+          <Color x:Key="MeshBColor">#4F46E5</Color>
+          <Color x:Key="MeshCColor">#06B6D4</Color>
+
+          <!-- Glass -->
+          <SolidColorBrush x:Key="GlassBg" Color="#1FFFFFFF"/>
+          <SolidColorBrush x:Key="GlassBorder" Color="#33FFFFFF"/>
+          <SolidColorBrush x:Key="GlassDivider" Color="#1FFFFFFF"/>
+          <SolidColorBrush x:Key="GlassHover" Color="#2BFFFFFF"/>
+          <SolidColorBrush x:Key="GlassPressed" Color="#3FFFFFFF"/>
+
+          <!-- Accent -->
+          <SolidColorBrush x:Key="Accent" Color="#FF375F"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="#33FF375F"/>
+          <Color x:Key="AccentColor">#FF375F</Color>
+
+          <!-- Text -->
+          <SolidColorBrush x:Key="TextHigh" Color="#F5F5F7"/>
+          <SolidColorBrush x:Key="TextMedium" Color="#C7C7CC"/>
+          <SolidColorBrush x:Key="TextLow" Color="#8E8E93"/>
+
+          <!-- Content surface -->
+          <SolidColorBrush x:Key="ContentBg" Color="#0D0D14"/>
+          <SolidColorBrush x:Key="ContentInk" Color="#F5F5F7"/>
+        </ResourceDictionary>
+
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme/>
+
+    <!-- ============ Global typography ============ -->
+    <Style Selector="Window">
+      <Setter Property="FontFamily" Value="Inter,Manrope,Segoe UI,-apple-system,sans-serif"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+    </Style>
+
+    <!-- ============ Display headings (Manrope, light weight) ============ -->
+    <Style Selector="TextBlock.display">
+      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontWeight" Value="Light"/>
+      <Setter Property="FontSize" Value="34"/>
+      <Setter Property="LetterSpacing" Value="-0.5"/>
+    </Style>
+
+    <Style Selector="TextBlock.h1">
+      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="22"/>
+      <Setter Property="LetterSpacing" Value="-0.3"/>
+    </Style>
+
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="LetterSpacing" Value="1.2"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
+    </Style>
+
+    <Style Selector="TextBlock.meta">
+      <Setter Property="FontFamily" Value="Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
+    </Style>
+
+  </Application.Styles>
 </Application>

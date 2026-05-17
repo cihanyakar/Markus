@@ -6,114 +6,149 @@
         xmlns:views="using:Markus.Views"
         xmlns:models="using:Markus.Models"
         mc:Ignorable="d"
-        d:DesignWidth="1000" d:DesignHeight="650"
+        d:DesignWidth="1100" d:DesignHeight="720"
         x:Class="Markus.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/markus.png"
-        MinWidth="640" MinHeight="420"
+        MinWidth="720" MinHeight="480"
         Title="{Binding DocumentTitle, StringFormat='{}{0} — Markus'}"
-        Background="Transparent"
-        TransparencyLevelHint="AcrylicBlur,Blur,None">
+        Background="{DynamicResource AppBackground}">
 
   <Design.DataContext>
     <vm:MainWindowViewModel/>
   </Design.DataContext>
 
   <Window.Styles>
-    <!-- Tool / toggle buttons in toolbar -->
+    <!-- Tool / toggle buttons -->
     <Style Selector="Button.tool, ToggleButton.tool">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="Padding" Value="11,7"/>
       <Setter Property="Margin" Value="1,0"/>
-      <Setter Property="MinHeight" Value="30"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.12"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.tool:pointerover /template/ ContentPresenter, ToggleButton.tool:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#22FFFFFF"/>
+      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
     </Style>
     <Style Selector="Button.tool:pressed /template/ ContentPresenter, ToggleButton.tool:checked /template/ ContentPresenter">
-      <Setter Property="Background" Value="#33FFFFFF"/>
+      <Setter Property="Background" Value="{DynamicResource GlassPressed}"/>
     </Style>
     <Style Selector="Button.tool PathIcon, ToggleButton.tool PathIcon">
       <Setter Property="Width" Value="15"/>
       <Setter Property="Height" Value="15"/>
-      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
+    </Style>
+    <Style Selector="ToggleButton.tool:checked PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
     </Style>
 
-    <!-- Glass panels -->
-    <Style Selector="Border.glass-bar">
-      <Setter Property="Background" Value="#33FFFFFF"/>
-      <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+    <!-- Glass panel base -->
+    <Style Selector="Border.glass">
+      <Setter Property="Background" Value="{DynamicResource GlassBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
     </Style>
+
     <Style Selector="Border.toolbar">
       <Setter Property="BorderThickness" Value="0,0,0,1"/>
       <Setter Property="Padding" Value="14,10"/>
+      <Setter Property="BoxShadow" Value="0 1 0 0 #14000000"/>
     </Style>
     <Style Selector="Border.statusbar">
       <Setter Property="BorderThickness" Value="0,1,0,0"/>
-      <Setter Property="Padding" Value="16,7"/>
+      <Setter Property="Padding" Value="18,7"/>
     </Style>
     <Style Selector="Border.sidebar">
       <Setter Property="BorderThickness" Value="1,0,0,0"/>
     </Style>
 
-    <!-- Transparent text inputs so the blur shows through -->
+    <!-- Source editor: transparent so atmosphere shows through -->
     <Style Selector="TextBox.source">
-      <Setter Property="Background" Value="#08000000"/>
+      <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="20,16"/>
+      <Setter Property="Padding" Value="28,24"/>
       <Setter Property="AcceptsReturn" Value="True"/>
       <Setter Property="AcceptsTab" Value="True"/>
       <Setter Property="TextWrapping" Value="NoWrap"/>
-      <Setter Property="FontFamily" Value="Consolas,Menlo,Monaco,JetBrains Mono,monospace"/>
       <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Foreground" Value="{DynamicResource ContentInk}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource Accent}"/>
     </Style>
     <Style Selector="TextBox.source /template/ Border#PART_BorderElement">
       <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
     </Style>
 
-    <Style Selector="TextBlock.muted">
-      <Setter Property="Opacity" Value="0.7"/>
-      <Setter Property="FontSize" Value="11"/>
-    </Style>
-
-    <!-- ComboBox tweaks for glass look -->
+    <!-- ComboBox tweak -->
     <Style Selector="ComboBox.glass">
-      <Setter Property="Background" Value="#22FFFFFF"/>
-      <Setter Property="BorderBrush" Value="#33FFFFFF"/>
-      <Setter Property="CornerRadius" Value="8"/>
-      <Setter Property="MinHeight" Value="30"/>
-      <Setter Property="Padding" Value="12,4"/>
+      <Setter Property="Background" Value="{DynamicResource GlassBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="14,5"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
+    </Style>
+
+    <!-- GridSplitter slim hairline -->
+    <Style Selector="GridSplitter.hairline">
+      <Setter Property="Background" Value="{DynamicResource GlassDivider}"/>
     </Style>
   </Window.Styles>
 
   <Panel>
-    <!-- Acrylic backdrop (Apple-Liquid-Glass approximation) -->
-    <ExperimentalAcrylicBorder IsHitTestVisible="False">
-      <ExperimentalAcrylicBorder.Material>
-        <ExperimentalAcrylicMaterial
-            BackgroundSource="Digger"
-            TintColor="{DynamicResource SystemBaseLowColor}"
-            TintOpacity="0.5"
-            MaterialOpacity="0.8"/>
-      </ExperimentalAcrylicBorder.Material>
-    </ExperimentalAcrylicBorder>
+
+    <!-- ============ Atmosphere: layered radial mesh ============ -->
+    <Panel ZIndex="-1">
+      <Rectangle IsHitTestVisible="False">
+        <Rectangle.Fill>
+          <RadialGradientBrush Center="18%,12%" GradientOrigin="18%,12%"
+                               RadiusX="0.65" RadiusY="0.7">
+            <GradientStop Color="{DynamicResource MeshAColor}" Offset="0"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+      <Rectangle IsHitTestVisible="False" Opacity="0.85">
+        <Rectangle.Fill>
+          <RadialGradientBrush Center="84%,86%" GradientOrigin="84%,86%"
+                               RadiusX="0.7" RadiusY="0.75">
+            <GradientStop Color="{DynamicResource MeshBColor}" Offset="0"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+      <Rectangle IsHitTestVisible="False" Opacity="0.65">
+        <Rectangle.Fill>
+          <RadialGradientBrush Center="82%,18%" GradientOrigin="82%,18%"
+                               RadiusX="0.5" RadiusY="0.55">
+            <GradientStop Color="{DynamicResource MeshCColor}" Offset="0"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+    </Panel>
 
     <Grid RowDefinitions="Auto,*,Auto">
 
       <!-- ============ Toolbar (glass) ============ -->
-      <Border Grid.Row="0" Classes="glass-bar toolbar">
+      <Border Grid.Row="0" Classes="glass toolbar">
         <DockPanel LastChildFill="False">
           <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2">
             <Button Classes="tool" Click="Open_Click">
-              <StackPanel Orientation="Horizontal" Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Folder}"/>
                 <TextBlock Text="Open" VerticalAlignment="Center"/>
               </StackPanel>
             </Button>
             <Button Classes="tool" Command="{Binding ReloadCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Refresh}"/>
                 <TextBlock Text="Reload" VerticalAlignment="Center"/>
               </StackPanel>
@@ -122,23 +157,23 @@
 
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
             <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
                 <TextBlock Text="Outline" VerticalAlignment="Center"/>
               </StackPanel>
             </ToggleButton>
 
             <TextBlock VerticalAlignment="Center"
-                       Margin="14,0,6,0"
-                       Classes="muted"
-                       Text="View"/>
+                       Margin="16,0,8,0"
+                       Classes="section"
+                       Text="VIEW"/>
             <ComboBox Classes="glass"
                       SelectedItem="{Binding CurrentViewMode}"
                       ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
-                      MinWidth="160"/>
+                      MinWidth="170"/>
 
-            <Button Classes="tool" Margin="12,0,0,0" Click="Settings_Click">
-              <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Classes="tool" Margin="14,0,0,0" Click="Settings_Click">
+              <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Settings}"/>
                 <TextBlock Text="Settings" VerticalAlignment="Center"/>
               </StackPanel>
@@ -156,6 +191,7 @@
           <TextBox Name="SourceOnlyEditor"
                    Classes="source"
                    IsVisible="{Binding IsSourceOnly}"
+                   FontFamily="{Binding MonoFontFamily}"
                    Text="{Binding SourceText, Mode=TwoWay}"/>
 
           <!-- Preview only -->
@@ -163,22 +199,24 @@
                                          Source="{Binding SourceText}"/>
 
           <!-- Split vertical -->
-          <Grid ColumnDefinitions="*,5,*" IsVisible="{Binding IsSplitVerticalActive}">
+          <Grid ColumnDefinitions="*,4,*" IsVisible="{Binding IsSplitVerticalActive}">
             <TextBox Grid.Column="0" Classes="source"
+                     FontFamily="{Binding MonoFontFamily}"
                      Text="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Column="1"
-                          Background="#22FFFFFF"
+                          Classes="hairline"
                           ResizeDirection="Columns"/>
             <views:MarkdownPreviewControl Grid.Column="2"
                                            Source="{Binding SourceText}"/>
           </Grid>
 
           <!-- Split horizontal -->
-          <Grid RowDefinitions="*,5,*" IsVisible="{Binding IsSplitHorizontalActive}">
+          <Grid RowDefinitions="*,4,*" IsVisible="{Binding IsSplitHorizontalActive}">
             <TextBox Grid.Row="0" Classes="source"
+                     FontFamily="{Binding MonoFontFamily}"
                      Text="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Row="1"
-                          Background="#22FFFFFF"
+                          Classes="hairline"
                           ResizeDirection="Rows"/>
             <views:MarkdownPreviewControl Grid.Row="2"
                                            Source="{Binding SourceText}"/>
@@ -186,46 +224,41 @@
 
           <!-- Detached placeholder -->
           <Grid IsVisible="{Binding IsDetached}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-              <TextBlock Text="View detached"
-                         FontSize="20"
-                         FontWeight="SemiBold"
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+              <TextBlock Classes="display" Text="Detached" HorizontalAlignment="Center"/>
+              <TextBlock Classes="meta"
+                         Text="Source and preview live in separate windows"
                          HorizontalAlignment="Center"/>
-              <TextBlock Text="Source and preview are shown in separate windows."
-                         Classes="muted"
+              <TextBlock Classes="meta" Margin="0,12,0,0"
+                         Text="(arriving in the next iteration)"
+                         FontStyle="Italic"
                          HorizontalAlignment="Center"/>
-              <TextBlock Text="(detached windows arrive in the next PR)"
-                         Classes="muted"
-                         HorizontalAlignment="Center"
-                         FontStyle="Italic"/>
             </StackPanel>
           </Grid>
 
         </Grid>
 
         <GridSplitter Grid.Column="1"
-                      Background="#22FFFFFF"
+                      Classes="hairline"
                       ResizeDirection="Columns"
                       IsVisible="{Binding IsOutlineVisible}"/>
 
-        <!-- Outline (glass sidebar). Width=280 + IsVisible=false → Auto collapses to 0. -->
+        <!-- Outline glass sidebar -->
         <Border Grid.Column="2"
-                Classes="glass-bar sidebar"
+                Classes="glass sidebar"
                 Width="280"
                 IsVisible="{Binding IsOutlineVisible}">
           <Grid RowDefinitions="Auto,*">
-            <Border Grid.Row="0"
-                    BorderBrush="#22FFFFFF"
-                    BorderThickness="0,0,0,1"
-                    Padding="16,12">
-              <TextBlock Text="Outline" FontWeight="SemiBold" FontSize="13"/>
-            </Border>
+            <StackPanel Grid.Row="0" Margin="20,18,20,12" Spacing="2">
+              <TextBlock Classes="section" Text="ON THIS PAGE"/>
+              <TextBlock Classes="h1" Text="Outline"/>
+            </StackPanel>
 
             <TreeView Grid.Row="1"
                       ItemsSource="{Binding OutlineNodes}"
                       Background="Transparent"
                       BorderThickness="0"
-                      Padding="8,10">
+                      Padding="12,4,12,12">
               <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}"
                                   DataType="{x:Type models:OutlineNode}">
@@ -241,18 +274,25 @@
       </Grid>
 
       <!-- ============ Status bar (glass) ============ -->
-      <Border Grid.Row="2" Classes="glass-bar statusbar">
+      <Border Grid.Row="2" Classes="glass statusbar">
         <DockPanel LastChildFill="False">
-          <TextBlock DockPanel.Dock="Left"
-                     Classes="muted"
-                     Text="{Binding StatusText}"/>
-          <TextBlock DockPanel.Dock="Right"
-                     Classes="muted"
-                     Text="{Binding CurrentViewMode, StringFormat='view: {0}'}"/>
+          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10">
+            <TextBlock Classes="section" Text="STATUS"/>
+            <TextBlock Foreground="{DynamicResource TextMedium}"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       Text="{Binding StatusText}"/>
+          </StackPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10">
+            <TextBlock Classes="section" Text="VIEW"/>
+            <TextBlock Foreground="{DynamicResource TextMedium}"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       Text="{Binding CurrentViewMode}"/>
+          </StackPanel>
         </DockPanel>
       </Border>
 
     </Grid>
   </Panel>
-
 </Window>

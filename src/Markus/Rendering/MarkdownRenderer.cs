@@ -12,7 +12,8 @@ namespace Markus.Rendering;
 
 internal static class MarkdownRenderer
 {
-    private static readonly FontFamily MonoFamily = new FontFamily("Consolas,Menlo,Monaco,JetBrains Mono,monospace");
+    public static FontFamily MonoFamily { get; set; } =
+        new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
 
     public static IEnumerable<Control> Render(MarkdownDocument? document)
     {

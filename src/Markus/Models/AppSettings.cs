@@ -14,6 +14,8 @@ internal sealed class AppSettings
 
     public double FontSize { get; set; } = 16.0;
 
+    public string MonoFont { get; set; } = "Iosevka";
+
     public AppSettings Clone()
     {
         return new AppSettings
@@ -24,6 +26,7 @@ internal sealed class AppSettings
             DefaultViewMode = DefaultViewMode,
             ShowOutline = ShowOutline,
             FontSize = FontSize,
+            MonoFont = MonoFont,
         };
     }
 }

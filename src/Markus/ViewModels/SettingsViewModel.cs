@@ -30,6 +30,13 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         new LanguageOption("tr", "Türkçe"),
     };
 
+    public static readonly IReadOnlyList<string> AvailableMonoFonts = new[]
+    {
+        "Iosevka",
+        "JetBrains Mono",
+        "Cascadia Code",
+    };
+
     public static readonly IReadOnlyList<ThemeOption> AvailableThemes = new ThemeOption[]
     {
         new ThemeOption("GitHubLight", "GitHub Light", false),
@@ -71,6 +78,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private double _fontSize;
 
+    [ObservableProperty]
+    private string _monoFont;
+
     public SettingsViewModel(SettingsService service, AppSettings settings)
     {
         Service = service;
@@ -81,6 +91,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _defaultViewMode = settings.DefaultViewMode;
         _showOutline = settings.ShowOutline;
         _fontSize = settings.FontSize;
+        _monoFont = settings.MonoFont;
     }
 
     public SettingsService Service { get; }
@@ -105,6 +116,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         DefaultViewMode = defaults.DefaultViewMode;
         ShowOutline = defaults.ShowOutline;
         FontSize = defaults.FontSize;
+        MonoFont = defaults.MonoFont;
     }
 
     // ---- Auto-save on any property change ---------------------------------
@@ -142,6 +154,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnFontSizeChanged(double value)
     {
         Settings.FontSize = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnMonoFontChanged(string value)
+    {
+        Settings.MonoFont = value;
         Service.Save(Settings);
     }
 }
