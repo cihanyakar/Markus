@@ -147,6 +147,12 @@
                 <TextBlock Text="Open" VerticalAlignment="Center"/>
               </StackPanel>
             </Button>
+            <Button Classes="tool" Click="Recent_Click">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{x:Static views:IconData.History}"/>
+                <PathIcon Data="{x:Static views:IconData.ChevronDown}" Width="10" Height="10"/>
+              </StackPanel>
+            </Button>
             <Button Classes="tool" Command="{Binding ReloadCommand}">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Refresh}"/>

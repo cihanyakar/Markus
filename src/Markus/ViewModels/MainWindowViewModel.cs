@@ -91,6 +91,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         DocumentTitle = Path.GetFileName(path);
         StatusText = $"{DocumentTitle} • {text.Length} chars";
         _fileWatcher.Watch(path);
+        AddToRecent(path);
     }
 
     public void Dispose()
@@ -133,6 +134,42 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool CanReload()
     {
         return !string.IsNullOrEmpty(CurrentFilePath);
+    }
+
+    private void AddToRecent(string path)
+    {
+        const int maxRecent = 10;
+        var list = Settings.RecentFiles;
+        list.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        list.Insert(0, path);
+        while (list.Count > maxRecent)
+        {
+            list.RemoveAt(list.Count - 1);
+        }
+        _settingsService.Save(Settings);
+    }
+
+    [RelayCommand]
+    private async Task OpenRecentAsync(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+        try
+        {
+            await LoadFileAsync(path);
+        }
+        catch (FileNotFoundException)
+        {
+            StatusText = $"{Path.GetFileName(path)} • file not found";
+            Settings.RecentFiles.Remove(path);
+            _settingsService.Save(Settings);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Open failed: {ex.Message}";
+        }
     }
 
     [RelayCommand]

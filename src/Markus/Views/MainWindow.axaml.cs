@@ -29,6 +29,30 @@ internal sealed partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private static void ShowRecentFlyout(Button anchor, MainWindowViewModel vm)
+    {
+        var menu = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedLeft };
+        if (vm.Settings.RecentFiles.Count == 0)
+        {
+            menu.Items.Add(new MenuItem { Header = "No recent files", IsEnabled = false });
+        }
+        else
+        {
+            foreach (var path in vm.Settings.RecentFiles)
+            {
+                var item = new MenuItem
+                {
+                    Header = System.IO.Path.GetFileName(path),
+                    Command = vm.OpenRecentCommand,
+                    CommandParameter = path,
+                };
+                ToolTip.SetTip(item, path);
+                menu.Items.Add(item);
+            }
+        }
+        menu.ShowAt(anchor);
+    }
+
     private async void OnDrop(object? sender, DragEventArgs e)
     {
         try
@@ -118,6 +142,15 @@ internal sealed partial class MainWindow : Window
         {
             SetStatus($"Open failed: {ex.Message}");
         }
+    }
+
+    private void Recent_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || sender is not Button button)
+        {
+            return;
+        }
+        ShowRecentFlyout(button, vm);
     }
 
     private async void Settings_Click(object? sender, RoutedEventArgs e)
