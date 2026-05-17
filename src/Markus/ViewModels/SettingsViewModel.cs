@@ -38,6 +38,19 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         new ThemeOption("TokyoNight", "Tokyo Night", true),
     };
 
+    public static readonly IReadOnlyList<SettingsCategoryItem> Categories = new SettingsCategoryItem[]
+    {
+        new SettingsCategoryItem(SettingsCategory.Appearance, "Appearance", "🎨"),
+        new SettingsCategoryItem(SettingsCategory.View, "View", "📐"),
+        new SettingsCategoryItem(SettingsCategory.General, "General", "⚙"),
+    };
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAppearanceSelected))]
+    [NotifyPropertyChangedFor(nameof(IsViewSelected))]
+    [NotifyPropertyChangedFor(nameof(IsGeneralSelected))]
+    private SettingsCategoryItem _selectedCategory = Categories[0];
+
     [ObservableProperty]
     private RendererKind _renderer;
 
@@ -74,17 +87,11 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     public string SettingsDirectory => Service.SettingsDirectory;
 
-    [RelayCommand]
-    private void Save()
-    {
-        Settings.Renderer = Renderer;
-        Settings.Language = Language;
-        Settings.Theme = Theme;
-        Settings.DefaultViewMode = DefaultViewMode;
-        Settings.ShowOutline = ShowOutline;
-        Settings.FontSize = FontSize;
-        Service.Save(Settings);
-    }
+    public bool IsAppearanceSelected => SelectedCategory.Kind is SettingsCategory.Appearance;
+
+    public bool IsViewSelected => SelectedCategory.Kind is SettingsCategory.View;
+
+    public bool IsGeneralSelected => SelectedCategory.Kind is SettingsCategory.General;
 
     [RelayCommand]
     private void RestoreDefaults()
@@ -96,6 +103,44 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         DefaultViewMode = defaults.DefaultViewMode;
         ShowOutline = defaults.ShowOutline;
         FontSize = defaults.FontSize;
+    }
+
+    // ---- Auto-save on any property change ---------------------------------
+
+    partial void OnRendererChanged(RendererKind value)
+    {
+        Settings.Renderer = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnLanguageChanged(string value)
+    {
+        Settings.Language = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnThemeChanged(string value)
+    {
+        Settings.Theme = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnDefaultViewModeChanged(ViewMode value)
+    {
+        Settings.DefaultViewMode = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnShowOutlineChanged(bool value)
+    {
+        Settings.ShowOutline = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnFontSizeChanged(double value)
+    {
+        Settings.FontSize = value;
+        Service.Save(Settings);
     }
 }
 
@@ -113,4 +158,13 @@ internal sealed record ThemeOption(string key, string display, bool isDark)
     public string Display => display;
 
     public bool IsDark => isDark;
+}
+
+internal sealed record SettingsCategoryItem(SettingsCategory kind, string name, string glyph)
+{
+    public SettingsCategory Kind => kind;
+
+    public string Name => name;
+
+    public string Glyph => glyph;
 }

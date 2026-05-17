@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Markus.Models;
@@ -5,8 +6,12 @@ using Markus.Services;
 
 namespace Markus.ViewModels;
 
-internal sealed partial class MainWindowViewModel : ViewModelBase
+internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
+    private readonly SettingsService _settingsService;
+    private readonly FileWatcherService _fileWatcher;
+    private bool _disposed;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSourceOnly))]
     [NotifyPropertyChangedFor(nameof(IsPreviewOnly))]
@@ -25,11 +30,15 @@ internal sealed partial class MainWindowViewModel : ViewModelBase
     private string _documentTitle = "Markus";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
+    private string? _currentFilePath;
+
+    [ObservableProperty]
     private string _sourceText =
         "# Welcome to Markus\n\n"
         + "This is a **placeholder**. Open a `.md` file to see it rendered.\n\n"
-        + "- Live reload (coming soon)\n"
-        + "- Code highlight (coming soon)\n"
+        + "- Live reload (active once a file is open)\n"
+        + "- Native preview renderer (next iteration)\n"
         + "- Multiple themes\n";
 
     public MainWindowViewModel()
@@ -37,9 +46,14 @@ internal sealed partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel(SettingsService settingsService)
     {
+        _settingsService = settingsService;
+        _fileWatcher = new FileWatcherService();
+        _fileWatcher.FileChanged += OnFileChangedOnBackgroundThread;
+
         Settings = settingsService.Load();
         _currentViewMode = Settings.DefaultViewMode;
         _isOutlineVisible = Settings.ShowOutline;
+        _settingsService.Changed += OnSettingsChanged;
     }
 
     public AppSettings Settings { get; private set; }
@@ -54,13 +68,56 @@ internal sealed partial class MainWindowViewModel : ViewModelBase
 
     public bool IsDetached => CurrentViewMode is ViewMode.Detached;
 
-    public void ApplySettings(AppSettings settings)
+    public async Task LoadFileAsync(string path)
     {
-        Settings = settings;
-        if (CurrentViewMode != settings.DefaultViewMode)
+        var text = await File.ReadAllTextAsync(path);
+        SourceText = text;
+        CurrentFilePath = path;
+        DocumentTitle = Path.GetFileName(path);
+        StatusText = $"{DocumentTitle} • {text.Length} chars";
+        _fileWatcher.Watch(path);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
         {
-            CurrentViewMode = settings.DefaultViewMode;
+            return;
         }
+
+        _disposed = true;
+        _settingsService.Changed -= OnSettingsChanged;
+        _fileWatcher.FileChanged -= OnFileChangedOnBackgroundThread;
+        _fileWatcher.Dispose();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanReload))]
+    private async Task ReloadAsync()
+    {
+        if (CurrentFilePath is not { } path)
+        {
+            return;
+        }
+
+        try
+        {
+            var text = await File.ReadAllTextAsync(path);
+            SourceText = text;
+            StatusText = $"{DocumentTitle} • reloaded • {text.Length} chars";
+        }
+        catch (FileNotFoundException)
+        {
+            StatusText = $"{DocumentTitle} • file no longer exists";
+        }
+        catch (IOException ex)
+        {
+            StatusText = $"Reload failed: {ex.Message}";
+        }
+    }
+
+    private bool CanReload()
+    {
+        return !string.IsNullOrEmpty(CurrentFilePath);
     }
 
     [RelayCommand]
@@ -73,5 +130,28 @@ internal sealed partial class MainWindowViewModel : ViewModelBase
     private void ToggleOutline()
     {
         IsOutlineVisible = !IsOutlineVisible;
+    }
+
+    private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
+    {
+        Settings = e.Settings;
+    }
+
+    private void OnFileChangedOnBackgroundThread(object? sender, FileChangedEventArgs e)
+    {
+        // FileSystemWatcher fires on a thread-pool thread; hop to UI before
+        // touching observable state.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (e.Change == WatcherChangeTypes.Deleted)
+            {
+                StatusText = $"{DocumentTitle} • file deleted on disk";
+                return;
+            }
+
+            CurrentFilePath = e.Path;
+            DocumentTitle = Path.GetFileName(e.Path);
+            ReloadCommand.Execute(null);
+        });
     }
 }

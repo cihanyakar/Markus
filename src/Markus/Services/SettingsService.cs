@@ -21,6 +21,8 @@ internal sealed class SettingsService
         _settingsPath = Path.Combine(SettingsDirectory, "settings.json");
     }
 
+    public event EventHandler<SettingsChangedEventArgs>? Changed;
+
     public string SettingsDirectory { get; }
 
     public AppSettings Load()
@@ -51,6 +53,7 @@ internal sealed class SettingsService
         Directory.CreateDirectory(SettingsDirectory);
         var json = JsonSerializer.Serialize(settings, JsonOptions);
         File.WriteAllText(_settingsPath, json);
+        Changed?.Invoke(this, new SettingsChangedEventArgs(settings));
     }
 
     private static string ResolveSettingsDirectory()
@@ -75,4 +78,14 @@ internal sealed class SettingsService
         var unixHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(unixHome, ".config", "Markus");
     }
+}
+
+internal sealed class SettingsChangedEventArgs : EventArgs
+{
+    public SettingsChangedEventArgs(AppSettings settings)
+    {
+        Settings = settings;
+    }
+
+    public AppSettings Settings { get; }
 }

@@ -59,7 +59,8 @@
       <DockPanel LastChildFill="False">
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2">
           <Button Classes="tool" Content="📂  Open"   Click="Open_Click"/>
-          <Button Classes="tool" Content="↻  Reload" Click="Reload_Click"/>
+          <Button Classes="tool" Content="↻  Reload"
+                  Command="{Binding ReloadCommand}"/>
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">

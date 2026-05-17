@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Markus.Models;
 using Markus.Services;
 using Markus.ViewModels;
 
@@ -12,6 +11,7 @@ internal sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Closing += OnWindowClosing;
     }
 
     private async void Open_Click(object? sender, RoutedEventArgs e)
@@ -26,11 +26,6 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    private void Reload_Click(object? sender, RoutedEventArgs e)
-    {
-        SetStatus("Reload — not yet wired to a file source");
-    }
-
     private async void Settings_Click(object? sender, RoutedEventArgs e)
     {
         try
@@ -40,6 +35,14 @@ internal sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             SetStatus($"Settings failed: {ex.Message}");
+        }
+    }
+
+    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.Dispose();
         }
     }
 
@@ -70,20 +73,19 @@ internal sealed partial class MainWindow : Window
         };
 
         var files = await StorageProvider.OpenFilePickerAsync(pickerOptions);
-
         if (files.Count == 0)
         {
             return;
         }
 
-        var file = files[0];
-        await using var stream = await file.OpenReadAsync();
-        using var reader = new StreamReader(stream);
-        var text = await reader.ReadToEndAsync();
+        var path = files[0].TryGetLocalPath();
+        if (string.IsNullOrEmpty(path))
+        {
+            vm.StatusText = "Selected file has no local path (remote storage?)";
+            return;
+        }
 
-        vm.SourceText = text;
-        vm.DocumentTitle = file.Name;
-        vm.StatusText = $"{file.Name} • {text.Length} chars";
+        await vm.LoadFileAsync(path);
     }
 
     private async Task OpenSettingsAsync()
@@ -93,15 +95,12 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        var draft = vm.Settings.Clone();
-        var settingsVm = new SettingsViewModel(ServiceLocator.Settings, draft);
+        // SettingsViewModel auto-saves on every change and SettingsService
+        // raises Changed; the main window subscribes in its constructor.
+        // The dialog itself is just a "Done" button to dismiss.
+        var settingsVm = new SettingsViewModel(ServiceLocator.Settings, vm.Settings);
         var window = new SettingsWindow { DataContext = settingsVm };
 
-        var result = await window.ShowDialog<AppSettings?>(this);
-        if (result is not null)
-        {
-            vm.ApplySettings(result);
-            vm.StatusText = "Settings saved";
-        }
+        await window.ShowDialog(this);
     }
 }
