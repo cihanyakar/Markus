@@ -15,7 +15,7 @@ internal static class MarkdownRenderer
     public static FontFamily MonoFamily { get; set; } =
         new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
 
-    public static IEnumerable<Control> Render(MarkdownDocument? document)
+    public static IEnumerable<RenderedBlock> Render(MarkdownDocument? document)
     {
         if (document is null)
         {
@@ -27,7 +27,7 @@ internal static class MarkdownRenderer
             var control = RenderBlock(block);
             if (control is not null)
             {
-                yield return control;
+                yield return new RenderedBlock(control, block.Line);
             }
         }
     }

@@ -194,7 +194,8 @@
                               Text="{Binding SourceText, Mode=TwoWay}"/>
 
           <!-- Preview only -->
-          <views:MarkdownPreviewControl IsVisible="{Binding IsPreviewOnly}"
+          <views:MarkdownPreviewControl Name="PreviewOnlyView"
+                                         IsVisible="{Binding IsPreviewOnly}"
                                          Source="{Binding SourceText}"/>
 
           <!-- Split vertical -->
@@ -206,6 +207,7 @@
                           Classes="hairline"
                           ResizeDirection="Columns"/>
             <views:MarkdownPreviewControl Grid.Column="2"
+                                           Name="SplitVPreviewView"
                                            Source="{Binding SourceText}"/>
           </Grid>
 
@@ -218,6 +220,7 @@
                           Classes="hairline"
                           ResizeDirection="Rows"/>
             <views:MarkdownPreviewControl Grid.Row="2"
+                                           Name="SplitHPreviewView"
                                            Source="{Binding SourceText}"/>
           </Grid>
 
@@ -253,10 +256,12 @@
             </StackPanel>
 
             <TreeView Grid.Row="1"
+                      Name="OutlineTree"
                       ItemsSource="{Binding OutlineNodes}"
                       Background="Transparent"
                       BorderThickness="0"
-                      Padding="12,4,12,12">
+                      Padding="12,4,12,12"
+                      SelectionChanged="OutlineTree_SelectionChanged">
               <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}"
                                   DataType="{x:Type models:OutlineNode}">

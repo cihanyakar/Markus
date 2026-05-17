@@ -15,6 +15,7 @@ internal sealed class MarkdownPreviewControl : UserControl
     >(nameof(Source));
 
     private readonly StackPanel _container;
+    private readonly Dictionary<int, Control> _lineToControl = new Dictionary<int, Control>();
 
     public MarkdownPreviewControl()
     {
@@ -42,6 +43,16 @@ internal sealed class MarkdownPreviewControl : UserControl
         set => SetValue(SourceProperty, value);
     }
 
+    public bool ScrollToLine(int sourceLine)
+    {
+        if (_lineToControl.TryGetValue(sourceLine, out var control))
+        {
+            control.BringIntoView();
+            return true;
+        }
+        return false;
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -54,10 +65,12 @@ internal sealed class MarkdownPreviewControl : UserControl
     private void Render(string source)
     {
         _container.Children.Clear();
+        _lineToControl.Clear();
         var document = MarkdownPipeline.Parse(source);
-        foreach (var control in MarkdownRenderer.Render(document))
+        foreach (var rendered in MarkdownRenderer.Render(document))
         {
-            _container.Children.Add(control);
+            _container.Children.Add(rendered.Control);
+            _lineToControl[rendered.SourceLine] = rendered.Control;
         }
     }
 }

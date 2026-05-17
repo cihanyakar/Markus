@@ -106,6 +106,39 @@ internal sealed partial class MainWindow : Window
         }
     }
 
+    private void OutlineTree_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count == 0)
+        {
+            return;
+        }
+        if (e.AddedItems[0] is not Markus.Models.OutlineNode node)
+        {
+            return;
+        }
+        ScrollVisiblePreview(node.SourceLine);
+    }
+
+    private void ScrollVisiblePreview(int sourceLine)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        if (vm.CurrentViewMode == Markus.Models.ViewMode.Preview)
+        {
+            PreviewOnlyView.ScrollToLine(sourceLine);
+        }
+        else if (vm.CurrentViewMode == Markus.Models.ViewMode.SplitVertical)
+        {
+            SplitVPreviewView.ScrollToLine(sourceLine);
+        }
+        else if (vm.CurrentViewMode == Markus.Models.ViewMode.SplitHorizontal)
+        {
+            SplitHPreviewView.ScrollToLine(sourceLine);
+        }
+    }
+
     private void SetStatus(string text)
     {
         if (DataContext is MainWindowViewModel vm)
