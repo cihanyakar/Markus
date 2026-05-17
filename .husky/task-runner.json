@@ -1,0 +1,30 @@
+{
+  "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+  "tasks": [
+    {
+      "name": "csharpier-check-staged",
+      "group": "pre-commit",
+      "command": "dotnet",
+      "args": ["csharpier", "check", "${staged}"],
+      "include": ["**/*.cs"]
+    },
+    {
+      "name": "build-release",
+      "group": "pre-push",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "Markus.slnx",
+        "--configuration",
+        "Release",
+        "--nologo"
+      ]
+    },
+    {
+      "name": "csharpier-check-all",
+      "group": "pre-push",
+      "command": "dotnet",
+      "args": ["csharpier", "check", "."]
+    }
+  ]
+}

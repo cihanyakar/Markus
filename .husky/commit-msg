@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+commit_msg=$(head -n 1 "$1")
+pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9 ,_/-]+\))?!?: .{1,72}$'
+
+# Allow merge, revert, and fixup commits as-is.
+case "$commit_msg" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*)
+    exit 0
+    ;;
+esac
+
+if ! printf '%s' "$commit_msg" | grep -qE "$pattern"; then
+  printf '\n\033[31mERROR\033[0m: commit message does not follow Conventional Commits.\n\n'
+  printf 'Format: <type>(<optional scope>)!?: <subject>\n\n'
+  printf 'Examples:\n'
+  printf '  feat: add markdown file picker\n'
+  printf '  fix(viewer): handle empty document\n'
+  printf '  chore!: drop .NET 9 support\n\n'
+  printf 'Allowed types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test\n'
+  printf 'Your message: %s\n' "$commit_msg"
+  exit 1
+fi

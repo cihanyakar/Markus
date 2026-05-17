@@ -1,0 +1,33 @@
+* text=auto eol=lf
+
+# Always LF for shell scripts (Husky hooks must be POSIX-friendly).
+*.sh           text eol=lf
+.husky/*       text eol=lf
+
+# Always CRLF for Windows-only assets.
+*.bat          text eol=crlf
+*.cmd          text eol=crlf
+*.ps1          text eol=crlf
+
+# Binary assets.
+*.png          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.ico          binary
+*.icns         binary
+*.snk          binary
+*.pdf          binary
+*.woff         binary
+*.woff2        binary
+*.ttf          binary
+*.otf          binary
+
+# Language detection / diff hints.
+*.cs           text diff=csharp
+*.axaml        text
+*.xaml         text
+*.csproj       text
+*.slnx         text
+*.props        text
+*.targets      text
