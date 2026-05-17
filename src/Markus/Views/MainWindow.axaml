@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Markus.ViewModels"
+        xmlns:views="using:Markus.Views"
         xmlns:models="using:Markus.Models"
         mc:Ignorable="d"
         d:DesignWidth="1000" d:DesignHeight="650"
@@ -100,18 +101,8 @@
                  Text="{Binding SourceText, Mode=TwoWay}"/>
 
         <!-- Preview only -->
-        <ScrollViewer Padding="32,24" IsVisible="{Binding IsPreviewOnly}">
-          <StackPanel MaxWidth="780" HorizontalAlignment="Stretch">
-            <TextBlock Text="Preview"
-                       Classes="muted"
-                       Margin="0,0,0,8"/>
-            <TextBlock Text="{Binding SourceText}"
-                       TextWrapping="Wrap"
-                       FontFamily="Inter, -apple-system, Segoe UI, sans-serif"
-                       FontSize="15"
-                       LineHeight="22"/>
-          </StackPanel>
-        </ScrollViewer>
+        <views:MarkdownPreviewControl IsVisible="{Binding IsPreviewOnly}"
+                                       Source="{Binding SourceText}"/>
 
         <!-- Split vertical: source | preview -->
         <Grid ColumnDefinitions="*,5,*" IsVisible="{Binding IsSplitVerticalActive}">
@@ -127,12 +118,8 @@
           <GridSplitter Grid.Column="1"
                         Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
                         ResizeDirection="Columns"/>
-          <ScrollViewer Grid.Column="2" Padding="24,16">
-            <StackPanel>
-              <TextBlock Text="Preview" Classes="muted" Margin="0,0,0,8"/>
-              <TextBlock Text="{Binding SourceText}" TextWrapping="Wrap" FontSize="15" LineHeight="22"/>
-            </StackPanel>
-          </ScrollViewer>
+          <views:MarkdownPreviewControl Grid.Column="2"
+                                         Source="{Binding SourceText}"/>
         </Grid>
 
         <!-- Split horizontal: source / preview -->
@@ -149,12 +136,8 @@
           <GridSplitter Grid.Row="1"
                         Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
                         ResizeDirection="Rows"/>
-          <ScrollViewer Grid.Row="2" Padding="24,16">
-            <StackPanel>
-              <TextBlock Text="Preview" Classes="muted" Margin="0,0,0,8"/>
-              <TextBlock Text="{Binding SourceText}" TextWrapping="Wrap" FontSize="15" LineHeight="22"/>
-            </StackPanel>
-          </ScrollViewer>
+          <views:MarkdownPreviewControl Grid.Row="2"
+                                         Source="{Binding SourceText}"/>
         </Grid>
 
         <!-- Detached: main window is just a placeholder while two child windows show source/preview -->

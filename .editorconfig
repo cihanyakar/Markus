@@ -250,6 +250,7 @@ dotnet_diagnostic.CA1062.severity = none            # Validate args (NRT covers 
 dotnet_diagnostic.CA1303.severity = none            # Localize strings (not now)
 dotnet_diagnostic.CA1848.severity = none            # LoggerMessage delegates
 dotnet_diagnostic.CA1852.severity = error           # Seal internal types (varsayılan sealed)
+dotnet_diagnostic.CA1859.severity = suggestion      # Prefer concrete return type (perf-only suggestion)
 dotnet_diagnostic.CA1849.severity = error           # Call async methods in async context
 dotnet_diagnostic.CA2007.severity = none            # ConfigureAwait (desktop app, UI sync context)
 
@@ -305,6 +306,7 @@ dotnet_diagnostic.SA1111.severity = none            # Closing paren own line (CS
 dotnet_diagnostic.SA1515.severity = none            # Single-line comments preceded by blank
 dotnet_diagnostic.SA1512.severity = none            # Single-line comments not followed by blank
 dotnet_diagnostic.SA1500.severity = none            # Braces for multi-line statements (CSharpier owns)
+dotnet_diagnostic.SA1513.severity = none            # Closing brace followed by blank line (CSharpier owns)
 dotnet_diagnostic.SA1402.severity = none            # File may only contain a single type
 dotnet_diagnostic.SA1649.severity = none            # File name should match first type name
 dotnet_diagnostic.SA1502.severity = none            # Element should not be on single line (CSharpier wins)
