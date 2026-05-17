@@ -37,9 +37,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string _sourceText =
         "# Welcome to Markus\n\n"
         + "This is a **placeholder**. Open a `.md` file to see it rendered.\n\n"
+        + "## Features\n\n"
         + "- Live reload (active once a file is open)\n"
-        + "- Native preview renderer (next iteration)\n"
-        + "- Multiple themes\n";
+        + "- Native preview renderer\n"
+        + "- Multiple themes\n\n"
+        + "## Coming next\n\n"
+        + "- Detached source/preview windows\n"
+        + "- Theme tokens applied to the rendered content\n";
+
+    [ObservableProperty]
+    private IReadOnlyList<OutlineNode> _outlineNodes = Array.Empty<OutlineNode>();
 
     public MainWindowViewModel()
         : this(ServiceLocator.Settings) { }
@@ -54,6 +61,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _currentViewMode = Settings.DefaultViewMode;
         _isOutlineVisible = Settings.ShowOutline;
         _settingsService.Changed += OnSettingsChanged;
+
+        RebuildOutline(_sourceText);
     }
 
     public AppSettings Settings { get; private set; }
@@ -135,6 +144,24 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         Settings = e.Settings;
+    }
+
+    partial void OnSourceTextChanged(string value)
+    {
+        RebuildOutline(value);
+    }
+
+    private void RebuildOutline(string source)
+    {
+        try
+        {
+            var document = MarkdownPipeline.Parse(source);
+            OutlineNodes = OutlineBuilder.Build(document);
+        }
+        catch (Exception)
+        {
+            OutlineNodes = Array.Empty<OutlineNode>();
+        }
     }
 
     private void OnFileChangedOnBackgroundThread(object? sender, FileChangedEventArgs e)
