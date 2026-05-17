@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Markus.Services;
@@ -16,6 +17,41 @@ internal sealed partial class MainWindow : Window
         InitializeComponent();
         Closing += OnWindowClosing;
         DataContextChanged += OnDataContextChanged;
+
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DropEvent, OnDrop);
+        DragDrop.SetAllowDrop(this, true);
+    }
+
+    private static void OnDragOver(object? sender, DragEventArgs e)
+    {
+        e.DragEffects = DragDropEffects.Copy;
+        e.Handled = true;
+    }
+
+    private async void OnDrop(object? sender, DragEventArgs e)
+    {
+        try
+        {
+            if (e.DataTransfer is null || DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+            var file = e.DataTransfer.TryGetFile();
+            if (file is null)
+            {
+                return;
+            }
+            var path = file.TryGetLocalPath();
+            if (!string.IsNullOrEmpty(path))
+            {
+                await vm.LoadFileAsync(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Drop failed: {ex.Message}");
+        }
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
