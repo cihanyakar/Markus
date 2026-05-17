@@ -22,6 +22,12 @@ dotnet build
 dotnet run --project src/Markus
 ```
 
+## Test
+
+```bash
+dotnet test
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). All contributions must follow Conventional Commits and pass formatter, analyzers, and build (all warnings are errors).

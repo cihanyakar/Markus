@@ -23,6 +23,7 @@ After this, `git commit` and `git push` will run quality gates locally.
 ```bash
 dotnet csharpier format .   # format the whole repo
 dotnet build                # treat warnings as errors
+dotnet test                 # run unit tests
 dotnet run --project src/Markus
 ```
 
@@ -31,9 +32,11 @@ dotnet run --project src/Markus
 - **Formatting**: CSharpier (`dotnet csharpier check .`)
 - **Analyzers**: StyleCop, Meziantou, SonarAnalyzer, Roslynator, NetAnalyzers
 - **Build**: `TreatWarningsAsErrors=true` everywhere
+- **Tests**: xUnit v3 (`tests/Markus.Tests/`), Shouldly assertions, NSubstitute mocks
 
 Pre-commit hook runs CSharpier check on staged `.cs` files.
 Pre-push hook runs a full Release build plus a repo-wide format check.
+CI additionally runs the full test suite on Linux, macOS, and Windows.
 
 ## Commit messages: Conventional Commits
 

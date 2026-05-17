@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build & Verify (${{ matrix.os }})
+    name: Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -57,3 +57,14 @@ jobs:
 
       - name: Build (Release, warnings-as-errors)
         run: dotnet build Markus.slnx --configuration Release --no-restore
+
+      - name: Test (Release)
+        run: dotnet test Markus.slnx --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: '**/TestResults/*.trx'
+          retention-days: 14

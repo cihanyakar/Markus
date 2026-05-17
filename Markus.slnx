@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Markus/Markus.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Markus.Tests/Markus.Tests.csproj" />
+  </Folder>
 </Solution>
