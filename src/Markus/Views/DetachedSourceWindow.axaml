@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Markus.ViewModels"
+        xmlns:views="using:Markus.Views"
         x:Class="Markus.Views.DetachedSourceWindow"
         x:DataType="vm:MainWindowViewModel"
         Width="640" Height="720"
@@ -72,10 +73,9 @@
         </StackPanel>
       </Border>
 
-      <TextBox Grid.Row="1"
-               Classes="source"
-               FontFamily="{Binding MonoFontFamily}"
-               Text="{Binding SourceText, Mode=TwoWay}"/>
+      <views:SourceEditor Grid.Row="1"
+                          MonoFontFamily="{Binding MonoFontFamily}"
+                          Text="{Binding SourceText, Mode=TwoWay}"/>
 
       <Border Grid.Row="2" Classes="glass statusbar">
         <TextBlock Classes="meta" Text="{Binding StatusText}"/>

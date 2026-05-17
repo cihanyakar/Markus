@@ -24,6 +24,7 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Avalonia.AvaloniaEdit" />
+    <PackageReference Include="AvaloniaEdit.TextMate" />
     <PackageReference Include="Markdig" />
     <PackageReference Include="Fonts.Avalonia.Manrope" />
     <PackageReference Include="Fonts.Avalonia.Iosevka" />

@@ -188,11 +188,10 @@
         <Grid Grid.Column="0">
 
           <!-- Source only -->
-          <TextBox Name="SourceOnlyEditor"
-                   Classes="source"
-                   IsVisible="{Binding IsSourceOnly}"
-                   FontFamily="{Binding MonoFontFamily}"
-                   Text="{Binding SourceText, Mode=TwoWay}"/>
+          <views:SourceEditor Name="SourceOnlyEditor"
+                              IsVisible="{Binding IsSourceOnly}"
+                              MonoFontFamily="{Binding MonoFontFamily}"
+                              Text="{Binding SourceText, Mode=TwoWay}"/>
 
           <!-- Preview only -->
           <views:MarkdownPreviewControl IsVisible="{Binding IsPreviewOnly}"
@@ -200,9 +199,9 @@
 
           <!-- Split vertical -->
           <Grid ColumnDefinitions="*,4,*" IsVisible="{Binding IsSplitVerticalActive}">
-            <TextBox Grid.Column="0" Classes="source"
-                     FontFamily="{Binding MonoFontFamily}"
-                     Text="{Binding SourceText, Mode=TwoWay}"/>
+            <views:SourceEditor Grid.Column="0"
+                                MonoFontFamily="{Binding MonoFontFamily}"
+                                Text="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Column="1"
                           Classes="hairline"
                           ResizeDirection="Columns"/>
@@ -212,9 +211,9 @@
 
           <!-- Split horizontal -->
           <Grid RowDefinitions="*,4,*" IsVisible="{Binding IsSplitHorizontalActive}">
-            <TextBox Grid.Row="0" Classes="source"
-                     FontFamily="{Binding MonoFontFamily}"
-                     Text="{Binding SourceText, Mode=TwoWay}"/>
+            <views:SourceEditor Grid.Row="0"
+                                MonoFontFamily="{Binding MonoFontFamily}"
+                                Text="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Row="1"
                           Classes="hairline"
                           ResizeDirection="Rows"/>
