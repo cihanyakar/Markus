@@ -10,6 +10,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private readonly SettingsService _settingsService;
     private readonly FileWatcherService _fileWatcher;
+    private System.Threading.CancellationTokenSource? _outlineCts;
     private bool _disposed;
 
     [ObservableProperty]
@@ -22,6 +23,15 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private bool _isOutlineVisible;
+
+    [ObservableProperty]
+    private bool _isScrollLocked;
+
+    [ObservableProperty]
+    private bool _isSourceSoftWrap;
+
+    [ObservableProperty]
+    private bool _isPreviewSoftWrap;
 
     [ObservableProperty]
     private string _statusText = "No file open";
@@ -63,11 +73,14 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings = settingsService.Load();
         _currentViewMode = Settings.DefaultViewMode;
         _isOutlineVisible = Settings.ShowOutline;
+        _isSourceSoftWrap = Settings.IsSourceSoftWrap;
+        _isPreviewSoftWrap = Settings.IsPreviewSoftWrap;
         _monoFontFamily = MonoFontStack.Build(Settings.MonoFont);
         _settingsService.Changed += OnSettingsChanged;
 
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
         Rendering.MarkdownRenderer.Theme = Rendering.MarkdownThemes.Resolve(Settings.Theme);
+        Rendering.MarkdownRenderer.WrapCode = Settings.IsPreviewSoftWrap;
         Views.TextMateThemeResolver.Update(Settings.CodeTheme);
         RebuildOutline(_sourceText);
     }
@@ -112,6 +125,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsService.Changed -= OnSettingsChanged;
         _fileWatcher.FileChanged -= OnFileChangedOnBackgroundThread;
         _fileWatcher.Dispose();
+        _outlineCts?.Dispose();
     }
 
     [RelayCommand(CanExecute = nameof(CanReload))]
@@ -214,6 +228,42 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsOutlineVisible = !IsOutlineVisible;
     }
 
+    [RelayCommand]
+    private void ToggleScrollLock()
+    {
+        IsScrollLocked = !IsScrollLocked;
+    }
+
+    [RelayCommand]
+    private void ToggleSourceSoftWrap()
+    {
+        IsSourceSoftWrap = !IsSourceSoftWrap;
+    }
+
+    [RelayCommand]
+    private void TogglePreviewSoftWrap()
+    {
+        IsPreviewSoftWrap = !IsPreviewSoftWrap;
+    }
+
+    partial void OnIsSourceSoftWrapChanged(bool value)
+    {
+        Settings.IsSourceSoftWrap = value;
+        _settingsService.Save(Settings);
+    }
+
+    partial void OnIsPreviewSoftWrapChanged(bool value)
+    {
+        Settings.IsPreviewSoftWrap = value;
+        Rendering.MarkdownRenderer.WrapCode = value;
+        _settingsService.Save(Settings);
+        // Force the preview re-render so already-rendered code blocks pick up
+        // the new wrap mode immediately.
+        var current = SourceText;
+        SourceText = string.Empty;
+        SourceText = current;
+    }
+
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         Settings = e.Settings;
@@ -250,11 +300,51 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     partial void OnSourceTextChanged(string value)
     {
-        RebuildOutline(value);
+        _ = RebuildOutlineAsync(value);
+    }
+
+    private async System.Threading.Tasks.Task RebuildOutlineAsync(string source)
+    {
+        // Cancel the in-flight outline so rapid typing doesn't stack parses.
+        if (_outlineCts is { } previous)
+        {
+            await previous.CancelAsync();
+            previous.Dispose();
+        }
+        _outlineCts = new System.Threading.CancellationTokenSource();
+        var token = _outlineCts.Token;
+        try
+        {
+            // Parse + tree-build on the threadpool; the result hop back to the
+            // UI thread via the captured sync context for the property assign.
+            var nodes = await System.Threading.Tasks.Task.Run(
+                () =>
+                {
+                    var document = MarkdownPipeline.Parse(source);
+                    return OutlineBuilder.Build(document);
+                },
+                token
+            );
+            if (!token.IsCancellationRequested)
+            {
+                OutlineNodes = nodes;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Newer text already in flight; let it win.
+        }
+        catch (Exception)
+        {
+            OutlineNodes = Array.Empty<OutlineNode>();
+        }
     }
 
     private void RebuildOutline(string source)
     {
+        // Synchronous fallback for the constructor's first invocation, since
+        // we can't await before the window is wired up. Still off-thread? No,
+        // but the initial welcome text is tiny so the cost is negligible.
         try
         {
             var document = MarkdownPipeline.Parse(source);

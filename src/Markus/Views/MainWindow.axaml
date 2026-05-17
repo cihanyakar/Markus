@@ -75,6 +75,19 @@
             <NativeMenuItemSeparator/>
             <NativeMenuItem Header="Toggle Outline" Gesture="Cmd+Alt+B"
                             Command="{Binding ToggleOutlineCommand}"/>
+            <NativeMenuItem Header="Sync Scroll" Gesture="Cmd+Shift+L"
+                            ToggleType="CheckBox"
+                            IsChecked="{Binding IsScrollLocked}"
+                            Command="{Binding ToggleScrollLockCommand}"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Soft-Wrap Source"
+                            ToggleType="CheckBox"
+                            IsChecked="{Binding IsSourceSoftWrap}"
+                            Command="{Binding ToggleSourceSoftWrapCommand}"/>
+            <NativeMenuItem Header="Soft-Wrap Preview"
+                            ToggleType="CheckBox"
+                            IsChecked="{Binding IsPreviewSoftWrap}"
+                            Command="{Binding TogglePreviewSoftWrapCommand}"/>
             <NativeMenuItemSeparator/>
             <NativeMenuItem Header="Appearance">
               <NativeMenuItem.Menu>
@@ -264,6 +277,13 @@
 
           <!-- Trailing: outline / view / settings -->
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+            <ToggleButton Classes="tool" IsChecked="{Binding IsScrollLocked}"
+                          ToolTip.Tip="Sync scroll source ↔ preview (Scroll Lock / ⌘⇧L)">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <PathIcon Data="{x:Static views:IconData.Lock}"/>
+                <TextBlock Text="Sync" VerticalAlignment="Center"/>
+              </StackPanel>
+            </ToggleButton>
             <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
@@ -317,7 +337,8 @@
           <views:MarkdownTextEditor Name="SourceOnlyEditor"
                                      IsVisible="{Binding IsSourceVisibleInMain}"
                                      FontFamily="{Binding MonoFontFamily}"
-                                     BoundText="{Binding SourceText, Mode=TwoWay}"/>
+                                     BoundText="{Binding SourceText, Mode=TwoWay}"
+                                     WordWrap="{Binding IsSourceSoftWrap}"/>
 
           <!-- Preview only -->
           <views:MarkdownPreviewControl Name="PreviewOnlyView"
@@ -328,7 +349,8 @@
           <Grid ColumnDefinitions="*,4,*" IsVisible="{Binding IsSplitVerticalActive}">
             <views:MarkdownTextEditor Grid.Column="0"
                                        FontFamily="{Binding MonoFontFamily}"
-                                       BoundText="{Binding SourceText, Mode=TwoWay}"/>
+                                       BoundText="{Binding SourceText, Mode=TwoWay}"
+                                     WordWrap="{Binding IsSourceSoftWrap}"/>
             <GridSplitter Grid.Column="1"
                           Classes="hairline"
                           ResizeDirection="Columns"/>
@@ -341,7 +363,8 @@
           <Grid RowDefinitions="*,4,*" IsVisible="{Binding IsSplitHorizontalActive}">
             <views:MarkdownTextEditor Grid.Row="0"
                                        FontFamily="{Binding MonoFontFamily}"
-                                       BoundText="{Binding SourceText, Mode=TwoWay}"/>
+                                       BoundText="{Binding SourceText, Mode=TwoWay}"
+                                     WordWrap="{Binding IsSourceSoftWrap}"/>
             <GridSplitter Grid.Row="1"
                           Classes="hairline"
                           ResizeDirection="Rows"/>

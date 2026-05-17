@@ -20,6 +20,10 @@ internal sealed class AppSettings
 
     public string ThemeMode { get; set; } = "System";
 
+    public bool IsSourceSoftWrap { get; set; }
+
+    public bool IsPreviewSoftWrap { get; set; } = true;
+
     public List<string> RecentFiles { get; set; } = new List<string>();
 
     public AppSettings Clone()
@@ -35,6 +39,8 @@ internal sealed class AppSettings
             ShowOutline = ShowOutline,
             FontSize = FontSize,
             MonoFont = MonoFont,
+            IsSourceSoftWrap = IsSourceSoftWrap,
+            IsPreviewSoftWrap = IsPreviewSoftWrap,
             RecentFiles = new List<string>(RecentFiles),
         };
     }

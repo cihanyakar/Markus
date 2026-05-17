@@ -18,6 +18,8 @@ internal static class MarkdownRenderer
 
     public static MarkdownTheme Theme { get; set; } = MarkdownThemes.GitHubDark;
 
+    public static bool WrapCode { get; set; } = true;
+
     public static IEnumerable<RenderedBlock> Render(MarkdownDocument? document)
     {
         if (document is null)
@@ -159,7 +161,7 @@ internal static class MarkdownRenderer
                 FontFamily = MonoFamily,
                 FontSize = 13,
                 Foreground = new SolidColorBrush(Theme.CodeForeground),
-                TextWrapping = TextWrapping.NoWrap,
+                TextWrapping = WrapCode ? TextWrapping.Wrap : TextWrapping.NoWrap,
             },
         };
     }

@@ -18,6 +18,13 @@ internal sealed partial class MainWindow : Window
     private MarkdownTextEditor? _searchTargetEditor;
     private MarkdownPreviewControl? _searchTargetPreview;
 
+    // Track the last ratio we pushed to each side; an incoming ScrollChanged
+    // that matches the last push is our own programmatic write and skipped.
+    // Flag-based guards weren't reliable because Avalonia raises ScrollChanged
+    // on a later layout pass, after the flag reset.
+    private double _lastEditorRatio = double.NaN;
+    private double _lastPreviewRatio = double.NaN;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -32,6 +39,175 @@ internal sealed partial class MainWindow : Window
         Opened += OnWindowOpened;
         WirePreviewSearch();
         WireCommandPalette();
+        WireScrollSync();
+    }
+
+    private void WireScrollSync()
+    {
+        // Bind ScrollLock toggle to both the physical Scroll Lock key and an
+        // alt shortcut (Cmd+Shift+L) for keyboards without Scroll Lock.
+        KeyBindings.Add(
+            new KeyBinding { Gesture = new KeyGesture(Key.Scroll), Command = new RelayCommand(InvokeScrollLockToggle) }
+        );
+        KeyBindings.Add(
+            new KeyBinding
+            {
+                Gesture = new KeyGesture(Key.L, KeyModifiers.Meta | KeyModifiers.Shift),
+                Command = new RelayCommand(InvokeScrollLockToggle),
+            }
+        );
+
+        Loaded += (_, _) => AttachEditorScrollSync();
+    }
+
+    private void InvokeScrollLockToggle()
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.ToggleScrollLockCommand.Execute(null);
+        }
+    }
+
+    private void AttachEditorScrollSync()
+    {
+        // Drive sync from both sides via the wrapping ScrollViewer's
+        // ScrollChanged event. Ratio-based positioning makes the scroll
+        // pixel-smooth instead of jumping block-to-block.
+        foreach (var editor in this.GetVisualDescendants().OfType<MarkdownTextEditor>())
+        {
+            if (FindEditorScrollViewer(editor) is not { } sv)
+            {
+                continue;
+            }
+            sv.ScrollChanged -= OnEditorScrollChanged;
+            sv.ScrollChanged += OnEditorScrollChanged;
+        }
+        AttachPreviewScrollSubscribers();
+    }
+
+    private void AttachPreviewScrollSubscribers()
+    {
+        foreach (var preview in this.GetVisualDescendants().OfType<MarkdownPreviewControl>())
+        {
+            preview.Scroll.ScrollChanged -= OnPreviewScrollChanged;
+            preview.Scroll.ScrollChanged += OnPreviewScrollChanged;
+        }
+        if (_previewWindow?.FindDescendantPreview() is { } detachedPreview)
+        {
+            detachedPreview.Scroll.ScrollChanged -= OnPreviewScrollChanged;
+            detachedPreview.Scroll.ScrollChanged += OnPreviewScrollChanged;
+        }
+    }
+
+    private void OnEditorScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || !vm.IsScrollLocked)
+        {
+            return;
+        }
+        if (sender is not ScrollViewer source)
+        {
+            return;
+        }
+        var ratio = GetRatio(source);
+        if (IsEcho(ratio, _lastEditorRatio))
+        {
+            return;
+        }
+        _lastEditorRatio = ratio;
+        var preview = VisiblePreviewFor(vm.CurrentViewMode);
+        if (preview is null)
+        {
+            return;
+        }
+        _lastPreviewRatio = ratio;
+        ApplyRatio(preview.Scroll, ratio);
+    }
+
+    private void OnPreviewScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || !vm.IsScrollLocked)
+        {
+            return;
+        }
+        if (sender is not ScrollViewer source)
+        {
+            return;
+        }
+        var ratio = GetRatio(source);
+        if (IsEcho(ratio, _lastPreviewRatio))
+        {
+            return;
+        }
+        _lastPreviewRatio = ratio;
+        var editor = VisibleEditorFor(vm.CurrentViewMode);
+        var target = editor is null ? null : FindEditorScrollViewer(editor);
+        if (target is null)
+        {
+            return;
+        }
+        _lastEditorRatio = ratio;
+        ApplyRatio(target, ratio);
+    }
+
+    private static bool IsEcho(double current, double lastPushed)
+    {
+        return !double.IsNaN(lastPushed) && Math.Abs(current - lastPushed) < 0.0005;
+    }
+
+    private static void ApplyRatio(ScrollViewer target, double ratio)
+    {
+        var max = target.Extent.Height - target.Viewport.Height;
+        if (max <= 0)
+        {
+            return;
+        }
+        target.Offset = new Vector(target.Offset.X, max * ratio);
+    }
+
+    private static double GetRatio(ScrollViewer sv)
+    {
+        var max = sv.Extent.Height - sv.Viewport.Height;
+        return max > 0 ? sv.Offset.Y / max : 0;
+    }
+
+    private MarkdownPreviewControl? VisiblePreviewFor(Markus.Models.ViewMode mode)
+    {
+        if (mode == Markus.Models.ViewMode.Detached)
+        {
+            return _previewWindow?.FindDescendantPreview();
+        }
+        foreach (var preview in this.GetVisualDescendants().OfType<MarkdownPreviewControl>())
+        {
+            if (preview.IsEffectivelyVisible)
+            {
+                return preview;
+            }
+        }
+        return null;
+    }
+
+    private MarkdownTextEditor? VisibleEditorFor(Markus.Models.ViewMode mode)
+    {
+        // mode reserved for future per-mode disambiguation; today we just pick
+        // the first effectively-visible editor since only one is shown at a time.
+        _ = mode;
+        foreach (var editor in this.GetVisualDescendants().OfType<MarkdownTextEditor>())
+        {
+            if (editor.IsEffectivelyVisible)
+            {
+                return editor;
+            }
+        }
+        return null;
+    }
+
+    private static ScrollViewer? FindEditorScrollViewer(MarkdownTextEditor editor)
+    {
+        // AvaloniaEdit hosts its scrollable area as a descendant ScrollViewer
+        // inside the templated TextEditor; the public surface doesn't expose
+        // it directly so we walk the visual tree once.
+        return editor.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
     }
 
     private void WireCommandPalette()
@@ -83,6 +259,24 @@ internal sealed partial class MainWindow : Window
             new Markus.Models.CommandItem("Reload", "File", "⌘R", () => vm.ReloadCommand.Execute(null)),
             new Markus.Models.CommandItem("Settings", "App", "⌘,", () => vm.OpenSettingsCommand.Execute(null)),
             new Markus.Models.CommandItem("Toggle Outline", "View", "⌘⌥B", () => vm.ToggleOutlineCommand.Execute(null)),
+            new Markus.Models.CommandItem(
+                "Toggle Scroll Lock",
+                "View",
+                "⌘⇧L",
+                () => vm.ToggleScrollLockCommand.Execute(null)
+            ),
+            new Markus.Models.CommandItem(
+                "Toggle Source Soft-Wrap",
+                "View",
+                null,
+                () => vm.ToggleSourceSoftWrapCommand.Execute(null)
+            ),
+            new Markus.Models.CommandItem(
+                "Toggle Preview Soft-Wrap",
+                "View",
+                null,
+                () => vm.TogglePreviewSoftWrapCommand.Execute(null)
+            ),
             new Markus.Models.CommandItem(
                 "Source View",
                 "View",
@@ -380,10 +574,16 @@ internal sealed partial class MainWindow : Window
 
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        // Only start a window drag when the user grabs an empty toolbar area;
-        // buttons and combos must keep their own click semantics.
+        // Buttons / combos / textboxes keep their own click semantics.
         if (e.Source is Visual source && IsInteractiveChild(source))
         {
+            return;
+        }
+        // macOS convention: double-click the title bar toggles maximize/normal.
+        if (e.ClickCount >= 2)
+        {
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            e.Handled = true;
             return;
         }
         BeginMoveDrag(e);
@@ -441,6 +641,15 @@ internal sealed partial class MainWindow : Window
             vm.SettingsRequested += OnSettingsRequested;
             UpdateDetachedWindows(vm);
             RefreshRecentMenu();
+            ApplyEditorWordWrap(vm.IsSourceSoftWrap);
+        }
+    }
+
+    private void ApplyEditorWordWrap(bool wrap)
+    {
+        foreach (var editor in this.GetVisualDescendants().OfType<MarkdownTextEditor>())
+        {
+            editor.WordWrap = wrap;
         }
     }
 
@@ -476,6 +685,15 @@ internal sealed partial class MainWindow : Window
         )
         {
             UpdateDetachedWindows(vm);
+            ApplyEditorWordWrap(vm.IsSourceSoftWrap);
+            return;
+        }
+        if (
+            string.Equals(e.PropertyName, nameof(MainWindowViewModel.IsSourceSoftWrap), StringComparison.Ordinal)
+            && DataContext is MainWindowViewModel vmWrap
+        )
+        {
+            ApplyEditorWordWrap(vmWrap.IsSourceSoftWrap);
             return;
         }
         if (string.Equals(e.PropertyName, nameof(MainWindowViewModel.DocumentTitle), StringComparison.Ordinal))
