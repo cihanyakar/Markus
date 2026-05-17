@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.1](https://github.com/cihanyakar/Markus/compare/v0.1.0...v0.1.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **release:** build macOS .app bundle and compress single-file binaries ([8b1e617](https://github.com/cihanyakar/Markus/commit/8b1e617c67b5007c397657ee2285751c1e0e5e15))
+
+
+### Documentation
+
+* add Markus product and engineering plan (draft) ([1579280](https://github.com/cihanyakar/Markus/commit/1579280f7f30fc8facd02b046a751b779113133a))
+
+
+### Continuous Integration
+
+* **deps:** Bump actions/cache from 4 to 5 ([#1](https://github.com/cihanyakar/Markus/issues/1)) ([f04344f](https://github.com/cihanyakar/Markus/commit/f04344f9096e7d010f9cde9ae8b7519c07a7cfc1))
+* **deps:** Bump actions/checkout from 4 to 6 ([#3](https://github.com/cihanyakar/Markus/issues/3)) ([0262961](https://github.com/cihanyakar/Markus/commit/02629615d45d8fb81bec68af5d0739276ba8e7e4))
+* **deps:** Bump actions/setup-dotnet from 4 to 5 ([#2](https://github.com/cihanyakar/Markus/issues/2)) ([fbae1c8](https://github.com/cihanyakar/Markus/commit/fbae1c877b645092e73390805daed1f7c2c77448))
+
 ## 0.1.0 (2026-05-17)
 
 
