@@ -1,55 +1,50 @@
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
-using Avalonia.Styling;
 using AvaloniaEdit;
 using AvaloniaEdit.TextMate;
 using TextMateSharp.Grammars;
 
 namespace Markus.Views;
 
-internal sealed class SourceEditor : UserControl
+/// <summary>
+/// AvaloniaEdit's TextEditor.Text is a plain CLR property (not a StyledProperty),
+/// so XAML compiled bindings cannot reach it. This subclass adds a real
+/// StyledProperty (<see cref="BoundTextProperty"/>) that mirrors
+/// <c>Document.Text</c> in both directions, and wires TextMate for markdown
+/// highlighting on attach.
+/// </summary>
+internal sealed class MarkdownTextEditor : TextEditor
 {
-    public static readonly StyledProperty<string?> TextProperty = AvaloniaProperty.Register<SourceEditor, string?>(
-        nameof(Text),
-        defaultBindingMode: Avalonia.Data.BindingMode.TwoWay
-    );
+    public static readonly StyledProperty<string?> BoundTextProperty = AvaloniaProperty.Register<
+        MarkdownTextEditor,
+        string?
+    >(nameof(BoundText), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
 
     public static readonly StyledProperty<string> GrammarLanguageProperty = AvaloniaProperty.Register<
-        SourceEditor,
+        MarkdownTextEditor,
         string
     >(nameof(GrammarLanguage), "md");
 
-    public static readonly StyledProperty<FontFamily> MonoFontFamilyProperty = AvaloniaProperty.Register<
-        SourceEditor,
-        FontFamily
-    >(nameof(MonoFontFamily), new FontFamily("Iosevka,JetBrains Mono,Consolas,Menlo,monospace"));
-
-    private readonly TextEditor _editor;
     private RegistryOptions? _registry;
     private TextMate.Installation? _textMate;
     private bool _syncing;
 
-    public SourceEditor()
+    public MarkdownTextEditor()
     {
-        _editor = new TextEditor
-        {
-            ShowLineNumbers = false,
-            FontSize = 14,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Background = Brushes.Transparent,
-            Padding = new Thickness(28, 24),
-        };
-        _editor.TextChanged += OnEditorTextChanged;
-        Content = _editor;
+        ShowLineNumbers = false;
+        FontSize = 14;
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
+        VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        Background = Brushes.Transparent;
+        Padding = new Thickness(28, 24);
+        TextChanged += OnEditorTextChanged;
     }
 
-    public string? Text
+    public string? BoundText
     {
-        get => GetValue(TextProperty);
-        set => SetValue(TextProperty, value);
+        get => GetValue(BoundTextProperty);
+        set => SetValue(BoundTextProperty, value);
     }
 
     public string GrammarLanguage
@@ -58,19 +53,11 @@ internal sealed class SourceEditor : UserControl
         set => SetValue(GrammarLanguageProperty, value);
     }
 
-    public FontFamily MonoFontFamily
-    {
-        get => GetValue(MonoFontFamilyProperty);
-        set => SetValue(MonoFontFamilyProperty, value);
-    }
-
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         InstallTextMate();
-        // Re-apply current text *after* TextMate has been installed, in case
-        // installation rebuilt the document.
-        ApplyText(Text);
+        ApplyBoundText(BoundText);
 
         if (Application.Current is { } app)
         {
@@ -90,13 +77,9 @@ internal sealed class SourceEditor : UserControl
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == TextProperty)
+        if (change.Property == BoundTextProperty)
         {
-            ApplyText(change.GetNewValue<string?>());
-        }
-        else if (change.Property == MonoFontFamilyProperty)
-        {
-            _editor.FontFamily = change.GetNewValue<FontFamily>();
+            ApplyBoundText(change.GetNewValue<string?>());
         }
         else if (change.Property == GrammarLanguageProperty && _textMate is not null)
         {
@@ -109,7 +92,7 @@ internal sealed class SourceEditor : UserControl
         if (e.Property == Application.ActualThemeVariantProperty && _textMate is not null)
         {
             InstallTextMate();
-            ApplyText(Text);
+            ApplyBoundText(BoundText);
         }
     }
 
@@ -118,7 +101,7 @@ internal sealed class SourceEditor : UserControl
         _textMate?.Dispose();
         var themeName = TextMateThemeResolver.Resolve();
         _registry = new RegistryOptions(themeName);
-        _textMate = _editor.InstallTextMate(_registry);
+        _textMate = this.InstallTextMate(_registry);
         ApplyGrammar();
     }
 
@@ -128,26 +111,26 @@ internal sealed class SourceEditor : UserControl
         {
             return;
         }
-        var grammar = _registry.GetScopeByLanguageId(GrammarLanguage);
-        if (!string.IsNullOrEmpty(grammar))
+        var scope = _registry.GetScopeByLanguageId(GrammarLanguage);
+        if (!string.IsNullOrEmpty(scope))
         {
-            _textMate.SetGrammar(grammar);
+            _textMate.SetGrammar(scope);
         }
     }
 
-    private void ApplyText(string? value)
+    private void ApplyBoundText(string? value)
     {
         if (_syncing)
         {
             return;
         }
         var next = value ?? string.Empty;
-        if (string.Equals(_editor.Document.Text, next, StringComparison.Ordinal))
+        if (string.Equals(Document.Text, next, StringComparison.Ordinal))
         {
             return;
         }
         _syncing = true;
-        _editor.Document.Text = next;
+        Document.Text = next;
         _syncing = false;
     }
 
@@ -158,16 +141,7 @@ internal sealed class SourceEditor : UserControl
             return;
         }
         _syncing = true;
-        Text = _editor.Document.Text;
+        SetCurrentValue(BoundTextProperty, Document.Text);
         _syncing = false;
-    }
-}
-
-internal static class TextMateThemeResolver
-{
-    public static ThemeName Resolve()
-    {
-        var variant = Application.Current?.ActualThemeVariant;
-        return variant == ThemeVariant.Light ? ThemeName.LightPlus : ThemeName.DarkPlus;
     }
 }

@@ -264,10 +264,10 @@
         <Grid Grid.Column="0">
 
           <!-- Source only -->
-          <views:SourceEditor Name="SourceOnlyEditor"
-                              IsVisible="{Binding IsSourceOnly}"
-                              MonoFontFamily="{Binding MonoFontFamily}"
-                              Text="{Binding SourceText, Mode=TwoWay}"/>
+          <views:MarkdownTextEditor Name="SourceOnlyEditor"
+                                     IsVisible="{Binding IsSourceOnly}"
+                                     FontFamily="{Binding MonoFontFamily}"
+                                     BoundText="{Binding SourceText, Mode=TwoWay}"/>
 
           <!-- Preview only -->
           <views:MarkdownPreviewControl Name="PreviewOnlyView"
@@ -276,9 +276,9 @@
 
           <!-- Split vertical -->
           <Grid ColumnDefinitions="*,4,*" IsVisible="{Binding IsSplitVerticalActive}">
-            <views:SourceEditor Grid.Column="0"
-                                MonoFontFamily="{Binding MonoFontFamily}"
-                                Text="{Binding SourceText, Mode=TwoWay}"/>
+            <views:MarkdownTextEditor Grid.Column="0"
+                                       FontFamily="{Binding MonoFontFamily}"
+                                       BoundText="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Column="1"
                           Classes="hairline"
                           ResizeDirection="Columns"/>
@@ -289,9 +289,9 @@
 
           <!-- Split horizontal -->
           <Grid RowDefinitions="*,4,*" IsVisible="{Binding IsSplitHorizontalActive}">
-            <views:SourceEditor Grid.Row="0"
-                                MonoFontFamily="{Binding MonoFontFamily}"
-                                Text="{Binding SourceText, Mode=TwoWay}"/>
+            <views:MarkdownTextEditor Grid.Row="0"
+                                       FontFamily="{Binding MonoFontFamily}"
+                                       BoundText="{Binding SourceText, Mode=TwoWay}"/>
             <GridSplitter Grid.Row="1"
                           Classes="hairline"
                           ResizeDirection="Rows"/>
