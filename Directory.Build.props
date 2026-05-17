@@ -27,6 +27,20 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
+  <PropertyGroup Label="Versioning">
+    <!-- Version is derived from the most recent `v*` git tag by MinVer. -->
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+    <MinVerVerbosity>quiet</MinVerVerbosity>
+  </PropertyGroup>
+
+  <ItemGroup Label="Versioning" Condition="'$(IsAnalyzerProject)' != 'true'">
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
   <ItemGroup Label="Analyzers" Condition="'$(IsAnalyzerProject)' != 'true'">
     <PackageReference Include="StyleCop.Analyzers">
       <PrivateAssets>all</PrivateAssets>

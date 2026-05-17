@@ -1,6 +1,7 @@
 # Markus
 
 [![CI](https://github.com/cihanyakar/Markus/actions/workflows/ci.yml/badge.svg)](https://github.com/cihanyakar/Markus/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/cihanyakar/Markus?display_name=tag&sort=semver)](https://github.com/cihanyakar/Markus/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com)
 

@@ -17,6 +17,10 @@
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
   </ItemGroup>
 
+  <ItemGroup Label="Versioning">
+    <PackageVersion Include="MinVer" Version="7.0.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Analyzers">
     <PackageVersion Include="StyleCop.Analyzers" Version="1.1.118" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.85" />

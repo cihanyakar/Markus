@@ -1,0 +1,117 @@
+name: Release binaries
+
+on:
+  release:
+    types: [published]
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  HUSKY: 0
+  TAG_NAME: ${{ github.event.release.tag_name }}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-binaries-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Publish ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+            archive: zip
+          - rid: osx-x64
+            os: macos-13
+            archive: tar.gz
+          - rid: osx-arm64
+            os: macos-latest
+            archive: tar.gz
+          - rid: linux-x64
+            os: ubuntu-latest
+            archive: tar.gz
+
+    steps:
+      - name: Checkout (tag, full history for MinVer)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore src/Markus/Markus.csproj -r ${{ matrix.rid }}
+
+      - name: Publish self-contained single file
+        shell: bash
+        run: |
+          dotnet publish src/Markus/Markus.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            --no-restore \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:DebugType=embedded \
+            -o publish/${{ matrix.rid }}
+
+      - name: Archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        env:
+          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.tar.gz
+        run: |
+          tar -czf "$ARCHIVE_NAME" -C "publish/${{ matrix.rid }}" .
+          echo "ARTIFACT=$ARCHIVE_NAME" >> "$GITHUB_ENV"
+
+      - name: Archive (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        env:
+          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.zip
+        run: |
+          Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath "$env:ARCHIVE_NAME"
+          "ARTIFACT=$env:ARCHIVE_NAME" >> $env:GITHUB_ENV
+
+      - name: Compute SHA256 (Linux/macOS)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        env:
+          ART: ${{ env.ARTIFACT }}
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            shasum -a 256 "$ART" > "$ART.sha256"
+          else
+            sha256sum "$ART" > "$ART.sha256"
+          fi
+
+      - name: Compute SHA256 (Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        env:
+          ART: ${{ env.ARTIFACT }}
+        run: |
+          $h = Get-FileHash -Path $env:ART -Algorithm SHA256
+          "$($h.Hash.ToLower())  $env:ART" | Out-File -Encoding ASCII "$env:ART.sha256"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            ${{ env.ARTIFACT }}
+            ${{ env.ARTIFACT }}.sha256
