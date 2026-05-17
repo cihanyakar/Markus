@@ -20,6 +20,7 @@ internal static class MarkdownPipeline
             .UseAutoLinks()
             .UseTaskLists()
             .UseEmojiAndSmiley()
+            .UseMathematics()
             .Build();
     }
 }

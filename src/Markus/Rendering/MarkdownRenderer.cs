@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Markdig.Extensions.Mathematics;
 using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
@@ -36,6 +37,8 @@ internal static class MarkdownRenderer
     {
         return block switch
         {
+            MathBlock math => RenderPlaceholder("math", math.Lines.ToString()),
+            FencedCodeBlock f when IsMermaid(f) => RenderPlaceholder("mermaid", f.Lines.ToString()),
             HeadingBlock h => RenderHeading(h),
             ParagraphBlock p => RenderParagraph(p),
             FencedCodeBlock f => RenderFencedCode(f),
@@ -46,6 +49,47 @@ internal static class MarkdownRenderer
             HtmlBlock html => RenderHtmlAsCode(html),
             Table t => RenderTable(t),
             _ => null,
+        };
+    }
+
+    private static bool IsMermaid(FencedCodeBlock fenced)
+    {
+        return string.Equals(fenced.Info, "mermaid", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Control RenderPlaceholder(string kind, string source)
+    {
+        var label = new TextBlock
+        {
+            Text = $"{kind.ToUpperInvariant()} — not yet rendered",
+            FontSize = 10,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x55, 0x70)),
+            Margin = new Thickness(0, 0, 0, 6),
+        };
+
+        var raw = new SelectableTextBlock
+        {
+            Text = source.Trim(),
+            FontFamily = MonoFamily,
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6E, 0x84)),
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var panel = new StackPanel { Spacing = 0 };
+        panel.Children.Add(label);
+        panel.Children.Add(raw);
+
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(20, 0xFF, 0x3D, 0x55)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(90, 0xFF, 0x3D, 0x55)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(16, 12),
+            Margin = new Thickness(0, 6, 0, 10),
+            Child = panel,
         };
     }
 
@@ -327,6 +371,9 @@ internal static class MarkdownRenderer
             case HtmlInline raw:
                 target.Add(new Run(raw.Tag));
                 return;
+            case MathInline math:
+                target.Add(BuildInlineMathPlaceholder(math));
+                return;
             default:
                 target.Add(new Run(inline.ToString() ?? string.Empty));
                 return;
@@ -374,6 +421,17 @@ internal static class MarkdownRenderer
         {
             TextDecorations = TextDecorations.Underline,
             Foreground = new SolidColorBrush(Color.FromRgb(0x58, 0xa6, 0xff)),
+        };
+    }
+
+    private static Run BuildInlineMathPlaceholder(MathInline math)
+    {
+        return new Run(math.Content.ToString())
+        {
+            FontFamily = MonoFamily,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6E, 0x84)),
+            Background = new SolidColorBrush(Color.FromArgb(28, 0xFF, 0x3D, 0x55)),
         };
     }
 }
