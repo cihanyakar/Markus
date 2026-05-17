@@ -300,6 +300,7 @@ dotnet_diagnostic.SA1116.severity = none            # Parameter on first line (f
 dotnet_diagnostic.SA1117.severity = none            # Parameters on same/separate line (formatter owns)
 dotnet_diagnostic.SA1118.severity = none            # Parameter spans multiple lines (formatter owns)
 dotnet_diagnostic.SA1009.severity = none            # Closing paren spacing (CSharpier owns)
+dotnet_diagnostic.SA1010.severity = none            # Opening square bracket spacing (CSharpier owns; collection expressions)
 dotnet_diagnostic.SA1111.severity = none            # Closing paren own line (CSharpier owns)
 dotnet_diagnostic.SA1515.severity = none            # Single-line comments preceded by blank
 dotnet_diagnostic.SA1512.severity = none            # Single-line comments not followed by blank
@@ -331,3 +332,5 @@ dotnet_analyzer_diagnostic.severity = none
 [**/*.axaml.cs]
 # Loosen a few rules on code-behind that XAML-ties us into a public partial class.
 dotnet_diagnostic.CA1852.severity = none            # Can't seal partial XAML-bound classes safely
+dotnet_diagnostic.VSTHRD100.severity = none         # async void event handlers are the Avalonia way
+dotnet_diagnostic.VSTHRD200.severity = none         # *_Click cannot end in Async (it's an event handler)

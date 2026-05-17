@@ -1,20 +1,214 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Markus.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:vm="using:Markus.ViewModels"
+        xmlns:models="using:Markus.Models"
+        mc:Ignorable="d"
+        d:DesignWidth="1000" d:DesignHeight="650"
         x:Class="Markus.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="Markus">
+        Icon="/Assets/markus.png"
+        MinWidth="640" MinHeight="420"
+        Title="{Binding DocumentTitle, StringFormat='{}{0} — Markus'}">
 
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
+  <Design.DataContext>
+    <vm:MainWindowViewModel/>
+  </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+  <Window.Styles>
+    <Style Selector="Button.tool">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="Margin" Value="2,0"/>
+      <Setter Property="MinHeight" Value="28"/>
+    </Style>
+    <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.tool">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="Margin" Value="2,0"/>
+      <Setter Property="MinHeight" Value="28"/>
+    </Style>
+    <Style Selector="Border.statusbar">
+      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+      <Setter Property="BorderThickness" Value="0,1,0,0"/>
+      <Setter Property="Padding" Value="12,4"/>
+    </Style>
+    <Style Selector="Border.toolbar">
+      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="6,4"/>
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Opacity" Value="0.65"/>
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- ============ Toolbar ============ -->
+    <Border Grid.Row="0" Classes="toolbar">
+      <DockPanel LastChildFill="False">
+        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2">
+          <Button Classes="tool" Content="📂  Open"   Click="Open_Click"/>
+          <Button Classes="tool" Content="↻  Reload" Click="Reload_Click"/>
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+          <ToggleButton Classes="tool"
+                       Content="📑  Outline"
+                       IsChecked="{Binding IsOutlineVisible}"/>
+
+          <TextBlock VerticalAlignment="Center"
+                     Margin="12,0,6,0"
+                     Classes="muted"
+                     Text="View"/>
+          <ComboBox SelectedItem="{Binding CurrentViewMode}"
+                    ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
+                    MinWidth="160"/>
+
+          <Button Classes="tool" Content="⚙  Settings" Margin="12,0,0,0" Click="Settings_Click"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- ============ Content ============ -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,260">
+
+      <!-- Main viewer area (mode-dependent) -->
+      <Grid Grid.Column="0">
+
+        <!-- Source only -->
+        <TextBox Name="SourceOnlyEditor"
+                 IsVisible="{Binding IsSourceOnly}"
+                 AcceptsReturn="True"
+                 AcceptsTab="True"
+                 TextWrapping="NoWrap"
+                 FontFamily="Consolas,Menlo,Monaco,JetBrains Mono,monospace"
+                 FontSize="14"
+                 BorderThickness="0"
+                 Padding="16,12"
+                 Text="{Binding SourceText, Mode=TwoWay}"/>
+
+        <!-- Preview only -->
+        <ScrollViewer Padding="32,24" IsVisible="{Binding IsPreviewOnly}">
+          <StackPanel MaxWidth="780" HorizontalAlignment="Stretch">
+            <TextBlock Text="Preview"
+                       Classes="muted"
+                       Margin="0,0,0,8"/>
+            <TextBlock Text="{Binding SourceText}"
+                       TextWrapping="Wrap"
+                       FontFamily="Inter, -apple-system, Segoe UI, sans-serif"
+                       FontSize="15"
+                       LineHeight="22"/>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Split vertical: source | preview -->
+        <Grid ColumnDefinitions="*,5,*" IsVisible="{Binding IsSplitVerticalActive}">
+          <TextBox Grid.Column="0"
+                   Text="{Binding SourceText, Mode=TwoWay}"
+                   AcceptsReturn="True"
+                   AcceptsTab="True"
+                   TextWrapping="NoWrap"
+                   FontFamily="Consolas,Menlo,Monaco,JetBrains Mono,monospace"
+                   FontSize="14"
+                   BorderThickness="0"
+                   Padding="16,12"/>
+          <GridSplitter Grid.Column="1"
+                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        ResizeDirection="Columns"/>
+          <ScrollViewer Grid.Column="2" Padding="24,16">
+            <StackPanel>
+              <TextBlock Text="Preview" Classes="muted" Margin="0,0,0,8"/>
+              <TextBlock Text="{Binding SourceText}" TextWrapping="Wrap" FontSize="15" LineHeight="22"/>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+
+        <!-- Split horizontal: source / preview -->
+        <Grid RowDefinitions="*,5,*" IsVisible="{Binding IsSplitHorizontalActive}">
+          <TextBox Grid.Row="0"
+                   Text="{Binding SourceText, Mode=TwoWay}"
+                   AcceptsReturn="True"
+                   AcceptsTab="True"
+                   TextWrapping="NoWrap"
+                   FontFamily="Consolas,Menlo,Monaco,JetBrains Mono,monospace"
+                   FontSize="14"
+                   BorderThickness="0"
+                   Padding="16,12"/>
+          <GridSplitter Grid.Row="1"
+                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        ResizeDirection="Rows"/>
+          <ScrollViewer Grid.Row="2" Padding="24,16">
+            <StackPanel>
+              <TextBlock Text="Preview" Classes="muted" Margin="0,0,0,8"/>
+              <TextBlock Text="{Binding SourceText}" TextWrapping="Wrap" FontSize="15" LineHeight="22"/>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+
+        <!-- Detached: main window is just a placeholder while two child windows show source/preview -->
+        <Grid IsVisible="{Binding IsDetached}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+            <TextBlock Text="View detached"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Source and preview are shown in separate windows."
+                       Classes="muted"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="(detached windows arrive in the next PR)"
+                       Classes="muted"
+                       HorizontalAlignment="Center"
+                       FontStyle="Italic"/>
+          </StackPanel>
+        </Grid>
+
+      </Grid>
+
+      <!-- Splitter for outline -->
+      <GridSplitter Grid.Column="1"
+                    Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    ResizeDirection="Columns"
+                    IsVisible="{Binding IsOutlineVisible}"/>
+
+      <!-- Outline panel -->
+      <Border Grid.Column="2"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="1,0,0,0"
+              Padding="12"
+              IsVisible="{Binding IsOutlineVisible}">
+        <StackPanel>
+          <TextBlock Text="Outline" FontWeight="SemiBold" Margin="0,0,0,8"/>
+          <TextBlock Classes="muted"
+                     TextWrapping="Wrap"
+                     Text="Heading tree will populate once Markdig parsing lands (next PR)."/>
+        </StackPanel>
+      </Border>
+
+    </Grid>
+
+    <!-- ============ Status bar ============ -->
+    <Border Grid.Row="2" Classes="statusbar">
+      <DockPanel LastChildFill="False">
+        <TextBlock DockPanel.Dock="Left"
+                   Classes="muted"
+                   Text="{Binding StatusText}"/>
+        <TextBlock DockPanel.Dock="Right"
+                   Classes="muted"
+                   Text="{Binding CurrentViewMode, StringFormat='view: {0}'}"/>
+      </DockPanel>
+    </Border>
+
+  </Grid>
 
 </Window>

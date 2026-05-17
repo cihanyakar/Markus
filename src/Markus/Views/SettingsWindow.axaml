@@ -1,0 +1,128 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Markus.ViewModels"
+        xmlns:models="using:Markus.Models"
+        mc:Ignorable="d"
+        x:Class="Markus.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Width="560" Height="540"
+        MinWidth="480" MinHeight="460"
+        CanResize="True"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Markus — Settings">
+
+  <Window.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+      <Setter Property="Margin" Value="0,16,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,12,0"/>
+    </Style>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="Opacity" Value="0.65"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="16,10">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+        <TextBlock Grid.Column="0"
+                   Classes="hint"
+                   VerticalAlignment="Center"
+                   Text="{Binding SettingsDirectory, StringFormat='Saved to: {0}'}"
+                   TextTrimming="CharacterEllipsis"/>
+        <Button Grid.Column="1"
+                Content="Restore defaults"
+                Command="{Binding RestoreDefaultsCommand}"
+                Margin="0,0,8,0"/>
+        <Button Grid.Column="2"
+                Content="Cancel"
+                Click="Cancel_Click"
+                Margin="0,0,8,0"/>
+        <Button Grid.Column="3"
+                Content="Save"
+                Classes="accent"
+                Command="{Binding SaveCommand}"
+                Click="Save_Click"/>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Padding="20,16,20,16">
+      <StackPanel Spacing="4">
+
+        <TextBlock Classes="section" Text="Appearance" Margin="0,0,0,4"/>
+
+        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto"
+              RowSpacing="10">
+
+          <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="Theme"/>
+          <ComboBox Grid.Row="0" Grid.Column="1"
+                    ItemsSource="{x:Static vm:SettingsViewModel.AvailableThemes}"
+                    SelectedValueBinding="{Binding Key}"
+                    SelectedValue="{Binding Theme}"
+                    DisplayMemberBinding="{Binding Display}"
+                    HorizontalAlignment="Stretch"/>
+
+          <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="Renderer"/>
+          <ComboBox Grid.Row="1" Grid.Column="1"
+                    ItemsSource="{x:Static vm:SettingsViewModel.AvailableRenderers}"
+                    SelectedItem="{Binding Renderer}"
+                    HorizontalAlignment="Stretch"/>
+
+          <TextBlock Grid.Row="2" Grid.Column="0" Classes="label" Text="Default view"/>
+          <ComboBox Grid.Row="2" Grid.Column="1"
+                    ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
+                    SelectedItem="{Binding DefaultViewMode}"
+                    HorizontalAlignment="Stretch"/>
+
+          <TextBlock Grid.Row="3" Grid.Column="0" Classes="label" Text="Font size"/>
+          <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+            <Slider Width="220"
+                    Minimum="10" Maximum="28"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    Value="{Binding FontSize}"/>
+            <TextBlock VerticalAlignment="Center"
+                       Text="{Binding FontSize, StringFormat='{}{0:0} pt'}"/>
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Classes="section" Text="Behavior"/>
+
+        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="10">
+
+          <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="Outline panel"/>
+          <CheckBox Grid.Row="0" Grid.Column="1"
+                    Content="Show by default"
+                    IsChecked="{Binding ShowOutline}"/>
+
+          <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="Language"/>
+          <ComboBox Grid.Row="1" Grid.Column="1"
+                    ItemsSource="{x:Static vm:SettingsViewModel.AvailableLanguages}"
+                    SelectedValueBinding="{Binding Code}"
+                    SelectedValue="{Binding Language}"
+                    DisplayMemberBinding="{Binding Display}"
+                    HorizontalAlignment="Stretch"/>
+        </Grid>
+
+        <TextBlock Classes="hint" Margin="0,16,0,0"
+                   Text="Renderer choice currently affects: native (Markdig → Avalonia controls) or placeholder. More renderers (WebView/HTML) will land in a future release. Language other than English is wired up but not yet translated."/>
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>
