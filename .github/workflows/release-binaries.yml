@@ -9,7 +9,6 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   HUSKY: 0
-  TAG_NAME: ${{ github.event.release.tag_name }}
 
 permissions:
   contents: write
@@ -22,23 +21,23 @@ jobs:
   build:
     name: Publish ${{ matrix.rid }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         include:
           - rid: win-x64
             os: windows-latest
-            archive: zip
+            bundle: zip
           - rid: osx-x64
             os: macos-13
-            archive: tar.gz
+            bundle: app
           - rid: osx-arm64
             os: macos-latest
-            archive: tar.gz
+            bundle: app
           - rid: linux-x64
             os: ubuntu-latest
-            archive: tar.gz
+            bundle: tar
 
     steps:
       - name: Checkout (tag, full history for MinVer)
@@ -66,11 +65,60 @@ jobs:
             -p:PublishSingleFile=true \
             -p:PublishTrimmed=false \
             -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
             -p:DebugType=embedded \
             -o publish/${{ matrix.rid }}
 
+      # --- macOS: build a proper .app bundle ---
+      - name: Build .app bundle (macOS)
+        if: matrix.bundle == 'app'
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${TAG#v}"
+          YEAR=$(date -u +%Y)
+          APP_DIR="Markus.app"
+          mkdir -p "$APP_DIR/Contents/MacOS"
+          mkdir -p "$APP_DIR/Contents/Resources"
+
+          # Copy all published files into the .app's MacOS dir
+          cp -R "publish/${{ matrix.rid }}/." "$APP_DIR/Contents/MacOS/"
+          chmod +x "$APP_DIR/Contents/MacOS/Markus"
+
+          # Render Info.plist from the template
+          sed \
+            -e "s/__VERSION__/$VERSION/g" \
+            -e "s/__YEAR__/$YEAR/g" \
+            src/Markus/Build/Info.plist.template > "$APP_DIR/Contents/Info.plist"
+
+          # Optional icon (if shipped)
+          if [ -f "src/Markus/Build/Markus.icns" ]; then
+            cp src/Markus/Build/Markus.icns "$APP_DIR/Contents/Resources/"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string Markus.icns" "$APP_DIR/Contents/Info.plist" || true
+          fi
+
+          # Quarantine attribute that GitHub-downloaded files get is applied
+          # client-side; we cannot strip it here. Users right-click → Open
+          # the first time on macOS Gatekeeper.
+
+      - name: Archive macOS .app (zip)
+        if: matrix.bundle == 'app'
+        shell: bash
+        env:
+          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.zip
+        run: |
+          # `ditto` preserves macOS metadata; falls back to `zip` if missing
+          if command -v ditto >/dev/null 2>&1; then
+            ditto -c -k --sequesterRsrc --keepParent Markus.app "$ARCHIVE_NAME"
+          else
+            zip -ry "$ARCHIVE_NAME" Markus.app
+          fi
+          echo "ARTIFACT=$ARCHIVE_NAME" >> "$GITHUB_ENV"
+
+      # --- Linux: plain tar.gz ---
       - name: Archive (tar.gz)
-        if: matrix.archive == 'tar.gz'
+        if: matrix.bundle == 'tar'
         shell: bash
         env:
           ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.tar.gz
@@ -78,8 +126,9 @@ jobs:
           tar -czf "$ARCHIVE_NAME" -C "publish/${{ matrix.rid }}" .
           echo "ARTIFACT=$ARCHIVE_NAME" >> "$GITHUB_ENV"
 
+      # --- Windows: zip ---
       - name: Archive (zip)
-        if: matrix.archive == 'zip'
+        if: matrix.bundle == 'zip'
         shell: pwsh
         env:
           ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.zip
@@ -87,8 +136,9 @@ jobs:
           Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath "$env:ARCHIVE_NAME"
           "ARTIFACT=$env:ARCHIVE_NAME" >> $env:GITHUB_ENV
 
+      # --- SHA256 ---
       - name: Compute SHA256 (Linux/macOS)
-        if: matrix.archive == 'tar.gz'
+        if: matrix.bundle != 'zip'
         shell: bash
         env:
           ART: ${{ env.ARTIFACT }}
@@ -100,7 +150,7 @@ jobs:
           fi
 
       - name: Compute SHA256 (Windows)
-        if: matrix.archive == 'zip'
+        if: matrix.bundle == 'zip'
         shell: pwsh
         env:
           ART: ${{ env.ARTIFACT }}
