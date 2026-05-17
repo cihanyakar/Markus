@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Markus.Rendering;
 using Markus.Services;
 
@@ -66,6 +67,8 @@ internal sealed class MarkdownPreviewControl : UserControl
     {
         _container.Children.Clear();
         _lineToControl.Clear();
+        var theme = MarkdownRenderer.Theme;
+        Background = new SolidColorBrush(theme.Background);
         var document = MarkdownPipeline.Parse(source);
         foreach (var rendered in MarkdownRenderer.Render(document))
         {

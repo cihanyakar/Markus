@@ -49,6 +49,25 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         new ThemeOption("TokyoNight", "Tokyo Night", true),
     };
 
+    public static readonly IReadOnlyList<CodeThemeOption> AvailableCodeThemes = new CodeThemeOption[]
+    {
+        new CodeThemeOption("Auto", "Auto (match app)"),
+        new CodeThemeOption("LightPlus", "Light+"),
+        new CodeThemeOption("DarkPlus", "Dark+"),
+        new CodeThemeOption("Light", "Light"),
+        new CodeThemeOption("Dark", "Dark"),
+        new CodeThemeOption("Monokai", "Monokai"),
+        new CodeThemeOption("MonokaiDimmed", "Monokai Dimmed"),
+        new CodeThemeOption("DimmedMonokai", "Dimmed Monokai"),
+        new CodeThemeOption("SolarizedLight", "Solarized Light"),
+        new CodeThemeOption("SolarizedDark", "Solarized Dark"),
+        new CodeThemeOption("QuietLight", "Quiet Light"),
+        new CodeThemeOption("KimbieDark", "Kimbie Dark"),
+        new CodeThemeOption("Abbys", "Abyss"),
+        new CodeThemeOption("Red", "Red"),
+        new CodeThemeOption("TomorrowNightBlue", "Tomorrow Night Blue"),
+    };
+
     public static readonly IReadOnlyList<SettingsCategoryItem> Categories = new SettingsCategoryItem[]
     {
         new SettingsCategoryItem(SettingsCategory.Appearance, "Appearance", IconData.Palette),
@@ -72,6 +91,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     private string _theme;
 
     [ObservableProperty]
+    private string _codeTheme;
+
+    [ObservableProperty]
     private ViewMode _defaultViewMode;
 
     [ObservableProperty]
@@ -93,6 +115,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _renderer = settings.Renderer;
         _language = settings.Language;
         _theme = settings.Theme;
+        _codeTheme = settings.CodeTheme;
         _defaultViewMode = settings.DefaultViewMode;
         _showOutline = settings.ShowOutline;
         _fontSize = settings.FontSize;
@@ -119,6 +142,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         Renderer = defaults.Renderer;
         Language = defaults.Language;
         Theme = defaults.Theme;
+        CodeTheme = defaults.CodeTheme;
         DefaultViewMode = defaults.DefaultViewMode;
         ShowOutline = defaults.ShowOutline;
         FontSize = defaults.FontSize;
@@ -143,6 +167,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnThemeChanged(string value)
     {
         Settings.Theme = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnCodeThemeChanged(string value)
+    {
+        Settings.CodeTheme = value;
         Service.Save(Settings);
     }
 
@@ -191,6 +221,13 @@ internal sealed record ThemeOption(string key, string display, bool isDark)
     public string Display => display;
 
     public bool IsDark => isDark;
+}
+
+internal sealed record CodeThemeOption(string key, string display)
+{
+    public string Key => key;
+
+    public string Display => display;
 }
 
 internal sealed record SettingsCategoryItem(SettingsCategory kind, string name, StreamGeometry icon)

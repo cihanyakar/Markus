@@ -68,6 +68,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
         Rendering.MarkdownRenderer.Theme = Rendering.MarkdownThemes.Resolve(Settings.Theme);
+        Views.TextMateThemeResolver.Update(Settings.CodeTheme);
         RebuildOutline(_sourceText);
     }
 
@@ -232,6 +233,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             Rendering.MarkdownRenderer.Theme = newTheme;
         }
+
+        // Code (TextMate) theme is independent from the preview theme.
+        Views.TextMateThemeResolver.Update(e.Settings.CodeTheme);
 
         if (fontChanged || themeChanged)
         {

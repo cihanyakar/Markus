@@ -92,6 +92,7 @@
 
   <Application.Styles>
     <FluentTheme/>
+    <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
 
     <!-- ============ Global typography ============ -->
     <Style Selector="Window">

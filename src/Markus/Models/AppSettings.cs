@@ -8,6 +8,8 @@ internal sealed class AppSettings
 
     public string Theme { get; set; } = "GitHubDark";
 
+    public string CodeTheme { get; set; } = "Auto";
+
     public ViewMode DefaultViewMode { get; set; } = ViewMode.Preview;
 
     public bool ShowOutline { get; set; }
@@ -27,6 +29,7 @@ internal sealed class AppSettings
             Renderer = Renderer,
             Language = Language,
             Theme = Theme,
+            CodeTheme = CodeTheme,
             ThemeMode = ThemeMode,
             DefaultViewMode = DefaultViewMode,
             ShowOutline = ShowOutline,

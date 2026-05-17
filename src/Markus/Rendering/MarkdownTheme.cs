@@ -10,6 +10,10 @@ internal sealed class MarkdownTheme
 
     public bool IsDark { get; init; }
 
+    public Color Background { get; init; }
+
+    public Color Foreground { get; init; }
+
     public Color Accent { get; init; }
 
     public Color CodeBackground { get; init; }

@@ -111,6 +111,7 @@ internal static class MarkdownRenderer
         {
             FontSize = size,
             FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Theme.Foreground),
             Margin = new Thickness(0, heading.Level == 1 ? 8 : 12, 0, 4),
             TextWrapping = TextWrapping.Wrap,
         };
@@ -124,6 +125,7 @@ internal static class MarkdownRenderer
         {
             FontSize = 15,
             LineHeight = 24,
+            Foreground = new SolidColorBrush(Theme.Foreground),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 8),
         };
@@ -252,6 +254,7 @@ internal static class MarkdownRenderer
                 Text = html.Lines.ToString(),
                 FontFamily = MonoFamily,
                 FontSize = 12,
+                Foreground = new SolidColorBrush(Theme.CodeForeground),
                 TextWrapping = TextWrapping.Wrap,
             },
         };

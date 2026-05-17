@@ -178,7 +178,7 @@
               <TextBlock Classes="title" Text="Appearance"/>
               <TextBlock Classes="subtitle"
                          Text="How Markus looks while you read."/>
-              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="18">
+              <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="18">
                 <TextBlock Grid.Row="0" Grid.Column="0" Classes="row-label" Text="Mode"/>
                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
                   <RadioButton Content="System"
@@ -194,7 +194,7 @@
                                IsChecked="{Binding ThemeMode, Mode=TwoWay, Converter={x:Static views:EqualsConverter.Instance}, ConverterParameter=Dark}"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Theme"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Classes="row-label" Text="Preview theme"/>
                 <ComboBox Grid.Row="1" Grid.Column="1"
                           Classes="glass"
                           MaxWidth="340"
@@ -204,8 +204,18 @@
                           SelectedValue="{Binding Theme}"
                           DisplayMemberBinding="{Binding Display}"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Classes="row-label" Text="Font size"/>
-                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="14">
+                <TextBlock Grid.Row="2" Grid.Column="0" Classes="row-label" Text="Code theme"/>
+                <ComboBox Grid.Row="2" Grid.Column="1"
+                          Classes="glass"
+                          MaxWidth="340"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{x:Static vm:SettingsViewModel.AvailableCodeThemes}"
+                          SelectedValueBinding="{Binding Key}"
+                          SelectedValue="{Binding CodeTheme}"
+                          DisplayMemberBinding="{Binding Display}"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Classes="row-label" Text="Font size"/>
+                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="14">
                   <Slider Width="260"
                           Minimum="10" Maximum="28"
                           TickFrequency="1"
@@ -216,8 +226,8 @@
                              Text="{Binding FontSize, StringFormat='{}{0:0} pt'}"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Classes="row-label" Text="Code font"/>
-                <ComboBox Grid.Row="3" Grid.Column="1"
+                <TextBlock Grid.Row="4" Grid.Column="0" Classes="row-label" Text="Code font"/>
+                <ComboBox Grid.Row="4" Grid.Column="1"
                           Classes="glass"
                           MaxWidth="340"
                           HorizontalAlignment="Left"
@@ -226,9 +236,9 @@
               </Grid>
               <TextBlock Classes="hint"
                          Margin="0,24,0,0"
-                         MaxWidth="440"
+                         MaxWidth="460"
                          HorizontalAlignment="Left"
-                         Text="Themes restyle the rendered preview. The code font applies to both source view and rendered code blocks."/>
+                         Text="Preview theme restyles the rendered document. Code theme colors the source editor's syntax highlighting independently. Auto follows the app mode."/>
             </StackPanel>
 
             <!-- ====== View ====== -->

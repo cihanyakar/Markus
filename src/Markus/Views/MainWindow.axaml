@@ -5,6 +5,7 @@
         xmlns:vm="using:Markus.ViewModels"
         xmlns:views="using:Markus.Views"
         xmlns:models="using:Markus.Models"
+        xmlns:ae="using:AvaloniaEdit"
         mc:Ignorable="d"
         d:DesignWidth="1100" d:DesignHeight="720"
         x:Class="Markus.Views.MainWindow"

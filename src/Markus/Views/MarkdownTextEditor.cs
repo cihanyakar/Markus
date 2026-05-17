@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 using AvaloniaEdit;
+using AvaloniaEdit.Document;
 using AvaloniaEdit.TextMate;
 using TextMateSharp.Grammars;
 
@@ -24,7 +25,7 @@ internal sealed class MarkdownTextEditor : TextEditor
     public static readonly StyledProperty<string> GrammarLanguageProperty = AvaloniaProperty.Register<
         MarkdownTextEditor,
         string
-    >(nameof(GrammarLanguage), "md");
+    >(nameof(GrammarLanguage), "markdown");
 
     private RegistryOptions? _registry;
     private TextMate.Installation? _textMate;
@@ -36,9 +37,7 @@ internal sealed class MarkdownTextEditor : TextEditor
         FontSize = 14;
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-        Background = Brushes.Transparent;
         Padding = new Thickness(28, 24);
-        TextChanged += OnEditorTextChanged;
     }
 
     public string? BoundText
@@ -53,6 +52,11 @@ internal sealed class MarkdownTextEditor : TextEditor
         set => SetValue(GrammarLanguageProperty, value);
     }
 
+    // Avalonia matches control styles by exact type. Without this override
+    // the inherited TextEditor template isn't applied to MarkdownTextEditor,
+    // so the control measures to zero and renders blank.
+    protected override Type StyleKeyOverride => typeof(TextEditor);
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -63,6 +67,7 @@ internal sealed class MarkdownTextEditor : TextEditor
         {
             app.PropertyChanged += OnApplicationPropertyChanged;
         }
+        TextMateThemeResolver.Changed += OnCodeThemeChanged;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -71,6 +76,7 @@ internal sealed class MarkdownTextEditor : TextEditor
         {
             app.PropertyChanged -= OnApplicationPropertyChanged;
         }
+        TextMateThemeResolver.Changed -= OnCodeThemeChanged;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -87,12 +93,32 @@ internal sealed class MarkdownTextEditor : TextEditor
         }
     }
 
+    private static void ApplyBrush(TextMate.Installation installation, string colorKey, Action<IBrush> apply)
+    {
+        if (!installation.TryGetThemeColor(colorKey, out var colorString))
+        {
+            return;
+        }
+        if (!Color.TryParse(colorString, out var color))
+        {
+            return;
+        }
+        apply(new SolidColorBrush(color));
+    }
+
     private void OnApplicationPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.Property == Application.ActualThemeVariantProperty && _textMate is not null)
         {
             InstallTextMate();
-            ApplyBoundText(BoundText);
+        }
+    }
+
+    private void OnCodeThemeChanged(object? sender, EventArgs e)
+    {
+        if (_textMate is not null)
+        {
+            InstallTextMate();
         }
     }
 
@@ -102,7 +128,22 @@ internal sealed class MarkdownTextEditor : TextEditor
         var themeName = TextMateThemeResolver.Resolve();
         _registry = new RegistryOptions(themeName);
         _textMate = this.InstallTextMate(_registry);
+        _textMate.AppliedTheme += OnTextMateThemeApplied;
         ApplyGrammar();
+        ApplyThemeBrushes(_textMate);
+    }
+
+    private void OnTextMateThemeApplied(object? sender, TextMate.Installation installation)
+    {
+        ApplyThemeBrushes(installation);
+    }
+
+    private void ApplyThemeBrushes(TextMate.Installation installation)
+    {
+        ApplyBrush(installation, "editor.background", b => Background = b);
+        ApplyBrush(installation, "editor.foreground", b => Foreground = b);
+        ApplyBrush(installation, "editor.selectionBackground", b => TextArea.SelectionBrush = b);
+        ApplyBrush(installation, "editorLineNumber.foreground", b => LineNumbersForeground = b);
     }
 
     private void ApplyGrammar()
@@ -130,18 +171,19 @@ internal sealed class MarkdownTextEditor : TextEditor
             return;
         }
         _syncing = true;
-        Document.Text = next;
-        _syncing = false;
-    }
-
-    private void OnEditorTextChanged(object? sender, EventArgs e)
-    {
-        if (_syncing)
+        // Replace the document instance the way the official demo does; setting
+        // Document.Text alone doesn't always trigger the layout/render pipeline.
+        Document = new TextDocument(next);
+        Document.TextChanged += (_, _) =>
         {
-            return;
-        }
-        _syncing = true;
-        SetCurrentValue(BoundTextProperty, Document.Text);
+            if (_syncing)
+            {
+                return;
+            }
+            _syncing = true;
+            SetCurrentValue(BoundTextProperty, Document.Text);
+            _syncing = false;
+        };
         _syncing = false;
     }
 }
