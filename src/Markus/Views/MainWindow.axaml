@@ -222,17 +222,16 @@
                                            Source="{Binding SourceText}"/>
           </Grid>
 
-          <!-- Detached placeholder -->
+          <!-- Detached: main window stays as a hint while children carry the work -->
           <Grid IsVisible="{Binding IsDetached}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
               <TextBlock Classes="display" Text="Detached" HorizontalAlignment="Center"/>
               <TextBlock Classes="meta"
-                         Text="Source and preview live in separate windows"
-                         HorizontalAlignment="Center"/>
-              <TextBlock Classes="meta" Margin="0,12,0,0"
-                         Text="(arriving in the next iteration)"
-                         FontStyle="Italic"
-                         HorizontalAlignment="Center"/>
+                         HorizontalAlignment="Center"
+                         Text="Source and preview live in separate windows."/>
+              <TextBlock Classes="meta"
+                         HorizontalAlignment="Center"
+                         Text="Switch view mode to bring them back."/>
             </StackPanel>
           </Grid>
 
