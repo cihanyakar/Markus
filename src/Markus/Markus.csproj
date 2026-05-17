@@ -27,6 +27,11 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup Label="FriendAssemblies">
+    <InternalsVisibleTo Include="Markus.Tests" />
+    <InternalsVisibleTo Include="Markus.UI.Tests" />
+  </ItemGroup>
+
   <Target
     Name="HuskyInstall"
     BeforeTargets="Restore;CollectPackageReferences"

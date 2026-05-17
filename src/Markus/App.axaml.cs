@@ -6,7 +6,7 @@ using Markus.Views;
 
 namespace Markus;
 
-public partial class App : Application
+internal sealed partial class App : Application
 {
     public override void Initialize()
     {

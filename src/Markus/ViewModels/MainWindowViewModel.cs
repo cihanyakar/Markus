@@ -1,6 +1,6 @@
-﻿namespace Markus.ViewModels;
+namespace Markus.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
+internal sealed partial class MainWindowViewModel : ViewModelBase
 {
     public string Greeting { get; } = "Welcome to Avalonia!";
 }
