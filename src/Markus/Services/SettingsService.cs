@@ -1,18 +1,10 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Markus.Models;
 
 namespace Markus.Services;
 
 internal sealed class SettingsService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
-
     private readonly string _settingsPath;
 
     public SettingsService()
@@ -35,7 +27,7 @@ internal sealed class SettingsService
             }
 
             var json = File.ReadAllText(_settingsPath);
-            var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
+            var loaded = JsonSerializer.Deserialize(json, AppSettingsJsonContext.Default.AppSettings);
             return loaded ?? new AppSettings();
         }
         catch (JsonException)
@@ -51,7 +43,7 @@ internal sealed class SettingsService
     public void Save(AppSettings settings)
     {
         Directory.CreateDirectory(SettingsDirectory);
-        var json = JsonSerializer.Serialize(settings, JsonOptions);
+        var json = JsonSerializer.Serialize(settings, AppSettingsJsonContext.Default.AppSettings);
         File.WriteAllText(_settingsPath, json);
         Changed?.Invoke(this, new SettingsChangedEventArgs(settings));
     }

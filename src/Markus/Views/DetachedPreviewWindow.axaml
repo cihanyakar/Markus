@@ -7,7 +7,6 @@
         Width="780" Height="720"
         MinWidth="480" MinHeight="320"
         Title="{Binding DocumentTitle, StringFormat='{}{0} — Preview'}"
-        Icon="/Assets/markus.png"
         Background="{DynamicResource AppBackground}">
 
   <Window.Styles>

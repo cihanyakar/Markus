@@ -28,7 +28,7 @@ internal static unsafe class MacosAppleEventHandler
         {
             return;
         }
-        _installed = InstallDelegateMethod();
+        _installed = InstallDelegateMethods();
     }
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -61,7 +61,45 @@ internal static unsafe class MacosAppleEventHandler
         }
     }
 
-    private static bool InstallDelegateMethod()
+    // macOS 11+ delivers Finder "open" events via -[NSApplicationDelegate
+    // application:openURLs:] instead of the deprecated openFiles:. We bridge
+    // both for compatibility across macOS versions.
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static void OpenUrlsTrampoline(IntPtr self, IntPtr cmd, IntPtr sender, IntPtr urlsArray)
+    {
+        if (_callback is null || urlsArray == IntPtr.Zero)
+        {
+            return;
+        }
+        var count = ObjC.SendReturnLong(urlsArray, ObjC.Sel("count"));
+        for (long i = 0; i < count; i++)
+        {
+            var nsUrl = ObjC.SendIdLong(urlsArray, ObjC.Sel("objectAtIndex:"), i);
+            if (nsUrl == IntPtr.Zero)
+            {
+                continue;
+            }
+            var nsString = ObjC.SendId(nsUrl, ObjC.Sel("path"));
+            if (nsString == IntPtr.Zero)
+            {
+                continue;
+            }
+            var utf8 = ObjC.SendId(nsString, ObjC.Sel("UTF8String"));
+            if (utf8 == IntPtr.Zero)
+            {
+                continue;
+            }
+            var path = Marshal.PtrToStringUTF8(utf8);
+            if (string.IsNullOrEmpty(path))
+            {
+                continue;
+            }
+            var capture = _callback;
+            Dispatcher.UIThread.Post(() => capture(path));
+        }
+    }
+
+    private static bool InstallDelegateMethods()
     {
         var nsApp = ObjC.SendId(ObjC.GetClass("NSApplication"), ObjC.Sel("sharedApplication"));
         if (nsApp == IntPtr.Zero)
@@ -78,25 +116,29 @@ internal static unsafe class MacosAppleEventHandler
         {
             return false;
         }
-        var selector = ObjC.Sel("application:openFiles:");
 #pragma warning disable SA1011 // Function-pointer modifier `]<` can't be separated by a space.
-        var imp = (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, IntPtr, void>)&OpenFilesTrampoline;
+        var filesImp = (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, IntPtr, void>)&OpenFilesTrampoline;
+        var urlsImp = (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, IntPtr, void>)&OpenUrlsTrampoline;
 #pragma warning restore SA1011
 
-        // The type encoding "v@:@@" means: void method on (self id, _cmd SEL,
-        // sender id, files NSArray*). Same shape as the AppKit declaration.
-        var added = ObjC.AddMethod(cls, selector, imp, "v@:@@");
-        if (added)
+        // "v@:@@" means: void method on (self, _cmd, sender, NSArray*).
+        InstallOrSwap(cls, ObjC.Sel("application:openFiles:"), filesImp, "v@:@@");
+        InstallOrSwap(cls, ObjC.Sel("application:openURLs:"), urlsImp, "v@:@@");
+        return true;
+    }
+
+    private static void InstallOrSwap(IntPtr cls, IntPtr selector, IntPtr imp, string typeEncoding)
+    {
+        if (ObjC.AddMethod(cls, selector, imp, typeEncoding))
         {
-            return true;
+            return;
         }
         var existing = ObjC.GetInstanceMethod(cls, selector);
         if (existing == IntPtr.Zero)
         {
-            return false;
+            return;
         }
         ObjC.SetImplementation(existing, imp);
-        return true;
     }
 
     private static class ObjC

@@ -191,7 +191,19 @@ internal static class MarkdownRenderer
     private static Control RenderList(ListBlock list)
     {
         var panel = new StackPanel { Spacing = 2, Margin = new Thickness(0, 4, 0, 8) };
-        var index = 1;
+        // Honor the source's starting number ("5. foo / 6. bar" should render
+        // as 5, 6, ...) and its delimiter (period vs. paren). Falls back to 1.
+        var index =
+            list.IsOrdered
+            && int.TryParse(
+                list.OrderedStart,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var start
+            )
+                ? start
+                : 1;
+        var delimiter = list.OrderedDelimiter == '\0' ? '.' : list.OrderedDelimiter;
         foreach (var listItem in list)
         {
             if (listItem is not ListItemBlock item)
@@ -199,7 +211,7 @@ internal static class MarkdownRenderer
                 continue;
             }
 
-            var bullet = list.IsOrdered ? $"{index}." : "•";
+            var bullet = list.IsOrdered ? $"{index}{delimiter}" : "•";
             var marker = new TextBlock
             {
                 Text = bullet,
@@ -352,6 +364,9 @@ internal static class MarkdownRenderer
             case CodeInline code:
                 target.Add(BuildInlineCode(code));
                 return;
+            case LinkInline link when link.IsImage:
+                target.Add(BuildImage(link));
+                return;
             case LinkInline link:
                 target.Add(BuildLink(link));
                 return;
@@ -401,23 +416,100 @@ internal static class MarkdownRenderer
         };
     }
 
-    private static Run BuildLink(LinkInline link)
+    private static InlineUIContainer BuildLink(LinkInline link)
     {
         var label = link.FirstChild is LiteralInline first ? first.Content.ToString() : link.Url;
-        return new Run(label ?? string.Empty)
+        return MakeClickableInline(label ?? string.Empty, link.Url);
+    }
+
+    private static InlineUIContainer BuildAutoLink(AutolinkInline auto)
+    {
+        return MakeClickableInline(auto.Url, auto.Url);
+    }
+
+    private static InlineUIContainer MakeClickableInline(string text, string? url)
+    {
+        var tb = new TextBlock
         {
+            Text = text,
             TextDecorations = TextDecorations.Underline,
             Foreground = new SolidColorBrush(Theme.Accent),
+            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+        };
+        tb.PointerPressed += (_, _) => OpenUrl(url);
+        return new InlineUIContainer(tb);
+    }
+
+    private static InlineUIContainer BuildImage(LinkInline image)
+    {
+        var alt = image.FirstChild is LiteralInline first ? first.Content.ToString() : null;
+        return new InlineUIContainer(LoadImageOrPlaceholder(image.Url, alt));
+    }
+
+    private static Control LoadImageOrPlaceholder(string? url, string? alt)
+    {
+        var bitmap = TryLoadBitmap(url);
+        if (bitmap is null)
+        {
+            return new SelectableTextBlock
+            {
+                Text = $"[image: {alt ?? url ?? "?"}]",
+                FontStyle = FontStyle.Italic,
+                Foreground = new SolidColorBrush(Theme.Muted),
+            };
+        }
+        return new Image
+        {
+            Source = bitmap,
+            Stretch = Stretch.Uniform,
+            MaxWidth = 720,
         };
     }
 
-    private static Run BuildAutoLink(AutolinkInline auto)
+    private static Avalonia.Media.Imaging.Bitmap? TryLoadBitmap(string? url)
     {
-        return new Run(auto.Url)
+        if (string.IsNullOrWhiteSpace(url))
         {
-            TextDecorations = TextDecorations.Underline,
-            Foreground = new SolidColorBrush(Theme.Accent),
-        };
+            return null;
+        }
+        try
+        {
+            if (System.IO.File.Exists(url))
+            {
+                return new Avalonia.Media.Imaging.Bitmap(url);
+            }
+        }
+        catch (System.IO.IOException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+        return null;
+    }
+
+    private static void OpenUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+        try
+        {
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo { FileName = url, UseShellExecute = true }
+            );
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Shell couldn't open the URL; swallow so a bad link doesn't crash the app.
+        }
+        catch (System.IO.FileNotFoundException)
+        {
+            // No-op: link target missing on disk.
+        }
     }
 
     private static Run BuildInlineMathPlaceholder(MathInline math)

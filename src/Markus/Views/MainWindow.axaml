@@ -10,7 +10,6 @@
         d:DesignWidth="1100" d:DesignHeight="720"
         x:Class="Markus.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/markus.png"
         MinWidth="720" MinHeight="480"
         Title="{Binding DocumentTitle, StringFormat='{}{0} — Markus'}"
         Background="Transparent"
@@ -50,6 +49,13 @@
             <NativeMenuItem Header="Copy" Gesture="Cmd+C"/>
             <NativeMenuItem Header="Paste" Gesture="Cmd+V"/>
             <NativeMenuItem Header="Select All" Gesture="Cmd+A"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Find" Gesture="Cmd+F"
+                            Command="{Binding FindCommand}"/>
+            <NativeMenuItem Header="Find Next" Gesture="Cmd+G"
+                            Command="{Binding FindNextCommand}"/>
+            <NativeMenuItem Header="Find Previous" Gesture="Cmd+Shift+G"
+                            Command="{Binding FindPreviousCommand}"/>
           </NativeMenu>
         </NativeMenuItem.Menu>
       </NativeMenuItem>
@@ -88,6 +94,15 @@
                             ToggleType="CheckBox"
                             IsChecked="{Binding IsPreviewSoftWrap}"
                             Command="{Binding TogglePreviewSoftWrapCommand}"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Focus Mode" Gesture="Cmd+Shift+M"
+                            ToggleType="CheckBox"
+                            IsChecked="{Binding IsFocusMode}"
+                            Command="{Binding ToggleFocusModeCommand}"/>
+            <NativeMenuItem Header="Typewriter Scrolling"
+                            ToggleType="CheckBox"
+                            IsChecked="{Binding IsTypewriterMode}"
+                            Command="{Binding ToggleTypewriterModeCommand}"/>
             <NativeMenuItemSeparator/>
             <NativeMenuItem Header="Appearance">
               <NativeMenuItem.Menu>
@@ -255,6 +270,7 @@
       <!-- ============ Toolbar (glass, also serves as draggable title bar) ============ -->
       <Border Grid.Row="0" Classes="glass toolbar"
               Name="TitleBarRegion"
+              IsVisible="{Binding !IsFocusMode}"
               PointerPressed="OnTitleBarPointerPressed">
         <Grid ColumnDefinitions="Auto,*,Auto">
 
@@ -338,7 +354,8 @@
                                      IsVisible="{Binding IsSourceVisibleInMain}"
                                      FontFamily="{Binding MonoFontFamily}"
                                      BoundText="{Binding SourceText, Mode=TwoWay}"
-                                     WordWrap="{Binding IsSourceSoftWrap}"/>
+                                     WordWrap="{Binding IsSourceSoftWrap}"
+                                     TypewriterMode="{Binding IsTypewriterMode}"/>
 
           <!-- Preview only -->
           <views:MarkdownPreviewControl Name="PreviewOnlyView"
@@ -350,7 +367,8 @@
             <views:MarkdownTextEditor Grid.Column="0"
                                        FontFamily="{Binding MonoFontFamily}"
                                        BoundText="{Binding SourceText, Mode=TwoWay}"
-                                     WordWrap="{Binding IsSourceSoftWrap}"/>
+                                     WordWrap="{Binding IsSourceSoftWrap}"
+                                     TypewriterMode="{Binding IsTypewriterMode}"/>
             <GridSplitter Grid.Column="1"
                           Classes="hairline"
                           ResizeDirection="Columns"/>
@@ -364,7 +382,8 @@
             <views:MarkdownTextEditor Grid.Row="0"
                                        FontFamily="{Binding MonoFontFamily}"
                                        BoundText="{Binding SourceText, Mode=TwoWay}"
-                                     WordWrap="{Binding IsSourceSoftWrap}"/>
+                                     WordWrap="{Binding IsSourceSoftWrap}"
+                                     TypewriterMode="{Binding IsTypewriterMode}"/>
             <GridSplitter Grid.Row="1"
                           Classes="hairline"
                           ResizeDirection="Rows"/>
@@ -414,7 +433,7 @@
       </Grid>
 
       <!-- ============ Status bar (glass) ============ -->
-      <Border Grid.Row="2" Classes="glass statusbar">
+      <Border Grid.Row="2" Classes="glass statusbar" IsVisible="{Binding !IsFocusMode}">
         <DockPanel LastChildFill="False">
           <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10">
             <TextBlock Classes="section" Text="STATUS"/>
@@ -423,7 +442,15 @@
                        VerticalAlignment="Center"
                        Text="{Binding StatusText}"/>
           </StackPanel>
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="14">
+            <TextBlock Foreground="{DynamicResource TextMedium}"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       Text="{Binding CaretPosition}"/>
+            <TextBlock Foreground="{DynamicResource TextLow}"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       Text="{Binding DocumentStats}"/>
             <TextBlock Classes="section" Text="VIEW"/>
             <TextBlock Foreground="{DynamicResource TextMedium}"
                        FontSize="11"

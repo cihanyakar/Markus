@@ -34,6 +34,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isPreviewSoftWrap;
 
     [ObservableProperty]
+    private bool _isFocusMode;
+
+    [ObservableProperty]
+    private bool _isTypewriterMode;
+
+    [ObservableProperty]
     private string _statusText = "No file open";
 
     [ObservableProperty]
@@ -44,6 +50,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string? _currentFilePath;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WordCount))]
+    [NotifyPropertyChangedFor(nameof(CharCount))]
+    [NotifyPropertyChangedFor(nameof(ReadingMinutes))]
+    [NotifyPropertyChangedFor(nameof(DocumentStats))]
     private string _sourceText =
         "# Welcome to Markus\n\n"
         + "This is a **placeholder**. Open a `.md` file to see it rendered.\n\n"
@@ -60,6 +70,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private string _monoFontFamily;
+
+    [ObservableProperty]
+    private string _caretPosition = "Ln 1, Col 1";
 
     public MainWindowViewModel()
         : this(ServiceLocator.Settings) { }
@@ -89,6 +102,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public event EventHandler? SettingsRequested;
 
+    public event EventHandler? FindRequested;
+
+    public event EventHandler? FindNextRequested;
+
+    public event EventHandler? FindPreviousRequested;
+
     public AppSettings Settings { get; private set; }
 
     public bool IsSourceOnly => CurrentViewMode is ViewMode.Source;
@@ -102,6 +121,15 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // In detached mode the main window keeps showing the source (the preview
     // floats out into its own window). Source-only obviously stays visible too.
     public bool IsSourceVisibleInMain => CurrentViewMode is ViewMode.Source or ViewMode.Detached;
+
+    public int WordCount => CountWords(SourceText);
+
+    public int CharCount => SourceText?.Length ?? 0;
+
+    // 250 words/min is a conservative reading-speed default for prose; rounded up.
+    public int ReadingMinutes => Math.Max(1, (int)Math.Ceiling(WordCount / 250.0));
+
+    public string DocumentStats => $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min";
 
     public async Task LoadFileAsync(string path)
     {
@@ -126,6 +154,31 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _fileWatcher.FileChanged -= OnFileChangedOnBackgroundThread;
         _fileWatcher.Dispose();
         _outlineCts?.Dispose();
+    }
+
+    private static int CountWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 0;
+        }
+        var count = 0;
+        var inWord = false;
+        foreach (var ch in text)
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                inWord = false;
+                continue;
+            }
+            if (inWord)
+            {
+                continue;
+            }
+            inWord = true;
+            count++;
+        }
+        return count;
     }
 
     [RelayCommand(CanExecute = nameof(CanReload))]
@@ -246,6 +299,36 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsPreviewSoftWrap = !IsPreviewSoftWrap;
     }
 
+    [RelayCommand]
+    private void ToggleFocusMode()
+    {
+        IsFocusMode = !IsFocusMode;
+    }
+
+    [RelayCommand]
+    private void ToggleTypewriterMode()
+    {
+        IsTypewriterMode = !IsTypewriterMode;
+    }
+
+    [RelayCommand]
+    private void Find()
+    {
+        FindRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void FindNext()
+    {
+        FindNextRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void FindPrevious()
+    {
+        FindPreviousRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     partial void OnIsSourceSoftWrapChanged(bool value)
     {
         Settings.IsSourceSoftWrap = value;
@@ -288,6 +371,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Code (TextMate) theme is independent from the preview theme.
         Views.TextMateThemeResolver.Update(e.Settings.CodeTheme);
+
+        if (IsSourceSoftWrap != e.Settings.IsSourceSoftWrap)
+        {
+            IsSourceSoftWrap = e.Settings.IsSourceSoftWrap;
+        }
+
+        if (IsPreviewSoftWrap != e.Settings.IsPreviewSoftWrap)
+        {
+            IsPreviewSoftWrap = e.Settings.IsPreviewSoftWrap;
+        }
 
         if (fontChanged || themeChanged)
         {

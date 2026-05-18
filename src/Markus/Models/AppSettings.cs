@@ -16,7 +16,7 @@ internal sealed class AppSettings
 
     public double FontSize { get; set; } = 16.0;
 
-    public string MonoFont { get; set; } = "Iosevka";
+    public string MonoFont { get; set; } = "JetBrains Mono";
 
     public string ThemeMode { get; set; } = "System";
 

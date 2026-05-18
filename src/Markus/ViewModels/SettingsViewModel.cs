@@ -108,6 +108,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _themeMode;
 
+    [ObservableProperty]
+    private bool _isSourceSoftWrap;
+
+    [ObservableProperty]
+    private bool _isPreviewSoftWrap;
+
     public SettingsViewModel(SettingsService service, AppSettings settings)
     {
         Service = service;
@@ -121,6 +127,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _fontSize = settings.FontSize;
         _monoFont = settings.MonoFont;
         _themeMode = settings.ThemeMode;
+        _isSourceSoftWrap = settings.IsSourceSoftWrap;
+        _isPreviewSoftWrap = settings.IsPreviewSoftWrap;
     }
 
     public SettingsService Service { get; }
@@ -148,6 +156,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         FontSize = defaults.FontSize;
         MonoFont = defaults.MonoFont;
         ThemeMode = defaults.ThemeMode;
+        IsSourceSoftWrap = defaults.IsSourceSoftWrap;
+        IsPreviewSoftWrap = defaults.IsPreviewSoftWrap;
     }
 
     // ---- Auto-save on any property change ---------------------------------
@@ -203,6 +213,18 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnThemeModeChanged(string value)
     {
         Settings.ThemeMode = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnIsSourceSoftWrapChanged(bool value)
+    {
+        Settings.IsSourceSoftWrap = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnIsPreviewSoftWrapChanged(bool value)
+    {
+        Settings.IsPreviewSoftWrap = value;
         Service.Save(Settings);
     }
 }

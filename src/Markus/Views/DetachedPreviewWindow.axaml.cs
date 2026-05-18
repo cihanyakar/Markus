@@ -8,6 +8,7 @@ internal sealed partial class DetachedPreviewWindow : Window
     public DetachedPreviewWindow()
     {
         InitializeComponent();
+        Icon = Markus.Services.IconLoader.LoadWindowIcon();
     }
 
     public MarkdownPreviewControl? FindDescendantPreview()

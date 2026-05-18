@@ -8,13 +8,13 @@ using Markus.Services;
 
 namespace Markus.Views;
 
-// _renderCts is disposed in DetachedFromVisualTree, which Avalonia raises on
+// Timers are disposed in DetachedFromVisualTree, which Avalonia raises on
 // teardown. Wrapping the UserControl in IDisposable just to satisfy CA1001
 // would conflict with Avalonia's own lifecycle.
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Reliability",
     "CA1001:Types that own disposable fields should be disposable",
-    Justification = "_renderCts is disposed in DetachedFromVisualTree, matching Avalonia's lifecycle."
+    Justification = "Disposable fields are released in DetachedFromVisualTree, matching Avalonia's lifecycle."
 )]
 internal sealed class MarkdownPreviewControl : UserControl
 {
@@ -33,33 +33,51 @@ internal sealed class MarkdownPreviewControl : UserControl
         bool
     >(nameof(SearchCaseSensitive));
 
-    // Cold-start gating: render the first N blocks eagerly (no UI yield) so
-    // the user sees content within the first frame, even on a multi-MB doc.
-    // After that, switch to a frame-budget strategy: keep adding controls
-    // until we've burned <FrameBudgetMs>, then release the UI thread.
-    private const int EagerFirstPaintCount = 30;
-    private const long FrameBudgetMs = 8;
+    // Idle debounce: coalesce rapid SourceText updates into one render after
+    // typing pauses. Force interval: when typing is continuous and idle never
+    // fires, repaint at most every <ForceMs> so the preview can't drift more
+    // than that behind the editor.
+    private const int DebounceMs = 120;
+    private const int ForceMs = 500;
 
-    private readonly StackPanel _container;
-    private readonly Dictionary<int, Control> _lineToControl = new Dictionary<int, Control>();
+    private readonly StackPanel _panelA;
+    private readonly StackPanel _panelB;
+    private readonly Dictionary<int, Control> _lineMapA = new Dictionary<int, Control>();
+    private readonly Dictionary<int, Control> _lineMapB = new Dictionary<int, Control>();
+    private readonly Grid _bufferGrid;
     private readonly PreviewSearcher _searcher = new PreviewSearcher();
     private readonly DispatcherTimer _debounceTimer;
-    private System.Threading.CancellationTokenSource? _renderCts;
+    private readonly DispatcherTimer _forceTimer;
     private string _pendingSource = string.Empty;
+    private string _lastRenderedSource = string.Empty;
+
+    // Renders are serialized through this flag: a tick handler returns early
+    // if a render is already in flight; the in-flight render's loop will
+    // pick up _pendingSource if it changed during streaming. No cancellation
+    // tokens to lose state through.
+    private bool _renderBusy;
+
+    // The visible panel; the pending (offscreen) panel is the other one.
+    // Renders stream into pending, then a synchronous swap flips visibility
+    // and aligns Scroll.Offset so the source-line at the top stays anchored.
+    private bool _activeIsA = true;
 
     public MarkdownPreviewControl()
     {
-        // StackPanel stretches to the available width (default for vertical
-        // panels) so content fills the split pane. We used to cap at 820pt
-        // with HorizontalAlignment=Left, which left dead space on the right
-        // in wide panes and pushed wrap calculations off the visible viewport.
-        _container = new StackPanel { Spacing = 0 };
+        _panelA = new StackPanel { Spacing = 0 };
+        _panelB = new StackPanel
+        {
+            Spacing = 0,
+            Opacity = 0,
+            IsHitTestVisible = false,
+        };
+        _bufferGrid = new Grid();
+        _bufferGrid.Children.Add(_panelA);
+        _bufferGrid.Children.Add(_panelB);
 
         // Right padding clears the vertical scrollbar's overlay zone so wrap
-        // and horizontal-scroll endings never tuck under it. Set the padding
-        // on a content wrapper inside the ScrollViewer so the scrollbar still
-        // lives at the viewport's right edge but content stops short of it.
-        var wrapper = new Border { Padding = new Thickness(20, 18, 32, 18), Child = _container };
+        // and horizontal-scroll endings never tuck under it.
+        var wrapper = new Border { Padding = new Thickness(20, 18, 32, 18), Child = _bufferGrid };
         Scroll = new ScrollViewer
         {
             Padding = new Thickness(0),
@@ -71,20 +89,26 @@ internal sealed class MarkdownPreviewControl : UserControl
 
         Content = Scroll;
         Focusable = true;
-        // Children (SelectableTextBlocks) consume click events for selection,
-        // so the bubbled pointerpressed never reaches us. Listen on the tunnel
-        // so a click anywhere in the preview surface focuses this control,
-        // letting Cmd+F target the preview.
+        // Children consume click events for selection, so the bubbled
+        // pointerpressed never reaches us. Listen on the tunnel so a click
+        // anywhere in the preview surface focuses this control, letting Cmd+F
+        // target the preview.
         AddHandler(PointerPressedEvent, (_, _) => Focus(), Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
-        _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+        _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(DebounceMs) };
         _debounceTimer.Tick += OnDebounceElapsed;
+        _forceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ForceMs) };
+        _forceTimer.Tick += OnForceElapsed;
         DetachedFromVisualTree += (_, _) =>
         {
-            _renderCts?.Dispose();
-            _renderCts = null;
+            _debounceTimer.Stop();
+            _forceTimer.Stop();
         };
     }
+
+    public event EventHandler? RenderStarted;
+
+    public event EventHandler? RenderCompleted;
 
     public string? Source
     {
@@ -110,32 +134,109 @@ internal sealed class MarkdownPreviewControl : UserControl
 
     public ScrollViewer Scroll { get; }
 
+    private StackPanel ActivePanel => _activeIsA ? _panelA : _panelB;
+
+    private StackPanel PendingPanel => _activeIsA ? _panelB : _panelA;
+
+    private Dictionary<int, Control> ActiveLineMap => _activeIsA ? _lineMapA : _lineMapB;
+
+    private Dictionary<int, Control> PendingLineMap => _activeIsA ? _lineMapB : _lineMapA;
+
     public bool ScrollToLine(int sourceLine)
     {
-        if (_lineToControl.TryGetValue(sourceLine, out var control))
+        if (ActiveLineMap.TryGetValue(sourceLine, out var control))
         {
             control.BringIntoView();
             return true;
         }
-        // Caret may land on a line without a top-level block (a blank line,
-        // an inline-only line, etc.). Walk back to the nearest block whose
-        // source line is <= sourceLine so sync-scroll lands somewhere sane.
-        var bestLine = -1;
-        Control? best = null;
-        foreach (var pair in _lineToControl)
-        {
-            if (pair.Key > sourceLine || pair.Key <= bestLine)
-            {
-                continue;
-            }
-            bestLine = pair.Key;
-            best = pair.Value;
-        }
-        if (best is null)
+        var nearest = FindNearestAtOrBefore(ActiveLineMap, sourceLine);
+        if (nearest is null)
         {
             return false;
         }
-        best.BringIntoView();
+        nearest.BringIntoView();
+        return true;
+    }
+
+    /// <summary>
+    /// Aligns the block whose source line is at or before <paramref name="sourceLine"/>
+    /// to the top of the viewport in the currently visible (active) buffer.
+    /// </summary>
+    public bool AlignTopToSourceLine(int sourceLine)
+    {
+        var control = FindNearestAtOrBefore(ActiveLineMap, sourceLine);
+        if (control is null)
+        {
+            return false;
+        }
+        var pos = control.TranslatePoint(default, _bufferGrid);
+        if (!pos.HasValue)
+        {
+            return false;
+        }
+        Scroll.Offset = new Vector(Scroll.Offset.X, pos.Value.Y);
+        return true;
+    }
+
+    /// <summary>
+    /// Returns the source line of the top-most visible preview block in the
+    /// currently visible (active) buffer.
+    /// </summary>
+    public int? FirstVisibleSourceLine()
+    {
+        return FirstVisibleSourceLineIn(ActiveLineMap);
+    }
+
+    /// <summary>
+    /// Returns the source line of the block whose vertical center is closest
+    /// to the center of the viewport. Used by sync-scroll: tying the middle
+    /// stays accurate across height mismatches the way top/bottom anchors
+    /// don't.
+    /// </summary>
+    public int? CenterVisibleSourceLine()
+    {
+        var viewportCenter = Scroll.Offset.Y + (Scroll.Viewport.Height / 2.0);
+        var bestLine = -1;
+        var bestDistance = double.MaxValue;
+        foreach (var pair in ActiveLineMap)
+        {
+            var pos = pair.Value.TranslatePoint(default, _bufferGrid);
+            if (!pos.HasValue)
+            {
+                continue;
+            }
+            var controlCenter = pos.Value.Y + (pair.Value.Bounds.Height / 2.0);
+            var distance = Math.Abs(controlCenter - viewportCenter);
+            if (distance >= bestDistance)
+            {
+                continue;
+            }
+            bestDistance = distance;
+            bestLine = pair.Key;
+        }
+        return bestLine < 0 ? null : bestLine;
+    }
+
+    /// <summary>
+    /// Aligns the block at or before <paramref name="sourceLine"/> so its
+    /// vertical center sits at the viewport's vertical center.
+    /// </summary>
+    public bool AlignCenterToSourceLine(int sourceLine)
+    {
+        var control = FindNearestAtOrBefore(ActiveLineMap, sourceLine);
+        if (control is null)
+        {
+            return false;
+        }
+        var pos = control.TranslatePoint(default, _bufferGrid);
+        if (!pos.HasValue)
+        {
+            return false;
+        }
+        var controlCenter = pos.Value.Y + (control.Bounds.Height / 2.0);
+        var target = controlCenter - (Scroll.Viewport.Height / 2.0);
+        var maxY = Math.Max(0, Scroll.Extent.Height - Scroll.Viewport.Height);
+        Scroll.Offset = new Vector(Scroll.Offset.X, Math.Clamp(target, 0, maxY));
         return true;
     }
 
@@ -169,24 +270,58 @@ internal sealed class MarkdownPreviewControl : UserControl
         }
     }
 
-    private static async System.Threading.Tasks.Task<Markdig.Syntax.MarkdownDocument?> ParseAsync(
-        string source,
-        System.Threading.CancellationToken token
-    )
+    private static Control? FindNearestAtOrBefore(Dictionary<int, Control> map, int sourceLine)
     {
-        try
+        if (map.TryGetValue(sourceLine, out var exact))
         {
-            return await System.Threading.Tasks.Task.Run(() => MarkdownPipeline.Parse(source), token);
+            return exact;
         }
-        catch (OperationCanceledException)
+        var bestLine = -1;
+        Control? best = null;
+        foreach (var pair in map)
         {
-            return null;
+            if (pair.Key > sourceLine || pair.Key <= bestLine)
+            {
+                continue;
+            }
+            bestLine = pair.Key;
+            best = pair.Value;
         }
+        return best;
     }
 
-    private void ApplySearch()
+    private int? FirstVisibleSourceLineIn(Dictionary<int, Control> map)
     {
-        _searcher.Highlight(_lineToControl.Values, SearchTerm ?? string.Empty, SearchCaseSensitive);
+        var offsetY = Scroll.Offset.Y;
+        var bestLine = -1;
+        var bestDistance = double.MaxValue;
+        foreach (var pair in map)
+        {
+            var pos = pair.Value.TranslatePoint(default, _bufferGrid);
+            if (!pos.HasValue)
+            {
+                continue;
+            }
+            var distance = pos.Value.Y - offsetY;
+            if (distance < 0)
+            {
+                // Block starts above the viewport; treat the closest one as
+                // the top so partial visibility still maps.
+                distance = -distance + double.Epsilon;
+            }
+            if (distance >= bestDistance)
+            {
+                continue;
+            }
+            bestDistance = distance;
+            bestLine = pair.Key;
+        }
+        return bestLine < 0 ? null : bestLine;
+    }
+
+    private void ApplySearchOnActive()
+    {
+        _searcher.Highlight(ActiveLineMap.Values, SearchTerm ?? string.Empty, SearchCaseSensitive);
         if (_searcher.MatchCount > 0)
         {
             PreviewSearcher.FindControlParent(_searcher.ActiveMatch?.Parent)?.BringIntoView();
@@ -195,87 +330,138 @@ internal sealed class MarkdownPreviewControl : UserControl
 
     private void ScheduleRender(string source)
     {
-        // Coalesce rapid SourceText updates (typing in the editor) into one
-        // render after a brief idle. Cancellation handles the case where a
-        // new render fires before the previous chunked loop finishes.
         _pendingSource = source;
         _debounceTimer.Stop();
         _debounceTimer.Start();
+        if (!_forceTimer.IsEnabled)
+        {
+            _forceTimer.Start();
+        }
     }
 
     private void OnDebounceElapsed(object? sender, EventArgs e)
     {
         _debounceTimer.Stop();
-        _ = RenderAsync(_pendingSource);
+        _ = DoRenderLoopAsync();
+    }
+
+    private void OnForceElapsed(object? sender, EventArgs e)
+    {
+        _ = DoRenderLoopAsync();
+    }
+
+    private async System.Threading.Tasks.Task DoRenderLoopAsync()
+    {
+        if (_renderBusy)
+        {
+            return;
+        }
+        _renderBusy = true;
+        try
+        {
+            while (!string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal))
+            {
+                var source = _pendingSource;
+                _lastRenderedSource = source;
+                await RenderAsync(source);
+            }
+            // Caught up; force timer can idle until the next edit re-arms it.
+            _forceTimer.Stop();
+        }
+        finally
+        {
+            _renderBusy = false;
+        }
     }
 
     private async System.Threading.Tasks.Task RenderAsync(string source)
     {
-        var token = await BeginRenderAsync();
-        if (token.IsCancellationRequested)
+        RenderStarted?.Invoke(this, EventArgs.Empty);
+        try
         {
-            return;
-        }
-        var document = await ParseAsync(source, token);
-        if (document is null || token.IsCancellationRequested)
-        {
-            return;
-        }
-        await StreamBlocksAsync(document, token);
-        ApplySearch();
-    }
-
-    private async System.Threading.Tasks.Task<System.Threading.CancellationToken> BeginRenderAsync()
-    {
-        if (_renderCts is { } previous)
-        {
-            await previous.CancelAsync();
-            previous.Dispose();
-        }
-        _renderCts = new System.Threading.CancellationTokenSource();
-
-        _container.Children.Clear();
-        _lineToControl.Clear();
-
-        var theme = MarkdownRenderer.Theme;
-        Background = new SolidColorBrush(theme.Background);
-
-        // Wrap mode flips the ScrollViewer's horizontal scrollbar off so the
-        // Auto policy doesn't reserve ghost width during measure.
-        Scroll.HorizontalScrollBarVisibility = MarkdownRenderer.WrapCode
-            ? ScrollBarVisibility.Disabled
-            : ScrollBarVisibility.Auto;
-
-        return _renderCts.Token;
-    }
-
-    private async System.Threading.Tasks.Task StreamBlocksAsync(
-        Markdig.Syntax.MarkdownDocument document,
-        System.Threading.CancellationToken token
-    )
-    {
-        _lineToControl.EnsureCapacity(document.Count + 16);
-        var rendered = 0;
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        foreach (var block in MarkdownRenderer.Render(document))
-        {
-            if (token.IsCancellationRequested)
+            var document = await System.Threading.Tasks.Task.Run(() => MarkdownPipeline.Parse(source));
+            if (document is null)
             {
                 return;
             }
-            _container.Children.Add(block.Control);
-            _lineToControl[block.SourceLine] = block.Control;
-            rendered++;
-            if (rendered < EagerFirstPaintCount)
-            {
-                continue;
-            }
-            if (sw.ElapsedMilliseconds < FrameBudgetMs)
-            {
-                continue;
-            }
-            await System.Threading.Tasks.Task.Yield();
-            sw.Restart();
+            PrepareThemeAndPending(document.Count);
+            StreamIntoPending(document);
+            // Snapshot anchor line BEFORE swap so we know where the user was
+            // looking. ActiveLineMap is the currently visible buffer.
+            var anchorLine = FirstVisibleSourceLineIn(ActiveLineMap);
+            // Force layout so pending's children are arranged and
+            // TranslatePoint returns valid coordinates.
+            _bufferGrid.UpdateLayout();
+            var anchorY = ResolveAnchorY(anchorLine);
+            SwapBuffersAndAnchor(anchorY);
+            ApplySearchOnActive();
+        }
+        finally
+        {
+            RenderCompleted?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void PrepareThemeAndPending(int blockHint)
+    {
+        PendingPanel.IsVisible = true;
+        PendingPanel.Opacity = 0;
+        PendingPanel.IsHitTestVisible = false;
+        PendingPanel.Children.Clear();
+        PendingLineMap.Clear();
+        PendingLineMap.EnsureCapacity(blockHint + 16);
+
+        var theme = MarkdownRenderer.Theme;
+        Background = new SolidColorBrush(theme.Background);
+        Scroll.HorizontalScrollBarVisibility = MarkdownRenderer.WrapCode
+            ? ScrollBarVisibility.Disabled
+            : ScrollBarVisibility.Auto;
+    }
+
+    private void StreamIntoPending(Markdig.Syntax.MarkdownDocument document)
+    {
+        // Build the whole pending buffer synchronously; the user keeps seeing
+        // the active buffer until the swap, so yielding only delays the swap.
+        foreach (var block in MarkdownRenderer.Render(document))
+        {
+            PendingPanel.Children.Add(block.Control);
+            PendingLineMap[block.SourceLine] = block.Control;
+        }
+    }
+
+    private double? ResolveAnchorY(int? anchorLine)
+    {
+        if (anchorLine is not { } line)
+        {
+            return null;
+        }
+        var target = FindNearestAtOrBefore(PendingLineMap, line);
+        if (target is null)
+        {
+            return null;
+        }
+        var pos = target.TranslatePoint(default, _bufferGrid);
+        return pos?.Y;
+    }
+
+    private void SwapBuffersAndAnchor(double? anchorY)
+    {
+        // Atomic on the UI thread: opacity + IsVisible + offset write happen
+        // in one synchronous batch, so the next composition frame shows the
+        // final state. UpdateLayout after the visibility swap ensures the
+        // ScrollViewer's Extent reflects the new visible buffer before we
+        // write the offset (otherwise it could clamp the target Y to 0).
+        ActivePanel.Opacity = 0;
+        ActivePanel.IsVisible = false;
+        ActivePanel.IsHitTestVisible = false;
+        PendingPanel.Opacity = 1;
+        PendingPanel.IsHitTestVisible = true;
+        _activeIsA = !_activeIsA;
+        _bufferGrid.UpdateLayout();
+        if (anchorY is { } y)
+        {
+            var maxY = Math.Max(0, Scroll.Extent.Height - Scroll.Viewport.Height);
+            Scroll.Offset = new Vector(Scroll.Offset.X, Math.Min(y, maxY));
         }
     }
 }

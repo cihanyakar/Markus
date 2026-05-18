@@ -16,7 +16,7 @@ public sealed class AppSettingsTests
         sut.DefaultViewMode.ShouldBe(ViewMode.Preview);
         sut.ShowOutline.ShouldBeFalse();
         sut.FontSize.ShouldBe(16.0);
-        sut.MonoFont.ShouldBe("Iosevka");
+        sut.MonoFont.ShouldBe("JetBrains Mono");
         sut.ThemeMode.ShouldBe("System");
         sut.RecentFiles.ShouldBeEmpty();
     }

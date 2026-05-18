@@ -1,13 +1,8 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Markus.App"
-             xmlns:local="using:Markus"
              xmlns:services="using:Markus.Services"
              RequestedThemeVariant="Default">
-
-  <Application.DataTemplates>
-    <local:ViewLocator/>
-  </Application.DataTemplates>
 
   <NativeMenu.Menu>
     <NativeMenu>
@@ -42,14 +37,17 @@
           <SolidColorBrush x:Key="GlassPressed" Color="#33000000"/>
 
           <!-- Accent -->
-          <SolidColorBrush x:Key="Accent" Color="#FF2D55"/>
-          <SolidColorBrush x:Key="AccentSoft" Color="#33FF2D55"/>
-          <Color x:Key="AccentColor">#FF2D55</Color>
+          <!-- Tint comes from macOS System Settings → Appearance → Highlight
+               color. SystemAccentColor is published by Avalonia.Themes.Fluent
+               and bridges to NSColor.controlAccentColor on macOS. -->
+          <SolidColorBrush x:Key="Accent" Color="{DynamicResource SystemAccentColor}"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="{DynamicResource SystemAccentColor}" Opacity="0.2"/>
+          <DynamicResource x:Key="AccentColor" ResourceKey="SystemAccentColor"/>
 
           <!-- Text -->
           <SolidColorBrush x:Key="TextHigh" Color="#1D1D1F"/>
           <SolidColorBrush x:Key="TextMedium" Color="#3A3A3C"/>
-          <SolidColorBrush x:Key="TextLow" Color="#6E6E73"/>
+          <SolidColorBrush x:Key="TextLow" Color="#52525A"/>
 
           <!-- Content surface -->
           <SolidColorBrush x:Key="ContentBg" Color="#80FFFFFF"/>
@@ -98,10 +96,10 @@
           <SolidColorBrush x:Key="GlassHover" Color="#2BFFFFFF"/>
           <SolidColorBrush x:Key="GlassPressed" Color="#3FFFFFFF"/>
 
-          <!-- Accent -->
-          <SolidColorBrush x:Key="Accent" Color="#FF375F"/>
-          <SolidColorBrush x:Key="AccentSoft" Color="#33FF375F"/>
-          <Color x:Key="AccentColor">#FF375F</Color>
+          <!-- Tint comes from macOS System Settings → Appearance → Highlight. -->
+          <SolidColorBrush x:Key="Accent" Color="{DynamicResource SystemAccentColor}"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="{DynamicResource SystemAccentColor}" Opacity="0.25"/>
+          <DynamicResource x:Key="AccentColor" ResourceKey="SystemAccentColor"/>
 
           <!-- Text -->
           <SolidColorBrush x:Key="TextHigh" Color="#F5F5F7"/>

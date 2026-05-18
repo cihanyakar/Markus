@@ -1,6 +1,5 @@
 using Avalonia;
 using Fonts.Avalonia.CascadiaCode;
-using Fonts.Avalonia.Iosevka;
 using Fonts.Avalonia.JetBrainsMono;
 using Fonts.Avalonia.Manrope;
 
@@ -28,7 +27,6 @@ internal static class Program
 #endif
             .WithInterFont()
             .WithManropeFont()
-            .WithIosevkaFont()
             .WithJetBrainsMonoFont()
             .WithCascadiaCodeFont()
             .LogToTrace();

@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
 using Markus.ViewModels;
+using Markus.Views;
 
 namespace Markus.Services;
 
@@ -27,8 +28,18 @@ internal static class AppCommands
 
     private static void ShowAbout()
     {
-        // Placeholder. A proper About window will land alongside the
-        // app-info plumbing.
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            return;
+        }
+        var owner = desktop.MainWindow;
+        var window = new AboutWindow();
+        if (owner is null)
+        {
+            window.Show();
+            return;
+        }
+        _ = window.ShowDialog(owner);
     }
 
     private static void QuitApp()

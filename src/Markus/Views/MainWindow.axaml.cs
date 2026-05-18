@@ -18,16 +18,17 @@ internal sealed partial class MainWindow : Window
     private MarkdownTextEditor? _searchTargetEditor;
     private MarkdownPreviewControl? _searchTargetPreview;
 
-    // Track the last ratio we pushed to each side; an incoming ScrollChanged
-    // that matches the last push is our own programmatic write and skipped.
-    // Flag-based guards weren't reliable because Avalonia raises ScrollChanged
-    // on a later layout pass, after the flag reset.
-    private double _lastEditorRatio = double.NaN;
-    private double _lastPreviewRatio = double.NaN;
+    // Sync-scroll uses source line numbers in both directions (folds make
+    // pixel ratios diverge). A single suppression flag reset via background
+    // dispatcher priority blocks the echo ScrollChanged Avalonia raises on
+    // the next layout pass, which a synchronous flag missed.
+    private bool _syncingScroll;
+    private int _suppressedRenderCount;
 
     public MainWindow()
     {
         InitializeComponent();
+        Icon = Services.IconLoader.LoadWindowIcon();
         Closing += OnWindowClosing;
         DataContextChanged += OnDataContextChanged;
 
@@ -56,8 +57,23 @@ internal sealed partial class MainWindow : Window
                 Command = new RelayCommand(InvokeScrollLockToggle),
             }
         );
+        KeyBindings.Add(
+            new KeyBinding
+            {
+                Gesture = new KeyGesture(Key.M, KeyModifiers.Meta | KeyModifiers.Shift),
+                Command = new RelayCommand(InvokeFocusToggle),
+            }
+        );
 
         Loaded += (_, _) => AttachEditorScrollSync();
+    }
+
+    private void InvokeFocusToggle()
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.ToggleFocusModeCommand.Execute(null);
+        }
     }
 
     private void InvokeScrollLockToggle()
@@ -81,8 +97,34 @@ internal sealed partial class MainWindow : Window
             }
             sv.ScrollChanged -= OnEditorScrollChanged;
             sv.ScrollChanged += OnEditorScrollChanged;
+            // Caret line/column drives the footer's "Ln X, Col Y" readout.
+            editor.TextArea.Caret.PositionChanged -= OnEditorCaretChanged;
+            editor.TextArea.Caret.PositionChanged += OnEditorCaretChanged;
+            UpdateCaretPosition(editor);
         }
         AttachPreviewScrollSubscribers();
+    }
+
+    private void OnEditorCaretChanged(object? sender, EventArgs e)
+    {
+        if (sender is not AvaloniaEdit.Editing.Caret caret)
+        {
+            return;
+        }
+        UpdateCaretPosition(caret.Line, caret.Column);
+    }
+
+    private void UpdateCaretPosition(MarkdownTextEditor editor)
+    {
+        UpdateCaretPosition(editor.TextArea.Caret.Line, editor.TextArea.Caret.Column);
+    }
+
+    private void UpdateCaretPosition(int line, int column)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.CaretPosition = $"Ln {line}, Col {column}";
+        }
     }
 
     private void AttachPreviewScrollSubscribers()
@@ -91,17 +133,43 @@ internal sealed partial class MainWindow : Window
         {
             preview.Scroll.ScrollChanged -= OnPreviewScrollChanged;
             preview.Scroll.ScrollChanged += OnPreviewScrollChanged;
+            preview.RenderStarted -= OnPreviewRenderStarted;
+            preview.RenderStarted += OnPreviewRenderStarted;
+            preview.RenderCompleted -= OnPreviewRenderCompleted;
+            preview.RenderCompleted += OnPreviewRenderCompleted;
         }
         if (_previewWindow?.FindDescendantPreview() is { } detachedPreview)
         {
             detachedPreview.Scroll.ScrollChanged -= OnPreviewScrollChanged;
             detachedPreview.Scroll.ScrollChanged += OnPreviewScrollChanged;
+            detachedPreview.RenderStarted -= OnPreviewRenderStarted;
+            detachedPreview.RenderStarted += OnPreviewRenderStarted;
+            detachedPreview.RenderCompleted -= OnPreviewRenderCompleted;
+            detachedPreview.RenderCompleted += OnPreviewRenderCompleted;
+        }
+    }
+
+    private void OnPreviewRenderStarted(object? sender, EventArgs e)
+    {
+        _suppressedRenderCount++;
+    }
+
+    private void OnPreviewRenderCompleted(object? sender, EventArgs e)
+    {
+        if (_suppressedRenderCount > 0)
+        {
+            _suppressedRenderCount--;
         }
     }
 
     private void OnEditorScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || !vm.IsScrollLocked)
+        if (
+            _syncingScroll
+            || _suppressedRenderCount > 0
+            || DataContext is not MainWindowViewModel vm
+            || !vm.IsScrollLocked
+        )
         {
             return;
         }
@@ -109,66 +177,118 @@ internal sealed partial class MainWindow : Window
         {
             return;
         }
-        var ratio = GetRatio(source);
-        if (IsEcho(ratio, _lastEditorRatio))
+        var editor = source.GetVisualAncestors().OfType<MarkdownTextEditor>().FirstOrDefault();
+        if (editor is null)
         {
             return;
         }
-        _lastEditorRatio = ratio;
+        var centerLine = EditorCenterSourceLine(editor, source);
+        if (centerLine is null)
+        {
+            return;
+        }
         var preview = VisiblePreviewFor(vm.CurrentViewMode);
         if (preview is null)
         {
             return;
         }
-        _lastPreviewRatio = ratio;
-        ApplyRatio(preview.Scroll, ratio);
+        BeginSyncWindow();
+        preview.AlignCenterToSourceLine(centerLine.Value);
     }
 
     private void OnPreviewScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || !vm.IsScrollLocked)
+        if (
+            _syncingScroll
+            || _suppressedRenderCount > 0
+            || DataContext is not MainWindowViewModel vm
+            || !vm.IsScrollLocked
+        )
         {
             return;
         }
-        if (sender is not ScrollViewer source)
+        if (sender is not ScrollViewer)
         {
             return;
         }
-        var ratio = GetRatio(source);
-        if (IsEcho(ratio, _lastPreviewRatio))
+        var preview = VisiblePreviewFor(vm.CurrentViewMode);
+        if (preview is null)
         {
             return;
         }
-        _lastPreviewRatio = ratio;
+        var line = preview.CenterVisibleSourceLine();
+        if (line is null)
+        {
+            return;
+        }
         var editor = VisibleEditorFor(vm.CurrentViewMode);
-        var target = editor is null ? null : FindEditorScrollViewer(editor);
-        if (target is null)
+        if (editor is null)
         {
             return;
         }
-        _lastEditorRatio = ratio;
-        ApplyRatio(target, ratio);
+        BeginSyncWindow();
+        ScrollEditorCenterToLine(editor, line.Value);
     }
 
-    private static bool IsEcho(double current, double lastPushed)
+    private static int? EditorCenterSourceLine(MarkdownTextEditor editor, ScrollViewer sv)
     {
-        return !double.IsNaN(lastPushed) && Math.Abs(current - lastPushed) < 0.0005;
+        var view = editor.TextArea.TextView;
+        var visualLines = view.VisualLines;
+        if (visualLines.Count == 0)
+        {
+            return null;
+        }
+        var centerY = sv.Offset.Y + (sv.Viewport.Height / 2.0);
+        foreach (var vl in visualLines)
+        {
+            if (centerY >= vl.VisualTop && centerY < vl.VisualTop + vl.Height)
+            {
+                return vl.FirstDocumentLine.LineNumber - 1;
+            }
+        }
+        // Fallback: pick the visually middle line if no exact hit (e.g., centerY
+        // landed in inter-line padding).
+        return visualLines[visualLines.Count / 2].FirstDocumentLine.LineNumber - 1;
     }
 
-    private static void ApplyRatio(ScrollViewer target, double ratio)
+    private static void ScrollEditorCenterToLine(MarkdownTextEditor editor, int sourceLine)
     {
-        var max = target.Extent.Height - target.Viewport.Height;
-        if (max <= 0)
+        var doc = editor.Document;
+        if (doc is null || doc.LineCount == 0)
         {
             return;
         }
-        target.Offset = new Vector(target.Offset.X, max * ratio);
+        var lineNumber = Math.Clamp(sourceLine + 1, 1, doc.LineCount);
+        // ScrollToLine constructs the VisualLine if it isn't already realized
+        // so VisualTop is meaningful below.
+        editor.ScrollToLine(lineNumber);
+        var view = editor.TextArea.TextView;
+        var vl = view.GetVisualLine(lineNumber);
+        if (vl is null)
+        {
+            return;
+        }
+        var sv = FindEditorScrollViewer(editor);
+        if (sv is null)
+        {
+            return;
+        }
+        var lineCenterY = vl.VisualTop + (vl.Height / 2.0);
+        var target = lineCenterY - (sv.Viewport.Height / 2.0);
+        var maxY = Math.Max(0, sv.Extent.Height - sv.Viewport.Height);
+        sv.Offset = new Vector(sv.Offset.X, Math.Clamp(target, 0, maxY));
     }
 
-    private static double GetRatio(ScrollViewer sv)
+    private void BeginSyncWindow()
     {
-        var max = sv.Extent.Height - sv.Viewport.Height;
-        return max > 0 ? sv.Offset.Y / max : 0;
+        // Stay in "syncing" state until the dispatcher has drained input and
+        // layout passes from this iteration; the echo ScrollChanged Avalonia
+        // raises after a programmatic Offset write fires inside that window.
+        _syncingScroll = true;
+        Avalonia.Threading.Dispatcher.UIThread.Post(
+            () => _syncingScroll = false,
+            Avalonia.Threading.DispatcherPriority.Background
+        );
     }
 
     private MarkdownPreviewControl? VisiblePreviewFor(Markus.Models.ViewMode mode)
@@ -253,11 +373,29 @@ internal sealed partial class MainWindow : Window
 
     private IReadOnlyList<Markus.Models.CommandItem> BuildCommands(MainWindowViewModel vm)
     {
+        var commands = new List<Markus.Models.CommandItem>(16);
+        commands.AddRange(BuildFileCommands(vm));
+        commands.AddRange(BuildViewCommands(vm));
+        commands.AddRange(BuildLayoutCommands(vm));
+        commands.AddRange(BuildThemeCommands(vm));
+        commands.Add(new Markus.Models.CommandItem("Find in Document", "Search", "⌘F", RouteSearchToActiveSurface));
+        return commands;
+    }
+
+    private static Markus.Models.CommandItem[] BuildFileCommands(MainWindowViewModel vm)
+    {
         return new[]
         {
             new Markus.Models.CommandItem("Open File", "File", "⌘O", () => vm.OpenFileCommand.Execute(null)),
             new Markus.Models.CommandItem("Reload", "File", "⌘R", () => vm.ReloadCommand.Execute(null)),
             new Markus.Models.CommandItem("Settings", "App", "⌘,", () => vm.OpenSettingsCommand.Execute(null)),
+        };
+    }
+
+    private static Markus.Models.CommandItem[] BuildViewCommands(MainWindowViewModel vm)
+    {
+        return new[]
+        {
             new Markus.Models.CommandItem("Toggle Outline", "View", "⌘⌥B", () => vm.ToggleOutlineCommand.Execute(null)),
             new Markus.Models.CommandItem(
                 "Toggle Scroll Lock",
@@ -277,6 +415,25 @@ internal sealed partial class MainWindow : Window
                 null,
                 () => vm.TogglePreviewSoftWrapCommand.Execute(null)
             ),
+            new Markus.Models.CommandItem(
+                "Toggle Focus Mode",
+                "View",
+                "⌘⇧M",
+                () => vm.ToggleFocusModeCommand.Execute(null)
+            ),
+            new Markus.Models.CommandItem(
+                "Toggle Typewriter Mode",
+                "View",
+                null,
+                () => vm.ToggleTypewriterModeCommand.Execute(null)
+            ),
+        };
+    }
+
+    private static Markus.Models.CommandItem[] BuildLayoutCommands(MainWindowViewModel vm)
+    {
+        return new[]
+        {
             new Markus.Models.CommandItem(
                 "Source View",
                 "View",
@@ -307,6 +464,13 @@ internal sealed partial class MainWindow : Window
                 null,
                 () => vm.SetViewModeCommand.Execute(Markus.Models.ViewMode.Detached)
             ),
+        };
+    }
+
+    private static Markus.Models.CommandItem[] BuildThemeCommands(MainWindowViewModel vm)
+    {
+        return new[]
+        {
             new Markus.Models.CommandItem(
                 "Theme: System",
                 "Appearance",
@@ -325,7 +489,6 @@ internal sealed partial class MainWindow : Window
                 null,
                 () => vm.SetThemeModeCommand.Execute("Dark")
             ),
-            new Markus.Models.CommandItem("Find in Document", "Search", "⌘F", RouteSearchToActiveSurface),
         };
     }
 
@@ -639,10 +802,28 @@ internal sealed partial class MainWindow : Window
             vm.PropertyChanged += OnViewModelPropertyChanged;
             vm.OpenRequested += OnOpenRequested;
             vm.SettingsRequested += OnSettingsRequested;
+            vm.FindRequested += OnFindRequested;
+            vm.FindNextRequested += OnFindNextRequested;
+            vm.FindPreviousRequested += OnFindPreviousRequested;
             UpdateDetachedWindows(vm);
             RefreshRecentMenu();
             ApplyEditorWordWrap(vm.IsSourceSoftWrap);
         }
+    }
+
+    private void OnFindRequested(object? sender, EventArgs e)
+    {
+        RouteSearchToActiveSurface();
+    }
+
+    private void OnFindNextRequested(object? sender, EventArgs e)
+    {
+        MoveSearchMatch(forward: true);
+    }
+
+    private void OnFindPreviousRequested(object? sender, EventArgs e)
+    {
+        MoveSearchMatch(forward: false);
     }
 
     private void ApplyEditorWordWrap(bool wrap)
@@ -811,6 +992,9 @@ internal sealed partial class MainWindow : Window
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.OpenRequested -= OnOpenRequested;
             vm.SettingsRequested -= OnSettingsRequested;
+            vm.FindRequested -= OnFindRequested;
+            vm.FindNextRequested -= OnFindNextRequested;
+            vm.FindPreviousRequested -= OnFindPreviousRequested;
             vm.Dispose();
         }
     }
