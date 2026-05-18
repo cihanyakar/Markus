@@ -45,13 +45,11 @@ internal sealed partial class SearchOverlay : UserControl
     public SearchOverlay()
     {
         InitializeComponent();
-        var input = this.FindControl<TextBox>("SearchInput");
-        if (input is not null)
+        if (this.FindControl<TextBox>("SearchInput") is { } input)
         {
             input.KeyDown += OnInputKeyDown;
         }
-        var replace = this.FindControl<TextBox>("ReplaceInput");
-        if (replace is not null)
+        if (this.FindControl<TextBox>("ReplaceInput") is { } replace)
         {
             replace.KeyDown += OnReplaceKeyDown;
         }
@@ -151,8 +149,7 @@ internal sealed partial class SearchOverlay : UserControl
 
     private void WireButton(string name, Action onClick)
     {
-        var button = this.FindControl<Button>(name);
-        if (button is not null)
+        if (this.FindControl<Button>(name) is { } button)
         {
             button.Click += (_, _) => onClick();
         }

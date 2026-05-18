@@ -25,13 +25,11 @@ internal sealed partial class CommandPalette : UserControl
     public CommandPalette()
     {
         InitializeComponent();
-        var input = this.FindControl<TextBox>("QueryInput");
-        if (input is not null)
+        if (this.FindControl<TextBox>("QueryInput") is { } input)
         {
             input.KeyDown += OnKeyDown;
         }
-        var list = this.FindControl<ListBox>("ResultsList");
-        if (list is not null)
+        if (this.FindControl<ListBox>("ResultsList") is { } list)
         {
             list.DoubleTapped += (_, _) => InvokeSelected();
         }
