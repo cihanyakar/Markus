@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout (tag, full history for MinVer)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.release.tag_name }}
           fetch-depth: 0
