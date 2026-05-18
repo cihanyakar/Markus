@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.2.0](https://github.com/cihanyakar/Markus/compare/v0.1.1...v0.2.0) (2026-05-18)
+
+
+### Features
+
+* add Settings window, view modes scaffold, and app icon ([27b700d](https://github.com/cihanyakar/Markus/commit/27b700dcd93f87fecb5920c7cc35074c06d5a47f))
+* **chrome:** native macOS Tahoe title bar with Liquid Glass tool platters ([780c760](https://github.com/cihanyakar/Markus/commit/780c760be846da201d904c78d61ad35d476103e6))
+* **editor:** AvaloniaEdit + TextMate syntax highlighting for source view ([0d5912e](https://github.com/cihanyakar/Markus/commit/0d5912e696efd18c3b37506bca2736236d5a3e43))
+* **input:** drag-and-drop a markdown file onto the window opens it ([c85ce28](https://github.com/cihanyakar/Markus/commit/c85ce28a77368ce20443b6b54d6d49cd53e69306))
+* macOS-style settings, live reload, file watcher ([5f60481](https://github.com/cihanyakar/Markus/commit/5f6048176afb27e41d73d3c5bed99f0c3a501bbf))
+* **menu:** native File / Edit / View menu bar, source editor rollback ([26da060](https://github.com/cihanyakar/Markus/commit/26da060a376088a14114e906080c2a941953b5ca))
+* native Markdig preview rendering ([12f2d10](https://github.com/cihanyakar/Markus/commit/12f2d10330023d2419ce0f78365381d21db51a82))
+* outline tree from heading structure ([26b4131](https://github.com/cihanyakar/Markus/commit/26b4131bfd1990ea77a5e4327b862d4122f0a4f9))
+* **outline:** scroll preview to heading on tree selection ([87e42bf](https://github.com/cihanyakar/Markus/commit/87e42bf6549eed5e5ae6255f2874caf2d843c649))
+* **perf:** async preview render, sync scroll, soft-wrap ([da1b316](https://github.com/cihanyakar/Markus/commit/da1b316bf3697e64bacffc7dded7127156b711ab))
+* **recent:** persisted recent files menu in toolbar ([97aa9be](https://github.com/cihanyakar/Markus/commit/97aa9be3f6da4a137400077e28cde91d93886cd6))
+* **render:** math and mermaid placeholder rendering ([028e773](https://github.com/cihanyakar/Markus/commit/028e773d101ce439590844ce28609f8527e90a53))
+* **render:** wire markdown theme picker to renderer ([0c36188](https://github.com/cihanyakar/Markus/commit/0c36188615a4ba4680fef765aa8266c443c0ae8a))
+* search, command palette, file association, detached redesign ([0ecbea2](https://github.com/cihanyakar/Markus/commit/0ecbea2331ce421f50f1f1add4c64093638e5a39))
+* **settings:** Light/Dark/System theme mode override ([a18c2e8](https://github.com/cihanyakar/Markus/commit/a18c2e8f6bbf7d1c0ce4256b767fe5b6378bfd20))
+* **settings:** Light/Dark/System theme mode override ([6d098be](https://github.com/cihanyakar/Markus/commit/6d098be2c5409c8177e96a8f70d4dbe903a7579e))
+* **theming:** syntax highlighting + independent code & preview themes ([9783359](https://github.com/cihanyakar/Markus/commit/978335971205fa8d18227f19c4d0e6581eb587ec))
+* **ui:** glassmorphic redesign with theme-aware atmosphere ([4a52b09](https://github.com/cihanyakar/Markus/commit/4a52b09975a9d65a53796b4eb1c51054d43dc5f6))
+* **ui:** liquid-glass look + collapsing outline column ([9230137](https://github.com/cihanyakar/Markus/commit/9230137c3df577eeb192ce484668c0778a2d4655))
+* UX overhaul, AOT-ready bundle, macOS-native settings ([4caab83](https://github.com/cihanyakar/Markus/commit/4caab839aecfe59aeead90d9b339cec6203e8599))
+
+
+### Bug Fixes
+
+* **editor:** use TextEditor inheritance + StyledProperty for binding ([4499449](https://github.com/cihanyakar/Markus/commit/4499449ae003dd29ed5e4930c3d2b4d6a02bec97))
+* source editor renders, app menu, outline shortcut ([c98b4ac](https://github.com/cihanyakar/Markus/commit/c98b4ac5ec1284c87d98f4bcb66d40bc43a7e74c))
+* **views:** silence IDE0031 in SearchOverlay and CommandPalette ([da07c92](https://github.com/cihanyakar/Markus/commit/da07c920cab4c703a248f2601c9662ba23fd25df))
+
+
+### Refactoring
+
+* **ui:** replace unicode emoji with Material Icons, refine styling ([bf8fdb0](https://github.com/cihanyakar/Markus/commit/bf8fdb075d2351648b7d28f4382fad846b63f358))
+
 ## [0.1.1](https://github.com/cihanyakar/Markus/compare/v0.1.0...v0.1.1) (2026-05-17)
 
 
