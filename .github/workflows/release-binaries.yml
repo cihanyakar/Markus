@@ -102,6 +102,24 @@ jobs:
           # client-side; we cannot strip it here. Users right-click → Open
           # the first time on macOS Gatekeeper.
 
+      - name: Ad-hoc sign bundle (macOS)
+        if: matrix.bundle == 'app'
+        shell: bash
+        run: |
+          APP_DIR="Markus.app"
+          # Sign each Mach-O inside individually so library validation
+          # accepts the sibling dylibs at load time. Without this, the
+          # bundle-wide --deep pass alone leaves dylibs with the linker's
+          # original automatic ad-hoc signature, which Gatekeeper rejects
+          # on machines other than the build host.
+          find "$APP_DIR/Contents/MacOS" -name '*.dylib' -exec codesign --sign - --force {} \;
+          # Seal the bundle without hardened runtime: --options=runtime
+          # would require notarized or team-id-signed dylibs and reject
+          # ad-hoc-signed ones, causing SkiaPlatform's static initializer
+          # to abort on first launch.
+          codesign --sign - --deep --force "$APP_DIR"
+          codesign --verify --verbose=2 "$APP_DIR" 2>&1 | tail -5
+
       - name: Archive macOS .app (zip)
         if: matrix.bundle == 'app'
         shell: bash
