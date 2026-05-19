@@ -9,7 +9,11 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- Pinned to 10-recommended because .NET 11 SDK adds IDE0028/IDE1006
+         to the recommended set, and TreatWarningsAsErrors would turn each
+         new lint into a build failure on the upgrade. Bump deliberately
+         after a code cleanup pass. -->
+    <AnalysisLevel>10-recommended</AnalysisLevel>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
