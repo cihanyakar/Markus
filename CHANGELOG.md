@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.1](https://github.com/cihanyakar/Markus/compare/v0.2.0...v0.2.1) (2026-05-19)
+
+
+### Build
+
+* **macos:** standalone .app build script without hardened runtime ([863ef55](https://github.com/cihanyakar/Markus/commit/863ef55cbed1f78052af3c52064274c38b8b45ac))
+
+
+### Continuous Integration
+
+* **deps:** bump actions/checkout to v6 and actions/setup-dotnet to v5 ([ed745f5](https://github.com/cihanyakar/Markus/commit/ed745f543549752267cc65b3b991297c5df05a27))
+* **deps:** Bump actions/upload-artifact from 4 to 7 ([#9](https://github.com/cihanyakar/Markus/issues/9)) ([4964ee4](https://github.com/cihanyakar/Markus/commit/4964ee4689232e7760514884ef7ced9603aa0aae))
+* **release:** ad-hoc codesign macOS .app bundles without hardened runtime ([f2064f4](https://github.com/cihanyakar/Markus/commit/f2064f4110a1b46dedcd9124a4b271e5dfa998d8))
+
 ## [0.2.0](https://github.com/cihanyakar/Markus/compare/v0.1.1...v0.2.0) (2026-05-18)
 
 
