@@ -120,18 +120,31 @@ jobs:
           codesign --sign - --deep --force "$APP_DIR"
           codesign --verify --verbose=2 "$APP_DIR" 2>&1 | tail -5
 
-      - name: Archive macOS .app (zip)
+      - name: Archive macOS .app (dmg)
         if: matrix.bundle == 'app'
         shell: bash
         env:
-          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.zip
+          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.dmg
         run: |
-          # `ditto` preserves macOS metadata; falls back to `zip` if missing
-          if command -v ditto >/dev/null 2>&1; then
-            ditto -c -k --sequesterRsrc --keepParent Markus.app "$ARCHIVE_NAME"
-          else
-            zip -ry "$ARCHIVE_NAME" Markus.app
-          fi
+          # Stage the bundle alongside an /Applications symlink so the DMG
+          # opens with a "drag here" install layout familiar from any
+          # commercial Mac app.
+          rm -rf dmg-staging
+          mkdir dmg-staging
+          cp -R Markus.app dmg-staging/
+          ln -s /Applications dmg-staging/Applications
+
+          hdiutil create \
+            -volname "Markus" \
+            -srcfolder dmg-staging \
+            -ov \
+            -format UDZO \
+            -fs HFS+ \
+            "$ARCHIVE_NAME"
+
+          # Ad-hoc sign the DMG too so Gatekeeper at least sees a consistent
+          # signature on the container even though .app inside is what matters.
+          codesign --sign - --force "$ARCHIVE_NAME"
           echo "ARTIFACT=$ARCHIVE_NAME" >> "$GITHUB_ENV"
 
       # --- Linux: plain tar.gz ---

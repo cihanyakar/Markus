@@ -94,11 +94,25 @@ echo "==> Registering with LaunchServices"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
     -f -R "$APP_DIR" >/dev/null
 
-echo "==> Archiving"
+echo "==> Building DMG"
 cd "$ROOT/dist"
-ARCHIVE="Markus-v$VERSION-$RID.zip"
-rm -f "$ARCHIVE" "$ARCHIVE.sha256"
-ditto -c -k --sequesterRsrc --keepParent "$(basename "$APP_DIR")" "$ARCHIVE"
+ARCHIVE="Markus-v$VERSION-$RID.dmg"
+STAGING="dmg-staging"
+rm -rf "$STAGING" "$ARCHIVE" "$ARCHIVE.sha256"
+mkdir "$STAGING"
+cp -R "$(basename "$APP_DIR")" "$STAGING/"
+# /Applications symlink turns the mounted volume into a "drag here" view.
+ln -s /Applications "$STAGING/Applications"
+hdiutil create \
+    -volname "Markus" \
+    -srcfolder "$STAGING" \
+    -ov \
+    -format UDZO \
+    -fs HFS+ \
+    "$ARCHIVE" \
+    | tail -3
+codesign --sign - --force "$ARCHIVE"
+rm -rf "$STAGING"
 shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
 
 echo
@@ -106,6 +120,6 @@ echo "Done."
 echo "    $(du -sh "$APP_DIR")"
 echo "    $(du -sh "$ROOT/dist/$ARCHIVE")"
 echo
-echo "Distribute the zip; first-time users on other Macs may need to run:"
+echo "Distribute the dmg; first-time users on other Macs may need to run:"
 echo "    xattr -cr /Applications/Markus.app"
-echo "or right-click → Open in Finder to clear quarantine."
+echo "after dragging into Applications, or right-click → Open in Finder."
