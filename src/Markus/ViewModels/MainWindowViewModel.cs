@@ -12,6 +12,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly FileWatcherService _fileWatcher;
     private System.Threading.CancellationTokenSource? _outlineCts;
     private bool _disposed;
+    private bool _suppressOutlinePlacementSave;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSourceOnly))]
@@ -22,7 +23,17 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private ViewMode _currentViewMode;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOutlineLeftVisible))]
+    [NotifyPropertyChangedFor(nameof(IsOutlineRightVisible))]
     private bool _isOutlineVisible;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOutlineLeftVisible))]
+    [NotifyPropertyChangedFor(nameof(IsOutlineRightVisible))]
+    private OutlinePlacement _outlinePlacement;
+
+    [ObservableProperty]
+    private string _outlineFilter = string.Empty;
 
     [ObservableProperty]
     private bool _isScrollLocked;
@@ -86,6 +97,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings = settingsService.Load();
         _currentViewMode = Settings.DefaultViewMode;
         _isOutlineVisible = Settings.ShowOutline;
+        _outlinePlacement = Settings.OutlinePlacement;
         _isSourceSoftWrap = Settings.IsSourceSoftWrap;
         _isPreviewSoftWrap = Settings.IsPreviewSoftWrap;
         _monoFontFamily = MonoFontStack.Build(Settings.MonoFont);
@@ -130,6 +142,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     public int ReadingMinutes => Math.Max(1, (int)Math.Ceiling(WordCount / 250.0));
 
     public string DocumentStats => $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min";
+
+    public bool IsOutlineLeftVisible => IsOutlineVisible && OutlinePlacement is OutlinePlacement.Left;
+
+    public bool IsOutlineRightVisible => IsOutlineVisible && OutlinePlacement is OutlinePlacement.Right;
 
     public async Task LoadFileAsync(string path)
     {
@@ -179,6 +195,36 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             count++;
         }
         return count;
+    }
+
+    private static void SetOutlineExpanded(IEnumerable<OutlineNode> nodes, bool expanded)
+    {
+        foreach (var node in nodes)
+        {
+            node.IsExpanded = expanded;
+            SetOutlineExpanded(node.Children, expanded);
+        }
+    }
+
+    private static bool ApplyOutlineFilter(IEnumerable<OutlineNode> nodes, string filter)
+    {
+        // Returns true if any node in the subtree matches; the parent stays
+        // visible to expose the match path. Filter resets visibility when
+        // empty so partial typing → erase restores the full tree.
+        var anyMatch = false;
+        foreach (var node in nodes)
+        {
+            var selfMatch = filter.Length == 0
+                || node.Text.Contains(filter, StringComparison.OrdinalIgnoreCase);
+            var childMatch = ApplyOutlineFilter(node.Children, filter);
+            node.IsVisible = selfMatch || childMatch;
+            if (childMatch && filter.Length > 0)
+            {
+                node.IsExpanded = true;
+            }
+            anyMatch |= node.IsVisible;
+        }
+        return anyMatch;
     }
 
     [RelayCommand(CanExecute = nameof(CanReload))]
@@ -329,6 +375,43 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         FindPreviousRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    [RelayCommand]
+    private void ExpandOutline()
+    {
+        SetOutlineExpanded(OutlineNodes, true);
+    }
+
+    [RelayCommand]
+    private void CollapseOutline()
+    {
+        SetOutlineExpanded(OutlineNodes, false);
+    }
+
+    partial void OnOutlineFilterChanged(string value)
+    {
+        ApplyOutlineFilter(OutlineNodes, value?.Trim() ?? string.Empty);
+    }
+
+    partial void OnOutlineNodesChanged(IReadOnlyList<OutlineNode> value)
+    {
+        // Re-apply the current filter so a freshly-parsed outline doesn't
+        // discard the user's quick-search state.
+        if (!string.IsNullOrEmpty(OutlineFilter))
+        {
+            ApplyOutlineFilter(value, OutlineFilter.Trim());
+        }
+    }
+
+    partial void OnOutlinePlacementChanged(OutlinePlacement value)
+    {
+        if (_suppressOutlinePlacementSave)
+        {
+            return;
+        }
+        Settings.OutlinePlacement = value;
+        _settingsService.Save(Settings);
+    }
+
     partial void OnIsSourceSoftWrapChanged(bool value)
     {
         Settings.IsSourceSoftWrap = value;
@@ -351,6 +434,20 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         Settings = e.Settings;
         ThemeApplicator.Apply(e.Settings.ThemeMode);
+        // Mirror the Settings dialog's outline placement back to the live VM
+        // (without saving again — would loop through OnOutlinePlacementChanged).
+        if (e.Settings.OutlinePlacement != OutlinePlacement)
+        {
+            _suppressOutlinePlacementSave = true;
+            try
+            {
+                OutlinePlacement = e.Settings.OutlinePlacement;
+            }
+            finally
+            {
+                _suppressOutlinePlacementSave = false;
+            }
+        }
 
         var fontStack = MonoFontStack.Build(e.Settings.MonoFont);
         var fontChanged = !string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal);

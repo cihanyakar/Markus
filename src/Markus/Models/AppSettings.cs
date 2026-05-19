@@ -14,6 +14,8 @@ internal sealed class AppSettings
 
     public bool ShowOutline { get; set; }
 
+    public OutlinePlacement OutlinePlacement { get; set; } = OutlinePlacement.Right;
+
     public double FontSize { get; set; } = 16.0;
 
     public string MonoFont { get; set; } = "JetBrains Mono";
@@ -37,6 +39,7 @@ internal sealed class AppSettings
             ThemeMode = ThemeMode,
             DefaultViewMode = DefaultViewMode,
             ShowOutline = ShowOutline,
+            OutlinePlacement = OutlinePlacement,
             FontSize = FontSize,
             MonoFont = MonoFont,
             IsSourceSoftWrap = IsSourceSoftWrap,

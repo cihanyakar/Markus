@@ -24,6 +24,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         ViewMode.Detached,
     };
 
+    public static readonly IReadOnlyList<OutlinePlacement> AvailableOutlinePlacements = new OutlinePlacement[]
+    {
+        OutlinePlacement.Left,
+        OutlinePlacement.Right,
+    };
+
     public static readonly IReadOnlyList<LanguageOption> AvailableLanguages = new LanguageOption[]
     {
         new LanguageOption("en", "English"),
@@ -100,6 +106,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     private bool _showOutline;
 
     [ObservableProperty]
+    private OutlinePlacement _outlinePlacement;
+
+    [ObservableProperty]
     private double _fontSize;
 
     [ObservableProperty]
@@ -124,6 +133,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _codeTheme = settings.CodeTheme;
         _defaultViewMode = settings.DefaultViewMode;
         _showOutline = settings.ShowOutline;
+        _outlinePlacement = settings.OutlinePlacement;
         _fontSize = settings.FontSize;
         _monoFont = settings.MonoFont;
         _themeMode = settings.ThemeMode;
@@ -153,6 +163,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         CodeTheme = defaults.CodeTheme;
         DefaultViewMode = defaults.DefaultViewMode;
         ShowOutline = defaults.ShowOutline;
+        OutlinePlacement = defaults.OutlinePlacement;
         FontSize = defaults.FontSize;
         MonoFont = defaults.MonoFont;
         ThemeMode = defaults.ThemeMode;
@@ -189,6 +200,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnDefaultViewModeChanged(ViewMode value)
     {
         Settings.DefaultViewMode = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnOutlinePlacementChanged(OutlinePlacement value)
+    {
+        Settings.OutlinePlacement = value;
         Service.Save(Settings);
     }
 

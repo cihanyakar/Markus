@@ -271,9 +271,14 @@
 
           <Grid Classes="row" ColumnDefinitions="160,*">
             <TextBlock Grid.Column="0" Text="Outline:" Classes="rowLabel"/>
-            <CheckBox Grid.Column="1"
-                      Content="Show outline panel by default"
-                      IsChecked="{Binding ShowOutline}"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <CheckBox Content="Show outline panel by default"
+                        IsChecked="{Binding ShowOutline}"/>
+              <ComboBox MinWidth="160"
+                        HorizontalAlignment="Left"
+                        ItemsSource="{x:Static vm:SettingsViewModel.AvailableOutlinePlacements}"
+                        SelectedItem="{Binding OutlinePlacement}"/>
+            </StackPanel>
           </Grid>
 
           <Grid Classes="row" ColumnDefinitions="160,*">

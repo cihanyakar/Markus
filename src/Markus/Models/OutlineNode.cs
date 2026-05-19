@@ -1,9 +1,16 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Markus.Models;
 
-internal sealed class OutlineNode
+internal sealed partial class OutlineNode : ObservableObject
 {
+    [ObservableProperty]
+    private bool _isExpanded = true;
+
+    [ObservableProperty]
+    private bool _isVisible = true;
+
     public OutlineNode(int level, string text, int sourceLine)
     {
         Level = level;

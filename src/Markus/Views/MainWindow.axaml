@@ -328,9 +328,22 @@
       </Border>
 
       <!-- ============ Content ============ -->
-      <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto">
+      <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
 
-        <Grid Grid.Column="0">
+        <!-- Outline on the LEFT (placement = Left). -->
+        <Border Grid.Column="0"
+                Classes="glass sidebar"
+                Width="280"
+                IsVisible="{Binding IsOutlineLeftVisible}">
+          <views:OutlinePanel Name="OutlineLeft"
+                              DataContext="{Binding}"/>
+        </Border>
+        <GridSplitter Grid.Column="1"
+                      Classes="hairline"
+                      ResizeDirection="Columns"
+                      IsVisible="{Binding IsOutlineLeftVisible}"/>
+
+        <Grid Grid.Column="2">
 
           <!-- Floating in-document search bar for the preview side. -->
           <views:SearchOverlay Name="PreviewSearch"
@@ -395,39 +408,18 @@
 
         </Grid>
 
-        <GridSplitter Grid.Column="1"
+        <GridSplitter Grid.Column="3"
                       Classes="hairline"
                       ResizeDirection="Columns"
-                      IsVisible="{Binding IsOutlineVisible}"/>
+                      IsVisible="{Binding IsOutlineRightVisible}"/>
 
-        <!-- Outline glass sidebar -->
-        <Border Grid.Column="2"
+        <!-- Outline on the RIGHT (placement = Right). -->
+        <Border Grid.Column="4"
                 Classes="glass sidebar"
                 Width="280"
-                IsVisible="{Binding IsOutlineVisible}">
-          <Grid RowDefinitions="Auto,*">
-            <StackPanel Grid.Row="0" Margin="20,18,20,12" Spacing="2">
-              <TextBlock Classes="section" Text="ON THIS PAGE"/>
-              <TextBlock Classes="h1" Text="Outline"/>
-            </StackPanel>
-
-            <TreeView Grid.Row="1"
-                      Name="OutlineTree"
-                      ItemsSource="{Binding OutlineNodes}"
-                      Background="Transparent"
-                      BorderThickness="0"
-                      Padding="12,4,12,12"
-                      SelectionChanged="OutlineTree_SelectionChanged">
-              <TreeView.ItemTemplate>
-                <TreeDataTemplate ItemsSource="{Binding Children}"
-                                  DataType="{x:Type models:OutlineNode}">
-                  <TextBlock Text="{Binding Text}"
-                             TextTrimming="CharacterEllipsis"
-                             VerticalAlignment="Center"/>
-                </TreeDataTemplate>
-              </TreeView.ItemTemplate>
-            </TreeView>
-          </Grid>
+                IsVisible="{Binding IsOutlineRightVisible}">
+          <views:OutlinePanel Name="OutlineRight"
+                              DataContext="{Binding}"/>
         </Border>
 
       </Grid>

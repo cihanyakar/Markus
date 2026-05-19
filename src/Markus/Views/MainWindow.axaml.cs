@@ -41,6 +41,19 @@ internal sealed partial class MainWindow : Window
         WirePreviewSearch();
         WireCommandPalette();
         WireScrollSync();
+        WireOutlinePanels();
+    }
+
+    private void WireOutlinePanels()
+    {
+        if (this.FindControl<OutlinePanel>("OutlineLeft") is { } left)
+        {
+            left.NodeSelected += OnOutlineNodeSelected;
+        }
+        if (this.FindControl<OutlinePanel>("OutlineRight") is { } right)
+        {
+            right.NodeSelected += OnOutlineNodeSelected;
+        }
     }
 
     private void WireScrollSync()
@@ -999,17 +1012,9 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    private void OutlineTree_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void OnOutlineNodeSelected(object? sender, OutlineNodeSelectedEventArgs e)
     {
-        if (e.AddedItems.Count == 0)
-        {
-            return;
-        }
-        if (e.AddedItems[0] is not Markus.Models.OutlineNode node)
-        {
-            return;
-        }
-        ScrollVisiblePreview(node.SourceLine);
+        ScrollVisiblePreview(e.Node.SourceLine);
     }
 
     private void ScrollVisiblePreview(int sourceLine)

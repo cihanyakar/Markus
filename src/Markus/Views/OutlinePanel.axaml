@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Markus.ViewModels"
+             xmlns:models="using:Markus.Models"
+             xmlns:views="using:Markus.Views"
+             mc:Ignorable="d"
+             x:Class="Markus.Views.OutlinePanel"
+             x:DataType="vm:MainWindowViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Button.outlineTool">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="Padding" Value="6"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.outlineTool:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
+    </Style>
+    <Style Selector="Button.outlineTool PathIcon">
+      <Setter Property="Width" Value="14"/>
+      <Setter Property="Height" Value="14"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
+    </Style>
+    <Style Selector="TextBox.outlineFilter">
+      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*">
+
+    <!-- Title -->
+    <StackPanel Grid.Row="0" Margin="16,14,16,8" Spacing="2">
+      <TextBlock Classes="section" Text="ON THIS PAGE"/>
+      <TextBlock Classes="h1" Text="Outline"/>
+    </StackPanel>
+
+    <!-- Toolbar: expand-all / collapse-all / quick search -->
+    <Grid Grid.Row="1"
+          Margin="12,0,12,8"
+          ColumnDefinitions="Auto,Auto,*">
+      <Button Grid.Column="0"
+              Classes="outlineTool"
+              Command="{Binding ExpandOutlineCommand}"
+              ToolTip.Tip="Expand all">
+        <PathIcon Data="{x:Static views:IconData.UnfoldMore}"/>
+      </Button>
+      <Button Grid.Column="1"
+              Classes="outlineTool"
+              Margin="2,0,8,0"
+              Command="{Binding CollapseOutlineCommand}"
+              ToolTip.Tip="Collapse all">
+        <PathIcon Data="{x:Static views:IconData.UnfoldLess}"/>
+      </Button>
+      <TextBox Grid.Column="2"
+               Classes="outlineFilter"
+               PlaceholderText="Filter…"
+               Text="{Binding OutlineFilter}"/>
+    </Grid>
+
+    <!-- Tree -->
+    <TreeView Grid.Row="2"
+              Name="OutlineTree"
+              ItemsSource="{Binding OutlineNodes}"
+              Background="Transparent"
+              BorderThickness="0"
+              Padding="8,4,8,12"
+              SelectionChanged="OutlineTree_SelectionChanged">
+      <TreeView.Styles>
+        <Style Selector="TreeViewItem" x:DataType="models:OutlineNode">
+          <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+          <Setter Property="IsVisible" Value="{Binding IsVisible}"/>
+        </Style>
+      </TreeView.Styles>
+      <TreeView.ItemTemplate>
+        <TreeDataTemplate ItemsSource="{Binding Children}"
+                          DataType="{x:Type models:OutlineNode}">
+          <TextBlock Text="{Binding Text}"
+                     TextTrimming="CharacterEllipsis"
+                     VerticalAlignment="Center"/>
+        </TreeDataTemplate>
+      </TreeView.ItemTemplate>
+    </TreeView>
+  </Grid>
+</UserControl>

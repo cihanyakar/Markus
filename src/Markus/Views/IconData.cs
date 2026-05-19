@@ -39,6 +39,16 @@ internal static class IconData
             "M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"
         );
 
+    public static StreamGeometry UnfoldMore { get; } =
+        StreamGeometry.Parse(
+            "M12,18.17L8.83,15L7.41,16.41L12,21L16.59,16.41L15.17,15L12,18.17M12,5.83L15.17,9L16.58,7.59L12,3L7.41,7.59L8.83,9L12,5.83Z"
+        );
+
+    public static StreamGeometry UnfoldLess { get; } =
+        StreamGeometry.Parse(
+            "M7.41,18.59L8.83,20L12,16.83L15.17,20L16.58,18.59L12,14L7.41,18.59M16.59,5.41L15.17,4L12,7.17L8.83,4L7.41,5.41L12,10L16.59,5.41Z"
+        );
+
     public static StreamGeometry FolderOpen { get; } =
         StreamGeometry.Parse(
             "M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z"
