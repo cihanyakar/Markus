@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Markus.Views.ShortcutRecorderDialog"
+        Title="Record shortcut"
+        Width="380" Height="220"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Background="{DynamicResource AppBackground}">
+
+  <Grid RowDefinitions="36,*,Auto" Margin="0">
+    <TextBlock Grid.Row="0"
+               Text="Record shortcut"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               FontSize="13"
+               FontWeight="SemiBold"
+               Foreground="{DynamicResource TextHigh}"/>
+
+    <StackPanel Grid.Row="1"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Spacing="14">
+      <TextBlock Text="Press a key combination"
+                 FontSize="13"
+                 Foreground="{DynamicResource TextMedium}"
+                 HorizontalAlignment="Center"/>
+      <Border Background="{DynamicResource GlassBg}"
+              BorderBrush="{DynamicResource GlassBorder}"
+              BorderThickness="1"
+              CornerRadius="10"
+              Padding="22,12"
+              MinWidth="220">
+        <TextBlock Name="CapturedLabel"
+                   Text="—"
+                   FontFamily="JetBrains Mono,Cascadia Code,monospace"
+                   FontSize="15"
+                   HorizontalAlignment="Center"
+                   Foreground="{DynamicResource TextHigh}"/>
+      </Border>
+      <TextBlock Text="Esc to cancel"
+                 FontSize="11"
+                 Foreground="{DynamicResource TextLow}"
+                 HorizontalAlignment="Center"/>
+    </StackPanel>
+
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="18,12">
+      <Button Grid.Column="1" Content="Cancel" Click="OnCancel" Margin="0,0,8,0"/>
+      <Button Grid.Column="2" Content="Set" Click="OnConfirm" Classes="accent"
+              IsEnabled="{Binding ElementName=CapturedLabel, Path=Tag, Mode=OneWay}"/>
+    </Grid>
+  </Grid>
+</Window>

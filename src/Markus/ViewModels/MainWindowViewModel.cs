@@ -58,6 +58,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
+    [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private string? _currentFilePath;
 
     [ObservableProperty]
@@ -65,16 +66,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(CharCount))]
     [NotifyPropertyChangedFor(nameof(ReadingMinutes))]
     [NotifyPropertyChangedFor(nameof(DocumentStats))]
-    private string _sourceText =
-        "# Welcome to Markus\n\n"
-        + "This is a **placeholder**. Open a `.md` file to see it rendered.\n\n"
-        + "## Features\n\n"
-        + "- Live reload (active once a file is open)\n"
-        + "- Native preview renderer\n"
-        + "- Multiple themes\n\n"
-        + "## Coming next\n\n"
-        + "- Detached source/preview windows\n"
-        + "- Theme tokens applied to the rendered content\n";
+    private string _sourceText = string.Empty;
 
     [ObservableProperty]
     private IReadOnlyList<OutlineNode> _outlineNodes = Array.Empty<OutlineNode>();
@@ -84,6 +76,14 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private string _caretPosition = "Ln 1, Col 1";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private string _selectionStats = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
+    private bool _isScratchBuffer;
 
     public MainWindowViewModel()
         : this(ServiceLocator.Settings) { }
@@ -147,15 +147,49 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsOutlineRightVisible => IsOutlineVisible && OutlinePlacement is OutlinePlacement.Right;
 
+    public bool HasSelection => !string.IsNullOrEmpty(SelectionStats);
+
+    public bool HasRecentFiles => Settings.RecentFiles.Count > 0;
+
+    // Welcome view shows while the user has neither opened a file nor typed
+    // into the placeholder. Disappears the moment a document is loaded or
+    // scratch buffer is started.
+    public bool IsWelcomeVisible => string.IsNullOrEmpty(CurrentFilePath) && !IsScratchBuffer;
+
     public async Task LoadFileAsync(string path)
     {
         var text = await File.ReadAllTextAsync(path);
         SourceText = text;
         CurrentFilePath = path;
+        IsScratchBuffer = false;
         DocumentTitle = Path.GetFileName(path);
         StatusText = $"{DocumentTitle} • {text.Length} chars";
         _fileWatcher.Watch(path);
         AddToRecent(path);
+    }
+
+    public void MoveHeading(OutlineNode dragged, OutlineNode? target, DropPosition position)
+    {
+        if (string.IsNullOrEmpty(SourceText))
+        {
+            return;
+        }
+        // -1 = "no target → append at end". Markdig's HeadingBlock.Line is
+        // 0-indexed, so 0 is a real heading and can't be the sentinel.
+        var targetLine = target?.SourceLine ?? -1;
+        var updated = HeadingMover.Move(SourceText, OutlineNodes, dragged.SourceLine, targetLine, position);
+        if (!string.Equals(updated, SourceText, StringComparison.Ordinal))
+        {
+            SourceText = updated;
+            StatusText = $"Moved '{dragged.Text}'";
+        }
+    }
+
+    public void PersistSession(int firstVisibleLine)
+    {
+        Settings.LastOpenedFile = CurrentFilePath;
+        Settings.LastScrollLine = firstVisibleLine;
+        _settingsService.Save(Settings);
     }
 
     public void Dispose()
@@ -214,8 +248,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         var anyMatch = false;
         foreach (var node in nodes)
         {
-            var selfMatch = filter.Length == 0
-                || node.Text.Contains(filter, StringComparison.OrdinalIgnoreCase);
+            var selfMatch = filter.Length == 0 || node.Text.Contains(filter, StringComparison.OrdinalIgnoreCase);
             var childMatch = ApplyOutlineFilter(node.Children, filter);
             node.IsVisible = selfMatch || childMatch;
             if (childMatch && filter.Length > 0)
@@ -373,6 +406,31 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void FindPrevious()
     {
         FindPreviousRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void NewScratch()
+    {
+        SourceText = string.Empty;
+        IsScratchBuffer = true;
+        DocumentTitle = "Untitled";
+        StatusText = "Scratch buffer · unsaved";
+    }
+
+    [RelayCommand]
+    private void FormatTables()
+    {
+        var current = SourceText;
+        if (string.IsNullOrEmpty(current))
+        {
+            return;
+        }
+        var formatted = MarkdownTableFormatter.Format(current);
+        if (!string.Equals(formatted, current, StringComparison.Ordinal))
+        {
+            SourceText = formatted;
+            StatusText = "Tables reformatted";
+        }
     }
 
     [RelayCommand]

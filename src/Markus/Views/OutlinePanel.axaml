@@ -19,6 +19,13 @@
       <Setter Property="MinHeight" Value="0"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
+
+    <!-- Stretch the outline rows across the panel so the click target spans
+         the whole sidebar width, not just the text. -->
+    <Style Selector="TreeView.outline TreeViewItem">
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
+
     <Style Selector="Button.outlineTool:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
     </Style>
@@ -35,7 +42,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,Auto,*">
+  <Grid RowDefinitions="Auto,Auto,*" ClipToBounds="True">
 
     <!-- Title -->
     <StackPanel Grid.Row="0" Margin="16,14,16,8" Spacing="2">
@@ -69,10 +76,13 @@
     <!-- Tree -->
     <TreeView Grid.Row="2"
               Name="OutlineTree"
+              Classes="outline"
               ItemsSource="{Binding OutlineNodes}"
               Background="Transparent"
               BorderThickness="0"
               Padding="8,4,8,12"
+              HorizontalAlignment="Stretch"
+              DragDrop.AllowDrop="True"
               SelectionChanged="OutlineTree_SelectionChanged">
       <TreeView.Styles>
         <Style Selector="TreeViewItem" x:DataType="models:OutlineNode">
@@ -89,5 +99,51 @@
         </TreeDataTemplate>
       </TreeView.ItemTemplate>
     </TreeView>
+
+    <!-- Drag ghost overlay. Sits on top of every row, never intercepts
+         pointer events. Its Canvas.Left/Top are mutated from code-behind to
+         track the cursor while a heading is being dragged. -->
+    <Canvas Grid.RowSpan="3"
+            Name="DragOverlay"
+            IsHitTestVisible="False"
+            ZIndex="100">
+      <!-- Drop-target indicator: three pre-styled Borders, only one of
+           which is shown for a given drop. Pre-bound DynamicResources
+           avoid expensive (or failure-prone) FindResource calls during
+           each pointer-moved tick. -->
+      <Border Name="DropBefore"
+              IsVisible="False"
+              Background="{DynamicResource Accent}"
+              Height="2"
+              CornerRadius="1"
+              IsHitTestVisible="False"/>
+      <Border Name="DropAfter"
+              IsVisible="False"
+              Background="{DynamicResource Accent}"
+              Height="2"
+              CornerRadius="1"
+              IsHitTestVisible="False"/>
+      <Border Name="DropInside"
+              IsVisible="False"
+              Background="{DynamicResource AccentSoft}"
+              BorderBrush="{DynamicResource Accent}"
+              BorderThickness="1"
+              CornerRadius="4"
+              IsHitTestVisible="False"/>
+      <Border Name="DragGhost"
+              IsVisible="False"
+              Background="{DynamicResource AccentSoft}"
+              BorderBrush="{DynamicResource Accent}"
+              BorderThickness="1"
+              CornerRadius="6"
+              Padding="10,5"
+              Opacity="0.92"
+              BoxShadow="0 2 8 0 #28000000">
+        <TextBlock Name="DragGhostText"
+                   FontSize="12"
+                   FontWeight="Medium"
+                   Foreground="{DynamicResource TextHigh}"/>
+      </Border>
+    </Canvas>
   </Grid>
 </UserControl>

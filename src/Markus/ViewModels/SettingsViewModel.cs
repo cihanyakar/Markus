@@ -78,12 +78,14 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     {
         new SettingsCategoryItem(SettingsCategory.Appearance, "Appearance", IconData.Palette),
         new SettingsCategoryItem(SettingsCategory.View, "View", IconData.ViewQuilt),
+        new SettingsCategoryItem(SettingsCategory.Shortcuts, "Shortcuts", IconData.UnfoldLess),
         new SettingsCategoryItem(SettingsCategory.General, "General", IconData.Tune),
     };
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAppearanceSelected))]
     [NotifyPropertyChangedFor(nameof(IsViewSelected))]
+    [NotifyPropertyChangedFor(nameof(IsShortcutsSelected))]
     [NotifyPropertyChangedFor(nameof(IsGeneralSelected))]
     private SettingsCategoryItem _selectedCategory = Categories[0];
 
@@ -107,6 +109,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private OutlinePlacement _outlinePlacement;
+
+    [ObservableProperty]
+    private bool _restoreSessionOnLaunch;
 
     [ObservableProperty]
     private double _fontSize;
@@ -134,6 +139,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _defaultViewMode = settings.DefaultViewMode;
         _showOutline = settings.ShowOutline;
         _outlinePlacement = settings.OutlinePlacement;
+        _restoreSessionOnLaunch = settings.RestoreSessionOnLaunch;
         _fontSize = settings.FontSize;
         _monoFont = settings.MonoFont;
         _themeMode = settings.ThemeMode;
@@ -151,7 +157,17 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     public bool IsViewSelected => SelectedCategory.Kind is SettingsCategory.View;
 
+    public bool IsShortcutsSelected => SelectedCategory.Kind is SettingsCategory.Shortcuts;
+
     public bool IsGeneralSelected => SelectedCategory.Kind is SettingsCategory.General;
+
+    public IReadOnlyList<ShortcutBindingViewModel> Shortcuts { get; } =
+        Markus
+            .Services.ShortcutActions.All.Select(a => new ShortcutBindingViewModel(
+                a,
+                Markus.Services.ServiceLocator.Keys
+            ))
+            .ToList();
 
     [RelayCommand]
     private void RestoreDefaults()
@@ -164,6 +180,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         DefaultViewMode = defaults.DefaultViewMode;
         ShowOutline = defaults.ShowOutline;
         OutlinePlacement = defaults.OutlinePlacement;
+        RestoreSessionOnLaunch = defaults.RestoreSessionOnLaunch;
         FontSize = defaults.FontSize;
         MonoFont = defaults.MonoFont;
         ThemeMode = defaults.ThemeMode;
@@ -206,6 +223,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnOutlinePlacementChanged(OutlinePlacement value)
     {
         Settings.OutlinePlacement = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnRestoreSessionOnLaunchChanged(bool value)
+    {
+        Settings.RestoreSessionOnLaunch = value;
         Service.Save(Settings);
     }
 
@@ -260,6 +283,15 @@ internal sealed record ThemeOption(string key, string display, bool isDark)
     public string Display => display;
 
     public bool IsDark => isDark;
+
+    public Avalonia.Media.IBrush Swatch
+    {
+        get
+        {
+            var theme = Rendering.MarkdownThemes.Resolve(key);
+            return new Avalonia.Media.SolidColorBrush(theme.Background);
+        }
+    }
 }
 
 internal sealed record CodeThemeOption(string key, string display)

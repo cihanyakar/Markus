@@ -56,6 +56,9 @@
                             Command="{Binding FindNextCommand}"/>
             <NativeMenuItem Header="Find Previous" Gesture="Cmd+Shift+G"
                             Command="{Binding FindPreviousCommand}"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Format Tables" Gesture="Cmd+Shift+F"
+                            Command="{Binding FormatTablesCommand}"/>
           </NativeMenu>
         </NativeMenuItem.Menu>
       </NativeMenuItem>
@@ -345,6 +348,10 @@
 
         <Grid Grid.Column="2">
 
+          <!-- Welcome screen — shown when no file open and no scratch started. -->
+          <views:WelcomeView IsVisible="{Binding IsWelcomeVisible}"
+                             ZIndex="5"/>
+
           <!-- Floating in-document search bar for the preview side. -->
           <views:SearchOverlay Name="PreviewSearch"
                                 IsVisible="False"
@@ -439,10 +446,17 @@
                        FontSize="11"
                        VerticalAlignment="Center"
                        Text="{Binding CaretPosition}"/>
+            <TextBlock Foreground="{DynamicResource Accent}"
+                       FontSize="11"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Text="{Binding SelectionStats}"
+                       IsVisible="{Binding HasSelection}"/>
             <TextBlock Foreground="{DynamicResource TextLow}"
                        FontSize="11"
                        VerticalAlignment="Center"
-                       Text="{Binding DocumentStats}"/>
+                       Text="{Binding DocumentStats}"
+                       IsVisible="{Binding !HasSelection}"/>
             <TextBlock Classes="section" Text="VIEW"/>
             <TextBlock Foreground="{DynamicResource TextMedium}"
                        FontSize="11"

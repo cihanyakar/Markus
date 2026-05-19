@@ -4,5 +4,6 @@ internal enum SettingsCategory
 {
     Appearance,
     View,
+    Shortcuts,
     General,
 }

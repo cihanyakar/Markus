@@ -217,8 +217,19 @@
                       HorizontalAlignment="Left"
                       ItemsSource="{x:Static vm:SettingsViewModel.AvailableThemes}"
                       SelectedValueBinding="{Binding Key}"
-                      SelectedValue="{Binding Theme}"
-                      DisplayMemberBinding="{Binding Display}"/>
+                      SelectedValue="{Binding Theme}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ThemeOption">
+                  <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Border Width="16" Height="16" CornerRadius="3"
+                            Background="{Binding Swatch}"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource SettingsDivider}"/>
+                    <TextBlock Text="{Binding Display}" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
           </Grid>
 
           <Grid Classes="row" ColumnDefinitions="160,*">
@@ -299,6 +310,42 @@
           </Grid>
         </StackPanel>
 
+        <!-- ====== Shortcuts ====== -->
+        <StackPanel IsVisible="{Binding IsShortcutsSelected}" Spacing="0">
+          <ItemsControl ItemsSource="{Binding Shortcuts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ShortcutBindingViewModel">
+                <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,6">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding DisplayName}"
+                               FontSize="13"
+                               Foreground="{DynamicResource SettingsLabel}"/>
+                    <TextBlock Text="{Binding Category}"
+                               FontSize="11"
+                               Foreground="{DynamicResource SettingsHint}"/>
+                  </StackPanel>
+                  <Button Grid.Column="1"
+                          Classes="recorder"
+                          Content="{Binding GestureDisplay}"
+                          MinWidth="140"
+                          Margin="0,0,8,0"
+                          Tag="{Binding}"
+                          Click="RecordShortcut_Click"/>
+                  <Button Grid.Column="2"
+                          Content="Reset"
+                          Tag="{Binding}"
+                          Click="ResetShortcut_Click"
+                          IsVisible="{Binding IsCustom}"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Margin="0,16,0,0"
+                  HorizontalAlignment="Right"
+                  Content="Reset all shortcuts"
+                  Click="ResetAllShortcuts_Click"/>
+        </StackPanel>
+
         <!-- ====== General ====== -->
         <StackPanel IsVisible="{Binding IsGeneralSelected}" Spacing="0">
           <Grid Classes="row" ColumnDefinitions="160,*">
@@ -322,6 +369,16 @@
                       SelectedValueBinding="{Binding Code}"
                       SelectedValue="{Binding Language}"
                       DisplayMemberBinding="{Binding Display}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="On launch:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <CheckBox Content="Reopen the last file"
+                        IsChecked="{Binding RestoreSessionOnLaunch}"/>
+              <TextBlock Classes="hint"
+                         Text="Markus restores the file and scroll position you had on quit. When off, the welcome screen shows instead."/>
+            </StackPanel>
           </Grid>
         </StackPanel>
 

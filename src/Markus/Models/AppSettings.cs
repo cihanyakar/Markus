@@ -28,6 +28,12 @@ internal sealed class AppSettings
 
     public List<string> RecentFiles { get; set; } = new List<string>();
 
+    public string? LastOpenedFile { get; set; }
+
+    public int LastScrollLine { get; set; }
+
+    public bool RestoreSessionOnLaunch { get; set; }
+
     public AppSettings Clone()
     {
         return new AppSettings
@@ -45,6 +51,9 @@ internal sealed class AppSettings
             IsSourceSoftWrap = IsSourceSoftWrap,
             IsPreviewSoftWrap = IsPreviewSoftWrap,
             RecentFiles = new List<string>(RecentFiles),
+            LastOpenedFile = LastOpenedFile,
+            LastScrollLine = LastScrollLine,
+            RestoreSessionOnLaunch = RestoreSessionOnLaunch,
         };
     }
 }

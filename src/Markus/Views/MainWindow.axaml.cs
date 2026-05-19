@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -58,27 +59,85 @@ internal sealed partial class MainWindow : Window
 
     private void WireScrollSync()
     {
-        // Bind ScrollLock toggle to both the physical Scroll Lock key and an
-        // alt shortcut (Cmd+Shift+L) for keyboards without Scroll Lock.
+        // Physical Scroll Lock toggles isolated from the keybinding service.
+        // No Meta modifier means it won't ever conflict with user-rebound
+        // shortcuts and laptop keyboards without the key just ignore it.
         KeyBindings.Add(
             new KeyBinding { Gesture = new KeyGesture(Key.Scroll), Command = new RelayCommand(InvokeScrollLockToggle) }
         );
-        KeyBindings.Add(
-            new KeyBinding
-            {
-                Gesture = new KeyGesture(Key.L, KeyModifiers.Meta | KeyModifiers.Shift),
-                Command = new RelayCommand(InvokeScrollLockToggle),
-            }
-        );
-        KeyBindings.Add(
-            new KeyBinding
-            {
-                Gesture = new KeyGesture(Key.M, KeyModifiers.Meta | KeyModifiers.Shift),
-                Command = new RelayCommand(InvokeFocusToggle),
-            }
-        );
-
+        ApplyKeyBindings();
+        Services.ServiceLocator.Keys.Changed += OnKeyBindingsChanged;
         Loaded += (_, _) => AttachEditorScrollSync();
+    }
+
+    private void OnKeyBindingsChanged(object? sender, EventArgs e)
+    {
+        ApplyKeyBindings();
+    }
+
+    private void ApplyKeyBindings()
+    {
+        // Wipe the dynamic bindings (everything except the special Scroll
+        // Lock key set in WireScrollSync) and rebuild from the catalog so a
+        // user edit in Settings → Shortcuts takes effect immediately.
+        for (var i = KeyBindings.Count - 1; i >= 0; i--)
+        {
+            if (KeyBindings[i].Gesture is { } g && g.Key == Key.Scroll && g.KeyModifiers == KeyModifiers.None)
+            {
+                continue;
+            }
+            KeyBindings.RemoveAt(i);
+        }
+        var keys = Services.ServiceLocator.Keys;
+        foreach (var action in Services.ShortcutActions.All)
+        {
+            var gesture = keys.GetGesture(action);
+            if (gesture is null)
+            {
+                continue;
+            }
+            var command = ResolveCommand(action);
+            if (command is null)
+            {
+                continue;
+            }
+            KeyBindings.Add(new KeyBinding { Gesture = gesture, Command = command });
+        }
+    }
+
+    private ICommand? ResolveCommand(Services.ShortcutAction action)
+    {
+        // Map catalog ids to the ViewModel commands / window helpers they
+        // already trigger. Returning null skips the binding (e.g., the
+        // ViewModel isn't ready yet on first construction).
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return null;
+        }
+        return action.Id switch
+        {
+            "file.open" => vm.OpenFileCommand,
+            "file.reload" => vm.ReloadCommand,
+            "file.new" => vm.NewScratchCommand,
+            "edit.find" => vm.FindCommand,
+            "edit.find-next" => vm.FindNextCommand,
+            "edit.find-previous" => vm.FindPreviousCommand,
+            "edit.format-tables" => vm.FormatTablesCommand,
+            "view.toggle-outline" => vm.ToggleOutlineCommand,
+            "view.scroll-lock" => new RelayCommand(InvokeScrollLockToggle),
+            "view.focus-mode" => new RelayCommand(InvokeFocusToggle),
+            "view.source" => new RelayCommand(() => vm.SetViewModeCommand.Execute(Markus.Models.ViewMode.Source)),
+            "view.preview" => new RelayCommand(() => vm.SetViewModeCommand.Execute(Markus.Models.ViewMode.Preview)),
+            "view.split-vertical" => new RelayCommand(() =>
+                vm.SetViewModeCommand.Execute(Markus.Models.ViewMode.SplitVertical)
+            ),
+            "view.split-horizontal" => new RelayCommand(() =>
+                vm.SetViewModeCommand.Execute(Markus.Models.ViewMode.SplitHorizontal)
+            ),
+            "view.detached" => new RelayCommand(() => vm.SetViewModeCommand.Execute(Markus.Models.ViewMode.Detached)),
+            "tools.command-palette" => new RelayCommand(ShowCommandPalette),
+            _ => null,
+        };
     }
 
     private void InvokeFocusToggle()
@@ -113,7 +172,10 @@ internal sealed partial class MainWindow : Window
             // Caret line/column drives the footer's "Ln X, Col Y" readout.
             editor.TextArea.Caret.PositionChanged -= OnEditorCaretChanged;
             editor.TextArea.Caret.PositionChanged += OnEditorCaretChanged;
+            editor.TextArea.SelectionChanged -= OnEditorSelectionChanged;
+            editor.TextArea.SelectionChanged += OnEditorSelectionChanged;
             UpdateCaretPosition(editor);
+            UpdateSelectionStats(editor);
         }
         AttachPreviewScrollSubscribers();
     }
@@ -138,6 +200,52 @@ internal sealed partial class MainWindow : Window
         {
             vm.CaretPosition = $"Ln {line}, Col {column}";
         }
+    }
+
+    private void OnEditorSelectionChanged(object? sender, EventArgs e)
+    {
+        if (sender is not AvaloniaEdit.Editing.TextArea area)
+        {
+            return;
+        }
+        var editor = area.GetVisualAncestors().OfType<MarkdownTextEditor>().FirstOrDefault();
+        if (editor is null)
+        {
+            return;
+        }
+        UpdateSelectionStats(editor);
+    }
+
+    private void UpdateSelectionStats(MarkdownTextEditor editor)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        var selectionText = editor.TextArea.Selection.GetText();
+        vm.SelectionStats = string.IsNullOrEmpty(selectionText)
+            ? string.Empty
+            : $"{CountWords(selectionText)} selected · {selectionText.Length} chars";
+    }
+
+    private static int CountWords(string text)
+    {
+        var count = 0;
+        var inWord = false;
+        foreach (var ch in text)
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                inWord = false;
+                continue;
+            }
+            if (!inWord)
+            {
+                inWord = true;
+                count++;
+            }
+        }
+        return count;
     }
 
     private void AttachPreviewScrollSubscribers()
@@ -351,13 +459,8 @@ internal sealed partial class MainWindow : Window
             return;
         }
         palette.CloseRequested += (_, _) => HideCommandPalette();
-        KeyBindings.Add(
-            new KeyBinding
-            {
-                Gesture = new KeyGesture(Key.K, KeyModifiers.Meta),
-                Command = new RelayCommand(ShowCommandPalette),
-            }
-        );
+        // Cmd+K gesture lives in the shared catalog (tools.command-palette)
+        // so it can be remapped from Settings → Shortcuts.
     }
 
     private void ShowCommandPalette()
@@ -518,14 +621,8 @@ internal sealed partial class MainWindow : Window
         overlay.Close += (_, _) => HideSearch();
         overlay.ReplaceCurrent += (_, _) => ReplaceCurrent();
         overlay.ReplaceAll += (_, _) => ReplaceAll();
-
-        KeyBindings.Add(
-            new KeyBinding
-            {
-                Gesture = new KeyGesture(Key.F, KeyModifiers.Meta),
-                Command = new RelayCommand(RouteSearchToActiveSurface),
-            }
-        );
+        // Cmd+F gesture lives in the shared catalog (edit.find) so it can be
+        // remapped from Settings → Shortcuts.
     }
 
     private void OnSearchOverlayPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -729,6 +826,36 @@ internal sealed partial class MainWindow : Window
         // NSVisualEffectMaterialLight. We patch the material so Tahoe applies
         // its current Liquid Glass tint and saturation instead.
         NSVisualEffectInstaller.Patch(this, NSVisualEffectInstaller.Material.HeaderView);
+        // Session restore scrolls the editor to LastScrollLine once the file
+        // has loaded. Loaded priority runs after layout so the editor's
+        // ScrollViewer has its viewport sized.
+        Avalonia.Threading.Dispatcher.UIThread.Post(RestoreSessionScroll, Avalonia.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void RestoreSessionScroll()
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        var settings = vm.Settings;
+        if (settings.LastScrollLine <= 0)
+        {
+            return;
+        }
+        if (!string.Equals(vm.CurrentFilePath, settings.LastOpenedFile, StringComparison.Ordinal))
+        {
+            return;
+        }
+        foreach (var editor in this.GetVisualDescendants().OfType<MarkdownTextEditor>())
+        {
+            if (!editor.IsEffectivelyVisible)
+            {
+                continue;
+            }
+            editor.ScrollToLine(settings.LastScrollLine);
+            break;
+        }
     }
 
     private void ConfigureExtendedTitleBar()
@@ -797,15 +924,93 @@ internal sealed partial class MainWindow : Window
                 return;
             }
             var path = file.TryGetLocalPath();
-            if (!string.IsNullOrEmpty(path))
+            if (string.IsNullOrEmpty(path))
             {
-                await vm.LoadFileAsync(path);
+                return;
             }
+            // Images dropped onto the editor copy into <doc>/assets/ and a
+            // Markdown image reference is inserted at the caret. Anything else
+            // falls back to the existing "open as document" flow.
+            if (IsImageExtension(path) && TryInsertImageAtCaret(vm, path))
+            {
+                return;
+            }
+            await vm.LoadFileAsync(path);
         }
         catch (Exception ex)
         {
             SetStatus($"Drop failed: {ex.Message}");
         }
+    }
+
+    private static bool IsImageExtension(string path)
+    {
+        var ext = System.IO.Path.GetExtension(path);
+        return ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".gif", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".svg", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool TryInsertImageAtCaret(MainWindowViewModel vm, string sourceImage)
+    {
+        // We need a document folder to drop the asset next to; if the user
+        // hasn't saved a file yet, fall back to the document open flow so we
+        // don't silently dump assets in unrelated directories.
+        if (string.IsNullOrEmpty(vm.CurrentFilePath))
+        {
+            return false;
+        }
+        var docDir = System.IO.Path.GetDirectoryName(vm.CurrentFilePath);
+        if (string.IsNullOrEmpty(docDir))
+        {
+            return false;
+        }
+        var assetsDir = System.IO.Path.Combine(docDir, "assets");
+        System.IO.Directory.CreateDirectory(assetsDir);
+        var fileName = System.IO.Path.GetFileName(sourceImage);
+        var dest = System.IO.Path.Combine(assetsDir, fileName);
+        var relative = $"assets/{fileName}";
+        // Avoid clobbering an existing file with the same name.
+        if (
+            !string.Equals(
+                System.IO.Path.GetFullPath(sourceImage),
+                System.IO.Path.GetFullPath(dest),
+                StringComparison.Ordinal
+            )
+        )
+        {
+            if (System.IO.File.Exists(dest))
+            {
+                var baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+                var ext = System.IO.Path.GetExtension(fileName);
+                var n = 2;
+                while (System.IO.File.Exists(dest))
+                {
+                    fileName = $"{baseName}-{n}{ext}";
+                    dest = System.IO.Path.Combine(assetsDir, fileName);
+                    relative = $"assets/{fileName}";
+                    n++;
+                }
+            }
+            System.IO.File.Copy(sourceImage, dest);
+        }
+        var alt = System.IO.Path.GetFileNameWithoutExtension(fileName);
+        var snippet = $"![{alt}]({relative})";
+        foreach (var editor in this.GetVisualDescendants().OfType<MarkdownTextEditor>())
+        {
+            if (!editor.IsEffectivelyVisible)
+            {
+                continue;
+            }
+            editor.Document.Insert(editor.CaretOffset, snippet);
+            editor.CaretOffset += snippet.Length;
+            SetStatus($"Inserted image · {relative}");
+            return true;
+        }
+        return false;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -821,6 +1026,8 @@ internal sealed partial class MainWindow : Window
             UpdateDetachedWindows(vm);
             RefreshRecentMenu();
             ApplyEditorWordWrap(vm.IsSourceSoftWrap);
+            // ResolveCommand needs vm; re-run now that DataContext is set.
+            ApplyKeyBindings();
         }
     }
 
@@ -999,8 +1206,35 @@ internal sealed partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        CloseDetachedWindows();
-        if (DataContext is MainWindowViewModel vm)
+        // Any unhandled exception thrown from a window-close handler bubbles
+        // up to the AppKit run loop and macOS records the exit as
+        // "unexpected quit" in the launch logs. Wrap the cleanup so a stray
+        // disposal error doesn't poison the shutdown path.
+        try
+        {
+            CloseDetachedWindows();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Markus shutdown (detached): {ex.Message}");
+        }
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        try
+        {
+            // Persist the current scroll line so the next launch can land on
+            // the same heading. First-visible source line is the same anchor
+            // the sync-scroll engine uses elsewhere.
+            var firstLine = ResolveFirstVisibleEditorLine();
+            vm.PersistSession(firstLine);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Markus shutdown (session): {ex.Message}");
+        }
+        try
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.OpenRequested -= OnOpenRequested;
@@ -1010,6 +1244,24 @@ internal sealed partial class MainWindow : Window
             vm.FindPreviousRequested -= OnFindPreviousRequested;
             vm.Dispose();
         }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Markus shutdown (dispose): {ex.Message}");
+        }
+    }
+
+    private int ResolveFirstVisibleEditorLine()
+    {
+        foreach (var editor in this.GetVisualDescendants().OfType<MarkdownTextEditor>())
+        {
+            var visualLines = editor.TextArea.TextView.VisualLines;
+            if (visualLines.Count == 0)
+            {
+                continue;
+            }
+            return visualLines[0].FirstDocumentLine.LineNumber;
+        }
+        return 0;
     }
 
     private void OnOutlineNodeSelected(object? sender, OutlineNodeSelectedEventArgs e)

@@ -26,6 +26,9 @@ internal sealed partial class App : Application
             // Files passed on the command line cover Windows / Linux launchers
             // and macOS terminal launches.
             FileOpenRouter.OpenInitial(vm, desktop.Args);
+            // If no command-line / Finder doc was queued and the user enabled
+            // session restore, reopen the file from the previous session.
+            FileOpenRouter.MaybeRestoreSession(vm, settings);
             // macOS Finder double-clicks (both the initial launch document and
             // subsequent files dropped on a running Markus) arrive through the
             // NSApplicationDelegate's application:openFiles:, which Avalonia 12
@@ -53,6 +56,35 @@ internal static class FileOpenRouter
         }
         var path = FirstReadableFile(args);
         if (path is null)
+        {
+            return;
+        }
+        _hasInitialDoc = true;
+        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path));
+    }
+
+    public static bool ConsumeInitialDocSlot()
+    {
+        if (_hasInitialDoc)
+        {
+            return false;
+        }
+        _hasInitialDoc = true;
+        return true;
+    }
+
+    public static void MaybeRestoreSession(MainWindowViewModel vm, Markus.Models.AppSettings settings)
+    {
+        if (_hasInitialDoc)
+        {
+            return;
+        }
+        if (!settings.RestoreSessionOnLaunch)
+        {
+            return;
+        }
+        var path = settings.LastOpenedFile;
+        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
         {
             return;
         }
