@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/cihanyakar/Markus/compare/v0.2.1...v0.3.0) (2026-05-20)
+
+
+### Features
+
+* **outline:** left/right placement, expand/collapse, quick filter ([5651f83](https://github.com/cihanyakar/Markus/commit/5651f830cc1346dbe2531519266264cccc8223ca))
+* **ux:** welcome view, drag-drop polish, table formatter, custom shortcuts ([59771d5](https://github.com/cihanyakar/Markus/commit/59771d5811107f9e34cee6c989e1b04f5fc30fb9))
+
+
+### Tests
+
+* 34 tests for parsers/services; coverage 12.6% → 21.6% ([0751ec5](https://github.com/cihanyakar/Markus/commit/0751ec55760a89805aa6a16f73833699f9416170))
+
 ## [0.2.1](https://github.com/cihanyakar/Markus/compare/v0.2.0...v0.2.1) (2026-05-19)
 
 
