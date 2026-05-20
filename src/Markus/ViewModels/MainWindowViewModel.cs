@@ -156,14 +156,15 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // scratch buffer is started.
     public bool IsWelcomeVisible => string.IsNullOrEmpty(CurrentFilePath) && !IsScratchBuffer;
 
-    public async Task LoadFileAsync(string path)
+    public async Task LoadFileAsync(string path, CancellationToken ct = default)
     {
-        var text = await File.ReadAllTextAsync(path);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, App.ShutdownToken);
+        var text = await File.ReadAllTextAsync(path, linked.Token);
         SourceText = text;
         CurrentFilePath = path;
         IsScratchBuffer = false;
         DocumentTitle = Path.GetFileName(path);
-        StatusText = $"{DocumentTitle} • {text.Length} chars";
+        StatusText = $"{DocumentTitle} • {text.Length:N0} chars";
         _fileWatcher.Watch(path);
         AddToRecent(path);
     }
@@ -270,9 +271,13 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var text = await File.ReadAllTextAsync(path);
+            var text = await File.ReadAllTextAsync(path, App.ShutdownToken);
             SourceText = text;
-            StatusText = $"{DocumentTitle} • reloaded • {text.Length} chars";
+            StatusText = $"{DocumentTitle} • reloaded • {text.Length:N0} chars";
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown interrupted the reload.
         }
         catch (FileNotFoundException)
         {
@@ -312,6 +317,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             await LoadFileAsync(path);
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown interrupted the load.
         }
         catch (FileNotFoundException)
         {
@@ -559,7 +568,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             await previous.CancelAsync();
             previous.Dispose();
         }
-        _outlineCts = new System.Threading.CancellationTokenSource();
+        _outlineCts = CancellationTokenSource.CreateLinkedTokenSource(App.ShutdownToken);
         var token = _outlineCts.Token;
         try
         {

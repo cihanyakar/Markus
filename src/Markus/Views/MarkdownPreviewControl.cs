@@ -359,14 +359,20 @@ internal sealed class MarkdownPreviewControl : UserControl
         _renderBusy = true;
         try
         {
-            while (!string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal))
+            while (
+                !App.ShutdownToken.IsCancellationRequested
+                && !string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal)
+            )
             {
                 var source = _pendingSource;
                 _lastRenderedSource = source;
                 await RenderAsync(source);
             }
-            // Caught up; force timer can idle until the next edit re-arms it.
             _forceTimer.Stop();
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown interrupted the render loop.
         }
         finally
         {
@@ -379,7 +385,10 @@ internal sealed class MarkdownPreviewControl : UserControl
         RenderStarted?.Invoke(this, EventArgs.Empty);
         try
         {
-            var document = await System.Threading.Tasks.Task.Run(() => MarkdownPipeline.Parse(source));
+            var document = await System.Threading.Tasks.Task.Run(
+                () => MarkdownPipeline.Parse(source),
+                App.ShutdownToken
+            );
             if (document is null)
             {
                 return;

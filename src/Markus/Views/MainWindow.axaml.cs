@@ -937,6 +937,10 @@ internal sealed partial class MainWindow : Window
             }
             await vm.LoadFileAsync(path);
         }
+        catch (OperationCanceledException)
+        {
+            // Shutdown interrupted the load.
+        }
         catch (Exception ex)
         {
             SetStatus($"Drop failed: {ex.Message}");

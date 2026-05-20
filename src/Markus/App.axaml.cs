@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -7,8 +8,17 @@ using Markus.Views;
 
 namespace Markus;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Reliability",
+    "S2930:IDisposables should be disposed",
+    Justification = "ShutdownCts lives for the entire process lifetime."
+)]
 internal sealed partial class App : Application
 {
+    private static readonly CancellationTokenSource ShutdownCts = new();
+
+    public static CancellationToken ShutdownToken => ShutdownCts.Token;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -16,23 +26,20 @@ internal sealed partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        PosixSignalRegistration.Create(PosixSignal.SIGINT, _ => ShutdownCts.Cancel());
+        PosixSignalRegistration.Create(PosixSignal.SIGTERM, _ => ShutdownCts.Cancel());
+
         var settings = Services.ServiceLocator.Settings.Load();
         Services.ThemeApplicator.Apply(settings.ThemeMode);
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            desktop.ShutdownRequested += (_, _) => ShutdownCts.Cancel();
+
             var vm = new MainWindowViewModel();
             desktop.MainWindow = new MainWindow { DataContext = vm };
-            // Files passed on the command line cover Windows / Linux launchers
-            // and macOS terminal launches.
             FileOpenRouter.OpenInitial(vm, desktop.Args);
-            // If no command-line / Finder doc was queued and the user enabled
-            // session restore, reopen the file from the previous session.
             FileOpenRouter.MaybeRestoreSession(vm, settings);
-            // macOS Finder double-clicks (both the initial launch document and
-            // subsequent files dropped on a running Markus) arrive through the
-            // NSApplicationDelegate's application:openFiles:, which Avalonia 12
-            // no longer forwards to the C# side. We swap in our own IMP.
             Views.Platform.MacosAppleEventHandler.Register(path => FileOpenRouter.OpenSingle(vm, path));
         }
 
@@ -60,7 +67,7 @@ internal static class FileOpenRouter
             return;
         }
         _hasInitialDoc = true;
-        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path));
+        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
     }
 
     public static bool ConsumeInitialDocSlot()
@@ -89,7 +96,7 @@ internal static class FileOpenRouter
             return;
         }
         _hasInitialDoc = true;
-        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path));
+        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
     }
 
     public static void OpenSingle(MainWindowViewModel vm, string rawPath)
@@ -105,7 +112,7 @@ internal static class FileOpenRouter
         if (!_hasInitialDoc)
         {
             _hasInitialDoc = true;
-            Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path));
+            Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
             return;
         }
         // Already have a document: every subsequent open lands in a fresh
@@ -116,7 +123,7 @@ internal static class FileOpenRouter
         }
         // Fallback (non-macOS, missing bundle): load in current as a graceful
         // degradation.
-        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path));
+        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
     }
 
     public static string? FirstReadableFile(IReadOnlyList<string> candidates)
@@ -206,11 +213,19 @@ internal static class FileOpenRouter
         return bundle;
     }
 
-    private static async System.Threading.Tasks.Task LoadFileAsync(MainWindowViewModel vm, string path)
+    private static async System.Threading.Tasks.Task LoadFileAsync(
+        MainWindowViewModel vm,
+        string path,
+        CancellationToken ct
+    )
     {
         try
         {
-            await vm.LoadFileAsync(path);
+            await vm.LoadFileAsync(path, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown or signal interrupted the read.
         }
         catch (System.IO.IOException)
         {
