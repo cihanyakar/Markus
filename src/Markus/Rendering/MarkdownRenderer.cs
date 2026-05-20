@@ -41,7 +41,7 @@ internal static class MarkdownRenderer
     {
         return block switch
         {
-            MathBlock math => RenderPlaceholder("math", math.Lines.ToString()),
+            MathBlock math => RenderMathBlock(math),
             FencedCodeBlock f when IsMermaid(f) => RenderPlaceholder("mermaid", f.Lines.ToString()),
             HeadingBlock h => RenderHeading(h),
             ParagraphBlock p => RenderParagraph(p),
@@ -383,7 +383,7 @@ internal static class MarkdownRenderer
                 target.Add(new Run(raw.Tag));
                 return;
             case MathInline math:
-                target.Add(BuildInlineMathPlaceholder(math));
+                target.Add(BuildInlineMath(math));
                 return;
             default:
                 target.Add(new Run(inline.ToString() ?? string.Empty));
@@ -512,14 +512,47 @@ internal static class MarkdownRenderer
         }
     }
 
-    private static Run BuildInlineMathPlaceholder(MathInline math)
+    private static Avalonia.Controls.Documents.Inline BuildInlineMath(MathInline math)
     {
-        return new Run(math.Content.ToString())
+        var latex = math.Content.ToString();
+        var painter = new CSharpMath.Avalonia.MathPainter
         {
-            FontFamily = MonoFamily,
-            FontSize = 13,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6E, 0x84)),
-            Background = new SolidColorBrush(Color.FromArgb(28, 0xFF, 0x3D, 0x55)),
+            LaTeX = latex,
+            FontSize = 15,
+            TextColor = Theme.Foreground,
+        };
+        var size = painter.Measure();
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            return new Run(latex)
+            {
+                FontFamily = MonoFamily,
+                FontSize = 13,
+                Foreground = new SolidColorBrush(Theme.CodeForeground),
+            };
+        }
+        var control = new MathPainterControl(painter, size.Width, size.Height);
+        return new InlineUIContainer(control);
+    }
+
+    private static Control RenderMathBlock(MathBlock math)
+    {
+        var latex = math.Lines.ToString().Trim();
+        var painter = new CSharpMath.Avalonia.MathPainter
+        {
+            LaTeX = latex,
+            FontSize = 20,
+            TextColor = Theme.Foreground,
+        };
+        var size = painter.Measure();
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            return RenderPlaceholder("math", latex);
+        }
+        return new MathPainterControl(painter, size.Width, size.Height)
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 8, 0, 12),
         };
     }
 }

@@ -37,6 +37,18 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup Label="CSharpMath (vendored from github.com/cihanyakar/CSharpMath, Avalonia 12 branch)">
+    <Reference Include="CSharpMath">
+      <HintPath>..\..\lib\CSharpMath\CSharpMath.dll</HintPath>
+    </Reference>
+    <Reference Include="CSharpMath.Rendering">
+      <HintPath>..\..\lib\CSharpMath\CSharpMath.Rendering.dll</HintPath>
+    </Reference>
+    <Reference Include="CSharpMath.Avalonia">
+      <HintPath>..\..\lib\CSharpMath\CSharpMath.Avalonia.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
   <ItemGroup Label="FriendAssemblies">
     <InternalsVisibleTo Include="Markus.Tests" />
     <InternalsVisibleTo Include="Markus.UI.Tests" />
