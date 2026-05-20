@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/cihanyakar/Markus/compare/v0.3.0...v0.4.0) (2026-05-20)
+
+
+### Features
+
+* **async:** cancellation token support for file I/O and render loop ([e2b2abb](https://github.com/cihanyakar/Markus/commit/e2b2abbbaf10e94990fdfcad9141b64085d5aceb))
+
 ## [0.3.0](https://github.com/cihanyakar/Markus/compare/v0.2.1...v0.3.0) (2026-05-20)
 
 
