@@ -13,11 +13,16 @@
     <Style Selector="Button.outlineTool">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="Transparent"/>
-      <Setter Property="Padding" Value="6"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="Padding" Value="7"/>
+      <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="MinWidth" Value="0"/>
       <Setter Property="MinHeight" Value="0"/>
       <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+        </Transitions>
+      </Setter>
     </Style>
 
     <!-- Stretch the outline rows across the panel so the click target spans
@@ -35,9 +40,9 @@
       <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
     </Style>
     <Style Selector="TextBox.outlineFilter">
-      <Setter Property="MinHeight" Value="28"/>
-      <Setter Property="Padding" Value="8,3"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="10,4"/>
+      <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="FontSize" Value="12"/>
     </Style>
   </UserControl.Styles>

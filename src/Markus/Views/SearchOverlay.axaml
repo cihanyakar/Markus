@@ -8,13 +8,13 @@
              x:Name="Root"
              d:DesignWidth="500" d:DesignHeight="84">
 
-  <Border CornerRadius="12"
+  <Border CornerRadius="14"
           Background="{DynamicResource OverlayBg}"
           BorderBrush="{DynamicResource OverlayBorder}"
           BorderThickness="1"
-          Padding="10,8">
+          Padding="12,10">
     <Border.Effect>
-      <DropShadowEffect BlurRadius="22" OffsetX="0" OffsetY="6" Color="Black" Opacity="0.28"/>
+      <DropShadowEffect BlurRadius="28" OffsetX="0" OffsetY="8" Color="Black" Opacity="0.22"/>
     </Border.Effect>
     <StackPanel Spacing="6">
 

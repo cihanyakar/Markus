@@ -300,6 +300,7 @@ dotnet_diagnostic.SA1124.severity = warning         # No regions
 dotnet_diagnostic.SA1116.severity = none            # Parameter on first line (formatter owns)
 dotnet_diagnostic.SA1117.severity = none            # Parameters on same/separate line (formatter owns)
 dotnet_diagnostic.SA1118.severity = none            # Parameter spans multiple lines (formatter owns)
+dotnet_diagnostic.SA1000.severity = none            # Keyword spacing (CSharpier owns)
 dotnet_diagnostic.SA1009.severity = none            # Closing paren spacing (CSharpier owns)
 dotnet_diagnostic.SA1010.severity = none            # Opening square bracket spacing (CSharpier owns; collection expressions)
 dotnet_diagnostic.SA1111.severity = none            # Closing paren own line (CSharpier owns)

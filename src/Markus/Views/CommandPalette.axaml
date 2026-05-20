@@ -17,9 +17,9 @@
       <Setter Property="Padding" Value="4"/>
     </Style>
     <Style Selector="ListBox.palette ListBoxItem">
-      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="Padding" Value="12,9"/>
       <Setter Property="Margin" Value="2,1"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="CornerRadius" Value="10"/>
     </Style>
     <Style Selector="ListBox.palette ListBoxItem:selected /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
@@ -44,13 +44,13 @@
     </Style>
   </UserControl.Styles>
 
-  <Border CornerRadius="14"
+  <Border CornerRadius="16"
           Background="{DynamicResource OverlayBg}"
           BorderBrush="{DynamicResource OverlayBorder}"
           BorderThickness="1"
           ClipToBounds="True">
     <Border.Effect>
-      <DropShadowEffect BlurRadius="32" OffsetX="0" OffsetY="10" Color="Black" Opacity="0.32"/>
+      <DropShadowEffect BlurRadius="40" OffsetX="0" OffsetY="12" Color="Black" Opacity="0.24"/>
     </Border.Effect>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -58,7 +58,7 @@
       <!-- Query input -->
       <Border Grid.Row="0" BorderThickness="0,0,0,1"
               BorderBrush="{DynamicResource OverlayBorder}"
-              Padding="16,12">
+              Padding="18,14">
         <TextBox Name="QueryInput"
                  BorderThickness="0"
                  Background="Transparent"

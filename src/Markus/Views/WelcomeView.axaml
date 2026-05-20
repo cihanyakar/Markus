@@ -13,11 +13,16 @@
       <Setter Property="Background" Value="{DynamicResource GlassBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="10"/>
-      <Setter Property="Padding" Value="18,14"/>
+      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="Padding" Value="20,16"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="HorizontalContentAlignment" Value="Left"/>
-      <Setter Property="MinWidth" Value="240"/>
+      <Setter Property="MinWidth" Value="260"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.16"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.welcomeAction:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
@@ -26,10 +31,15 @@
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="12,8"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="14,10"/>
+      <Setter Property="CornerRadius" Value="10"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.recentItem:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
@@ -38,7 +48,7 @@
 
   <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto">
-    <Grid Margin="48,40,48,40" RowDefinitions="Auto,Auto,Auto,Auto,*">
+    <Grid Margin="56,48,56,48" RowDefinitions="Auto,Auto,Auto,Auto,*">
 
       <!-- Brand -->
       <StackPanel Grid.Row="0" Spacing="6">
@@ -58,9 +68,9 @@
 
       <!-- Primary actions -->
       <StackPanel Grid.Row="1"
-                  Margin="0,32,0,0"
+                  Margin="0,36,0,0"
                   Orientation="Horizontal"
-                  Spacing="12">
+                  Spacing="14">
         <Button Classes="welcomeAction" Command="{Binding OpenFileCommand}">
           <StackPanel Orientation="Horizontal" Spacing="14">
             <PathIcon Data="{x:Static views:IconData.FolderOpen}" Width="22" Height="22"/>
@@ -93,7 +103,7 @@
 
       <!-- Recent files header -->
       <TextBlock Grid.Row="2"
-                 Margin="0,40,0,12"
+                 Margin="0,44,0,14"
                  Classes="section"
                  Text="RECENT"
                  IsVisible="{Binding HasRecentFiles}"/>
@@ -127,14 +137,14 @@
 
       <!-- Cheat sheet card -->
       <Border Grid.Row="4"
-              Margin="0,40,0,0"
+              Margin="0,44,0,0"
               MaxWidth="640"
               HorizontalAlignment="Left"
               Background="{DynamicResource GlassBg}"
               BorderBrush="{DynamicResource GlassBorder}"
               BorderThickness="1"
-              CornerRadius="10"
-              Padding="20,16">
+              CornerRadius="14"
+              Padding="22,18">
         <StackPanel Spacing="8">
           <TextBlock Classes="section" Text="QUICK SYNTAX"/>
           <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto"

@@ -18,8 +18,8 @@
       <Setter Property="Background" Value="{DynamicResource OverlayBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource OverlayBorder}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="18"/>
-      <Setter Property="Padding" Value="28,32,28,22"/>
+      <Setter Property="CornerRadius" Value="20"/>
+      <Setter Property="Padding" Value="32,36,32,24"/>
     </Style>
     <Style Selector="TextBlock.display">
       <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,sans-serif"/>

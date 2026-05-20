@@ -134,14 +134,14 @@
       <Setter Property="Background" Value="{DynamicResource PlatterBg}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource PlatterBorderBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="10"/>
-      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="Padding" Value="14,6"/>
       <Setter Property="Margin" Value="3,0"/>
-      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="MinHeight" Value="30"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
       <Setter Property="Transitions">
         <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.14"/>
+          <BrushTransition Property="Background" Duration="0:0:0.16"/>
         </Transitions>
       </Setter>
     </Style>
@@ -178,16 +178,16 @@
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
 
-    <!-- Toolbar: no hairline divider in Tahoe; the per-item platters carry the depth. -->
+    <!-- Toolbar -->
     <Style Selector="Border.toolbar">
       <Setter Property="Background" Value="{DynamicResource ToolbarSurface}"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="16,11,16,9"/>
+      <Setter Property="Padding" Value="18,12,18,10"/>
       <Setter Property="BoxShadow" Value="{DynamicResource ToolbarShadow}"/>
     </Style>
     <Style Selector="Border.statusbar">
       <Setter Property="BorderThickness" Value="0,1,0,0"/>
-      <Setter Property="Padding" Value="18,7"/>
+      <Setter Property="Padding" Value="20,8"/>
     </Style>
     <Style Selector="Border.sidebar">
       <Setter Property="BorderThickness" Value="1,0,0,0"/>
@@ -197,7 +197,7 @@
     <Style Selector="TextBox.source">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="28,24"/>
+      <Setter Property="Padding" Value="32,28"/>
       <Setter Property="AcceptsReturn" Value="True"/>
       <Setter Property="AcceptsTab" Value="True"/>
       <Setter Property="TextWrapping" Value="NoWrap"/>
@@ -210,13 +210,14 @@
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
 
-    <!-- ComboBox: simplified glass surface (template too deep to inject inset BoxShadow). -->
+    <!-- ComboBox: simplified glass surface -->
     <Style Selector="ComboBox.glass">
       <Setter Property="Background" Value="{DynamicResource PlatterBg}"/>
-      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource PlatterBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="12"/>
-      <Setter Property="MinHeight" Value="28"/>
-      <Setter Property="Padding" Value="12,4"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="14,4"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
@@ -239,28 +240,28 @@
 
     <!-- ============ Atmosphere: subtle mesh over system vibrancy ============ -->
     <Panel ZIndex="-1">
-      <Rectangle IsHitTestVisible="False" Opacity="0.22">
+      <Rectangle IsHitTestVisible="False" Opacity="0.18">
         <Rectangle.Fill>
-          <RadialGradientBrush Center="18%,12%" GradientOrigin="18%,12%"
-                               RadiusX="0.65" RadiusY="0.7">
+          <RadialGradientBrush Center="14%,8%" GradientOrigin="14%,8%"
+                               RadiusX="0.6" RadiusY="0.65">
             <GradientStop Color="{DynamicResource MeshAColor}" Offset="0"/>
             <GradientStop Color="#00FFFFFF" Offset="1"/>
           </RadialGradientBrush>
         </Rectangle.Fill>
       </Rectangle>
-      <Rectangle IsHitTestVisible="False" Opacity="0.18">
+      <Rectangle IsHitTestVisible="False" Opacity="0.15">
         <Rectangle.Fill>
-          <RadialGradientBrush Center="84%,86%" GradientOrigin="84%,86%"
-                               RadiusX="0.7" RadiusY="0.75">
+          <RadialGradientBrush Center="88%,88%" GradientOrigin="88%,88%"
+                               RadiusX="0.65" RadiusY="0.7">
             <GradientStop Color="{DynamicResource MeshBColor}" Offset="0"/>
             <GradientStop Color="#00FFFFFF" Offset="1"/>
           </RadialGradientBrush>
         </Rectangle.Fill>
       </Rectangle>
-      <Rectangle IsHitTestVisible="False" Opacity="0.14">
+      <Rectangle IsHitTestVisible="False" Opacity="0.12">
         <Rectangle.Fill>
-          <RadialGradientBrush Center="82%,18%" GradientOrigin="82%,18%"
-                               RadiusX="0.5" RadiusY="0.55">
+          <RadialGradientBrush Center="80%,14%" GradientOrigin="80%,14%"
+                               RadiusX="0.45" RadiusY="0.5">
             <GradientStop Color="{DynamicResource MeshCColor}" Offset="0"/>
             <GradientStop Color="#00FFFFFF" Offset="1"/>
           </RadialGradientBrush>
