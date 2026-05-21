@@ -85,6 +85,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private bool _isScratchBuffer;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DocumentStats))]
+    private string _lastModifiedText = string.Empty;
+
     public MainWindowViewModel()
         : this(ServiceLocator.Settings) { }
 
@@ -145,7 +149,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // 250 words/min is a conservative reading-speed default for prose; rounded up.
     public int ReadingMinutes => Math.Max(1, (int)Math.Ceiling(WordCount / 250.0));
 
-    public string DocumentStats => $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min";
+    public string DocumentStats =>
+        string.IsNullOrEmpty(LastModifiedText)
+            ? $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min"
+            : $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min · {LastModifiedText}";
 
     public bool IsOutlineLeftVisible => IsOutlineVisible && OutlinePlacement is OutlinePlacement.Left;
 
@@ -168,6 +175,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         CurrentFilePath = path;
         IsScratchBuffer = false;
         DocumentTitle = Path.GetFileName(path);
+        LastModifiedText = FormatLastModified(path);
         StatusText = $"{DocumentTitle} • {text.Length:N0} chars";
         _fileWatcher.Watch(path);
         AddToRecent(path);
@@ -265,6 +273,21 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         return anyMatch;
     }
 
+    private static string FormatLastModified(string path)
+    {
+        try
+        {
+            var lastWrite = File.GetLastWriteTime(path);
+            return lastWrite.Date == DateTime.Today
+                ? $"modified {lastWrite:HH:mm}"
+                : $"modified {lastWrite:yyyy-MM-dd HH:mm}";
+        }
+        catch (IOException)
+        {
+            return string.Empty;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanReload))]
     private async Task ReloadAsync()
     {
@@ -277,6 +300,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var text = await File.ReadAllTextAsync(path, App.ShutdownToken);
             SourceText = text;
+            LastModifiedText = FormatLastModified(path);
             StatusText = $"{DocumentTitle} • reloaded • {text.Length:N0} chars";
         }
         catch (OperationCanceledException)
@@ -427,6 +451,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         SourceText = string.Empty;
         IsScratchBuffer = true;
         DocumentTitle = "Untitled";
+        LastModifiedText = string.Empty;
         StatusText = "Scratch buffer · unsaved";
     }
 
