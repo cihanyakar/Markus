@@ -308,6 +308,20 @@
                          Text="Default view applies the next time you open a document."/>
             </StackPanel>
           </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Diagram scale:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+              <Slider Width="220"
+                      Minimum="0.5" Maximum="3.0"
+                      TickFrequency="0.25"
+                      IsSnapToTickEnabled="True"
+                      Value="{Binding MermaidScale}"/>
+              <TextBlock VerticalAlignment="Center"
+                         Foreground="{DynamicResource SettingsLabelMuted}"
+                         Text="{Binding MermaidScale, StringFormat='{}{0:0.##}x'}"/>
+            </StackPanel>
+          </Grid>
         </StackPanel>
 
         <!-- ====== Shortcuts ====== -->

@@ -106,6 +106,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
         Rendering.MarkdownRenderer.Theme = Rendering.MarkdownThemes.Resolve(Settings.Theme);
         Rendering.MarkdownRenderer.WrapCode = Settings.IsPreviewSoftWrap;
+        Rendering.MarkdownRenderer.BaseFontSize = Settings.FontSize;
+        Rendering.MarkdownRenderer.MermaidScale = Settings.MermaidScale;
         Views.TextMateThemeResolver.Update(Settings.CodeTheme);
         RebuildOutline(_sourceText);
     }
@@ -115,6 +117,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     public event EventHandler? SettingsRequested;
 
     public event EventHandler? FindRequested;
+
+    public event EventHandler? PreviewInvalidated;
 
     public event EventHandler? FindNextRequested;
 
@@ -490,37 +494,61 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings.IsPreviewSoftWrap = value;
         Rendering.MarkdownRenderer.WrapCode = value;
         _settingsService.Save(Settings);
-        // Force the preview re-render so already-rendered code blocks pick up
-        // the new wrap mode immediately.
-        var current = SourceText;
-        SourceText = string.Empty;
-        SourceText = current;
+        PreviewInvalidated?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         Settings = e.Settings;
         ThemeApplicator.Apply(e.Settings.ThemeMode);
-        // Mirror the Settings dialog's outline placement back to the live VM
-        // (without saving again — would loop through OnOutlinePlacementChanged).
-        if (e.Settings.OutlinePlacement != OutlinePlacement)
+        SyncOutlinePlacement(e.Settings);
+        SyncEditorFlags(e.Settings);
+
+        if (ApplyRendererSettings(e.Settings))
         {
-            _suppressOutlinePlacementSave = true;
-            try
-            {
-                OutlinePlacement = e.Settings.OutlinePlacement;
-            }
-            finally
-            {
-                _suppressOutlinePlacementSave = false;
-            }
+            PreviewInvalidated?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void SyncOutlinePlacement(AppSettings s)
+    {
+        if (s.OutlinePlacement == OutlinePlacement)
+        {
+            return;
         }
 
-        var fontStack = MonoFontStack.Build(e.Settings.MonoFont);
-        var fontChanged = !string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal);
+        _suppressOutlinePlacementSave = true;
+        try
+        {
+            OutlinePlacement = s.OutlinePlacement;
+        }
+        finally
+        {
+            _suppressOutlinePlacementSave = false;
+        }
+    }
 
-        var newTheme = Rendering.MarkdownThemes.Resolve(e.Settings.Theme);
+    private void SyncEditorFlags(AppSettings s)
+    {
+        if (IsSourceSoftWrap != s.IsSourceSoftWrap)
+        {
+            IsSourceSoftWrap = s.IsSourceSoftWrap;
+        }
+
+        if (IsPreviewSoftWrap != s.IsPreviewSoftWrap)
+        {
+            IsPreviewSoftWrap = s.IsPreviewSoftWrap;
+        }
+    }
+
+    private bool ApplyRendererSettings(AppSettings s)
+    {
+        var fontStack = MonoFontStack.Build(s.MonoFont);
+        var fontChanged = !string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal);
+        var newTheme = Rendering.MarkdownThemes.Resolve(s.Theme);
         var themeChanged = !ReferenceEquals(newTheme, Rendering.MarkdownRenderer.Theme);
+        var fontSizeChanged = Math.Abs(Rendering.MarkdownRenderer.BaseFontSize - s.FontSize) > 0.01;
+        var mermaidChanged = Math.Abs(Rendering.MarkdownRenderer.MermaidScale - s.MermaidScale) > 0.01;
 
         if (fontChanged)
         {
@@ -533,26 +561,11 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             Rendering.MarkdownRenderer.Theme = newTheme;
         }
 
-        // Code (TextMate) theme is independent from the preview theme.
-        Views.TextMateThemeResolver.Update(e.Settings.CodeTheme);
+        Rendering.MarkdownRenderer.BaseFontSize = s.FontSize;
+        Rendering.MarkdownRenderer.MermaidScale = s.MermaidScale;
+        Views.TextMateThemeResolver.Update(s.CodeTheme);
 
-        if (IsSourceSoftWrap != e.Settings.IsSourceSoftWrap)
-        {
-            IsSourceSoftWrap = e.Settings.IsSourceSoftWrap;
-        }
-
-        if (IsPreviewSoftWrap != e.Settings.IsPreviewSoftWrap)
-        {
-            IsPreviewSoftWrap = e.Settings.IsPreviewSoftWrap;
-        }
-
-        if (fontChanged || themeChanged)
-        {
-            // Nudge SourceText so preview re-renders with the new look.
-            var current = SourceText;
-            SourceText = string.Empty;
-            SourceText = current;
-        }
+        return fontChanged || themeChanged || fontSizeChanged || mermaidChanged;
     }
 
     partial void OnSourceTextChanged(string value)

@@ -35,6 +35,7 @@
     <PackageReference Include="JetBrains.Annotations">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Svg.Controls.Skia.Avalonia" />
   </ItemGroup>
 
   <ItemGroup Label="CSharpMath (vendored from github.com/cihanyakar/CSharpMath, Avalonia 12 branch)">
@@ -49,29 +50,20 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup Label="Bundled tools" Condition="Exists('$(MSBuildThisFileDirectory)../../tools/$(RuntimeIdentifier)/mmdr')">
+    <None Include="$(MSBuildThisFileDirectory)../../tools/$(RuntimeIdentifier)/mmdr">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>mmdr</Link>
+    </None>
+  </ItemGroup>
+
   <ItemGroup Label="FriendAssemblies">
     <InternalsVisibleTo Include="Markus.Tests" />
     <InternalsVisibleTo Include="Markus.UI.Tests" />
   </ItemGroup>
 
-  <Target
-    Name="HuskyInstall"
-    BeforeTargets="Restore;CollectPackageReferences"
-    Condition="'$(HUSKY)' != '0' AND '$(CI)' != 'true'"
-  >
-    <Exec
-      Command="dotnet tool restore"
-      StandardOutputImportance="Low"
-      StandardErrorImportance="High"
-      WorkingDirectory="$(MSBuildThisFileDirectory)../../"
-      ContinueOnError="true"
-    />
-    <Exec
-      Command="dotnet husky install"
-      StandardOutputImportance="Low"
-      StandardErrorImportance="High"
-      WorkingDirectory="$(MSBuildThisFileDirectory)../../"
-      ContinueOnError="true"
-    />
+  <Target Name="HuskyInstall" BeforeTargets="Restore;CollectPackageReferences" Condition="'$(HUSKY)' != '0' AND '$(CI)' != 'true'">
+    <Exec Command="dotnet tool restore" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory="$(MSBuildThisFileDirectory)../../" ContinueOnError="true" />
+    <Exec Command="dotnet husky install" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory="$(MSBuildThisFileDirectory)../../" ContinueOnError="true" />
   </Target>
 </Project>

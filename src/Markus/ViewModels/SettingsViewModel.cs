@@ -128,6 +128,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isPreviewSoftWrap;
 
+    [ObservableProperty]
+    private double _mermaidScale;
+
     public SettingsViewModel(SettingsService service, AppSettings settings)
     {
         Service = service;
@@ -145,6 +148,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _themeMode = settings.ThemeMode;
         _isSourceSoftWrap = settings.IsSourceSoftWrap;
         _isPreviewSoftWrap = settings.IsPreviewSoftWrap;
+        _mermaidScale = settings.MermaidScale;
     }
 
     public SettingsService Service { get; }
@@ -186,6 +190,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         ThemeMode = defaults.ThemeMode;
         IsSourceSoftWrap = defaults.IsSourceSoftWrap;
         IsPreviewSoftWrap = defaults.IsPreviewSoftWrap;
+        MermaidScale = defaults.MermaidScale;
     }
 
     // ---- Auto-save on any property change ---------------------------------
@@ -265,6 +270,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnIsPreviewSoftWrapChanged(bool value)
     {
         Settings.IsPreviewSoftWrap = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnMermaidScaleChanged(double value)
+    {
+        Settings.MermaidScale = value;
         Service.Save(Settings);
     }
 }

@@ -1027,6 +1027,7 @@ internal sealed partial class MainWindow : Window
             vm.FindRequested += OnFindRequested;
             vm.FindNextRequested += OnFindNextRequested;
             vm.FindPreviousRequested += OnFindPreviousRequested;
+            vm.PreviewInvalidated += OnPreviewInvalidated;
             UpdateDetachedWindows(vm);
             RefreshRecentMenu();
             ApplyEditorWordWrap(vm.IsSourceSoftWrap);
@@ -1048,6 +1049,14 @@ internal sealed partial class MainWindow : Window
     private void OnFindPreviousRequested(object? sender, EventArgs e)
     {
         MoveSearchMatch(forward: false);
+    }
+
+    private void OnPreviewInvalidated(object? sender, EventArgs e)
+    {
+        foreach (var preview in this.GetVisualDescendants().OfType<MarkdownPreviewControl>())
+        {
+            preview.InvalidateRender();
+        }
     }
 
     private void ApplyEditorWordWrap(bool wrap)

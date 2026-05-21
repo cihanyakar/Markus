@@ -142,6 +142,12 @@ internal sealed class MarkdownPreviewControl : UserControl
 
     private Dictionary<int, Control> PendingLineMap => _activeIsA ? _lineMapB : _lineMapA;
 
+    public void InvalidateRender()
+    {
+        _lastRenderedSource = string.Empty;
+        ScheduleRender(Source ?? string.Empty);
+    }
+
     public bool ScrollToLine(int sourceLine)
     {
         if (ActiveLineMap.TryGetValue(sourceLine, out var control))

@@ -20,6 +20,10 @@ internal static class MarkdownRenderer
 
     public static bool WrapCode { get; set; } = true;
 
+    public static double BaseFontSize { get; set; } = 16.0;
+
+    public static double MermaidScale { get; set; } = 1.0;
+
     public static IEnumerable<RenderedBlock> Render(MarkdownDocument? document)
     {
         if (document is null)
@@ -42,7 +46,7 @@ internal static class MarkdownRenderer
         return block switch
         {
             MathBlock math => RenderMathBlock(math),
-            FencedCodeBlock f when IsMermaid(f) => RenderPlaceholder("mermaid", f.Lines.ToString()),
+            FencedCodeBlock f when IsMermaid(f) => RenderMermaid(f),
             HeadingBlock h => RenderHeading(h),
             ParagraphBlock p => RenderParagraph(p),
             FencedCodeBlock f => RenderFencedCode(f),
@@ -111,7 +115,7 @@ internal static class MarkdownRenderer
 
         var block = new SelectableTextBlock
         {
-            FontSize = size,
+            FontSize = Fs(size),
             FontWeight = FontWeight.SemiBold,
             Foreground = new SolidColorBrush(Theme.Foreground),
             Margin = new Thickness(0, heading.Level == 1 ? 8 : 12, 0, 4),
@@ -125,8 +129,8 @@ internal static class MarkdownRenderer
     {
         var block = new SelectableTextBlock
         {
-            FontSize = 15,
-            LineHeight = 24,
+            FontSize = Fs(15),
+            LineHeight = Fs(24),
             Foreground = new SolidColorBrush(Theme.Foreground),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 8),
@@ -159,7 +163,7 @@ internal static class MarkdownRenderer
             {
                 Text = text,
                 FontFamily = MonoFamily,
-                FontSize = 13,
+                FontSize = Fs(13),
                 Foreground = new SolidColorBrush(Theme.CodeForeground),
                 TextWrapping = WrapCode ? TextWrapping.Wrap : TextWrapping.NoWrap,
             },
@@ -215,7 +219,7 @@ internal static class MarkdownRenderer
             var marker = new TextBlock
             {
                 Text = bullet,
-                FontSize = 15,
+                FontSize = Fs(15),
                 Margin = new Thickness(4, 0, 8, 0),
                 MinWidth = 18,
                 Foreground = new SolidColorBrush(Color.FromArgb(180, 128, 128, 128)),
@@ -267,7 +271,7 @@ internal static class MarkdownRenderer
             {
                 Text = html.Lines.ToString(),
                 FontFamily = MonoFamily,
-                FontSize = 12,
+                FontSize = Fs(12),
                 Foreground = new SolidColorBrush(Theme.CodeForeground),
                 TextWrapping = TextWrapping.Wrap,
             },
@@ -518,7 +522,7 @@ internal static class MarkdownRenderer
         var painter = new CSharpMath.Avalonia.MathPainter
         {
             LaTeX = latex,
-            FontSize = 15,
+            FontSize = (float)Fs(15),
             TextColor = Theme.Foreground,
         };
         var size = painter.Measure();
@@ -527,12 +531,23 @@ internal static class MarkdownRenderer
             return new Run(latex)
             {
                 FontFamily = MonoFamily,
-                FontSize = 13,
+                FontSize = Fs(13),
                 Foreground = new SolidColorBrush(Theme.CodeForeground),
             };
         }
         var control = new MathPainterControl(painter, size.Width, size.Height);
         return new InlineUIContainer(control);
+    }
+
+    private static Control RenderMermaid(FencedCodeBlock fenced)
+    {
+        var source = fenced.Lines.ToString();
+        if (!Services.MermaidRenderer.IsAvailable)
+        {
+            return RenderPlaceholder("mermaid", source);
+        }
+
+        return new MermaidControl(source);
     }
 
     private static Control RenderMathBlock(MathBlock math)
@@ -541,7 +556,7 @@ internal static class MarkdownRenderer
         var painter = new CSharpMath.Avalonia.MathPainter
         {
             LaTeX = latex,
-            FontSize = 20,
+            FontSize = (float)Fs(20),
             TextColor = Theme.Foreground,
         };
         var size = painter.Measure();
@@ -554,5 +569,10 @@ internal static class MarkdownRenderer
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 8, 0, 12),
         };
+    }
+
+    private static double Fs(double size)
+    {
+        return size * BaseFontSize / 16.0;
     }
 }
