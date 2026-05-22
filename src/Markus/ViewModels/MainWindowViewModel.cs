@@ -216,7 +216,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsService.Changed -= OnSettingsChanged;
         _fileWatcher.FileChanged -= OnFileChangedOnBackgroundThread;
         _fileWatcher.Dispose();
-        _outlineCts?.Dispose();
+        var cts = System.Threading.Interlocked.Exchange(ref _outlineCts, null);
+        cts?.Cancel();
+        cts?.Dispose();
     }
 
     private static int CountWords(string? text)
@@ -600,14 +602,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async System.Threading.Tasks.Task RebuildOutlineAsync(string source)
     {
-        // Cancel the in-flight outline so rapid typing doesn't stack parses.
-        if (_outlineCts is { } previous)
+        // Swap atomically so two concurrent fire-and-forget calls never
+        // race on the same CTS reference.
+        var fresh = CancellationTokenSource.CreateLinkedTokenSource(App.ShutdownToken);
+        var previous = System.Threading.Interlocked.Exchange(ref _outlineCts, fresh);
+        if (previous is not null)
         {
             await previous.CancelAsync();
             previous.Dispose();
         }
-        _outlineCts = CancellationTokenSource.CreateLinkedTokenSource(App.ShutdownToken);
-        var token = _outlineCts.Token;
+        var token = fresh.Token;
         try
         {
             // Parse + tree-build on the threadpool; the result hop back to the

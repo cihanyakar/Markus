@@ -32,6 +32,8 @@ internal sealed class MermaidControl : ContentControl, IDisposable
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _cts?.Cancel();
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _ = StartRenderAsync(MarkdownRenderer.MermaidScale, _cts.Token);
     }
@@ -65,7 +67,11 @@ internal sealed class MermaidControl : ContentControl, IDisposable
         File.WriteAllText(tempPath, svgText);
         _tempSvgPath = tempPath;
 
-        var svg = new Avalonia.Svg.Skia.Svg(new Uri(tempPath)) { Path = tempPath, Stretch = Stretch.Uniform };
+        var svg = new Avalonia.Svg.Skia.Svg(new Uri("file://" + tempPath))
+        {
+            Path = tempPath,
+            Stretch = Stretch.Uniform,
+        };
 
         return new Viewbox
         {

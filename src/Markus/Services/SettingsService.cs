@@ -8,8 +8,11 @@ internal sealed class SettingsService
     private readonly string _settingsPath;
 
     public SettingsService()
+        : this(ResolveSettingsDirectory()) { }
+
+    internal SettingsService(string settingsDirectory)
     {
-        SettingsDirectory = ResolveSettingsDirectory();
+        SettingsDirectory = settingsDirectory;
         _settingsPath = Path.Combine(SettingsDirectory, "settings.json");
     }
 

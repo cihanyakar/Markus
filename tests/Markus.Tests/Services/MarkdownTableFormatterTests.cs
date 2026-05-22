@@ -138,4 +138,39 @@ public sealed class MarkdownTableFormatterTests
 
         MarkdownTableFormatter.Format(input).ShouldBe(input);
     }
+
+    [Fact]
+    public void Escaped_Pipes_Inside_Cells_Are_Preserved()
+    {
+        // Bug: SplitCells uses a naive Split('|') that treats escaped
+        // pipes (\|) as column delimiters. A cell like "a \| b" should
+        // remain a single cell, but the naive split produces three cells.
+        var input =
+            @"| Name | Expression |
+|------|------------|
+| test | a \| b     |
+";
+
+        var formatted = MarkdownTableFormatter.Format(input);
+
+        // The escaped pipe should stay inside its cell, and the table
+        // should remain two columns wide.
+        var dataLines = formatted.Split('\n').Where(l => l.Contains("test")).ToList();
+        dataLines.Count.ShouldBe(1);
+        // Count unescaped pipe delimiters on the data row. A proper 2-column
+        // row has exactly 3 real (unescaped) pipes: leading, middle, trailing.
+        // The escaped \| inside "a \| b" should NOT be counted.
+        var row = dataLines[0];
+        var unescapedPipes = 0;
+        for (var i = 0; i < row.Length; i++)
+        {
+            if (row[i] == '|' && (i == 0 || row[i - 1] != '\\'))
+            {
+                unescapedPipes++;
+            }
+        }
+        // With the bug, SplitCells sees 3 cells ("Name", "a \", " b")
+        // which inflates the column count, so unescapedPipes > 3.
+        unescapedPipes.ShouldBe(3);
+    }
 }

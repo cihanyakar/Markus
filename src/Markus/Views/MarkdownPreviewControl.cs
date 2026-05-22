@@ -51,6 +51,12 @@ internal sealed class MarkdownPreviewControl : UserControl
     private string _pendingSource = string.Empty;
     private string _lastRenderedSource = string.Empty;
 
+    // Monotonically increasing counter bumped by InvalidateRender so that a
+    // forced re-render (theme/font change, same text) is detected even when
+    // _pendingSource == _lastRenderedSource.
+    private int _renderGeneration;
+    private int _lastRenderedGeneration;
+
     // Renders are serialized through this flag: a tick handler returns early
     // if a render is already in flight; the in-flight render's loop will
     // pick up _pendingSource if it changed during streaming. No cancellation
@@ -144,7 +150,7 @@ internal sealed class MarkdownPreviewControl : UserControl
 
     public void InvalidateRender()
     {
-        _lastRenderedSource = string.Empty;
+        _renderGeneration++;
         ScheduleRender(Source ?? string.Empty);
     }
 
@@ -367,11 +373,15 @@ internal sealed class MarkdownPreviewControl : UserControl
         {
             while (
                 !App.ShutdownToken.IsCancellationRequested
-                && !string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal)
+                && (
+                    !string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal)
+                    || _renderGeneration != _lastRenderedGeneration
+                )
             )
             {
                 var source = _pendingSource;
                 _lastRenderedSource = source;
+                _lastRenderedGeneration = _renderGeneration;
                 await RenderAsync(source);
             }
             _forceTimer.Stop();

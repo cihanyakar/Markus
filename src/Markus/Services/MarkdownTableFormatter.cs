@@ -195,7 +195,29 @@ internal static class MarkdownTableFormatter
         {
             trimmed = trimmed[..^1];
         }
-        return trimmed.Split('|').Select(s => s.Trim()).ToList();
+
+        var cells = new List<string>();
+        var current = new StringBuilder();
+        for (var i = 0; i < trimmed.Length; i++)
+        {
+            if (trimmed[i] == '|' && i > 0 && trimmed[i - 1] == '\\')
+            {
+                // Escaped pipe. Replace the trailing backslash with \| in the cell.
+                current[^1] = '\\';
+                current.Append('|');
+            }
+            else if (trimmed[i] == '|')
+            {
+                cells.Add(current.ToString().Trim());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(trimmed[i]);
+            }
+        }
+        cells.Add(current.ToString().Trim());
+        return cells;
     }
 
     private static List<CellAlignment> ParseAlignment(IEnumerable<string> delimiterCells)

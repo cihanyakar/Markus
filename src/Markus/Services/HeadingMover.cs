@@ -53,7 +53,7 @@ internal static class HeadingMover
                 remaining.Add(lines[i]);
             }
         }
-        var insertAt = ResolveInsertIndex(remaining, headings, targetIndex, position, srcStart);
+        var insertAt = ResolveInsertIndex(remaining, headings, targetIndex, position, srcStart, srcEnd);
         // Splice the dragged buffer back in at the resolved offset.
         var output = new List<string>(remaining.Count + draggedBuffer.Count);
         for (var i = 0; i < remaining.Count; i++)
@@ -116,7 +116,8 @@ internal static class HeadingMover
         List<HeadingRef> headings,
         int targetIndex,
         DropPosition position,
-        int draggedSrcStart
+        int draggedSrcStart,
+        int draggedSrcEnd
     )
     {
         if (targetIndex < 0)
@@ -128,14 +129,11 @@ internal static class HeadingMover
         var adjustedTargetLine = target.Line;
         if (target.Line > draggedSrcStart)
         {
-            // dragged section sat before target, so target shifted up by the
-            // span. Find target heading inside `remaining` by scanning for the
-            // first line whose ATX hashes match the original level.
-            adjustedTargetLine = FindHeadingByMatch(remaining, target);
-            if (adjustedTargetLine < 0)
-            {
-                return remaining.Count;
-            }
+            // The dragged section (srcStart..srcEnd) was removed from the
+            // original lines. Every original line after srcEnd shifted up by
+            // the size of the removed span.
+            var removedCount = draggedSrcEnd - draggedSrcStart + 1;
+            adjustedTargetLine = target.Line - removedCount;
         }
         return position switch
         {
@@ -143,19 +141,6 @@ internal static class HeadingMover
             DropPosition.Inside => SkipToEndOfHeadingLine(remaining, adjustedTargetLine),
             _ => ResolveAfterIndex(remaining, headings, targetIndex, adjustedTargetLine),
         };
-    }
-
-    private static int FindHeadingByMatch(List<string> remaining, HeadingRef target)
-    {
-        var prefix = new string('#', target.Level) + " ";
-        for (var i = 0; i < remaining.Count; i++)
-        {
-            if (remaining[i].StartsWith(prefix, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-        return -1;
     }
 
     private static int SkipToEndOfHeadingLine(List<string> remaining, int headingIndex)
