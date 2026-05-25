@@ -6,13 +6,21 @@ using Avalonia.Media;
 using Markdig.Extensions.Mathematics;
 using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
+using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
 namespace Markus.Rendering;
 
+internal sealed class AnchorLinkEventArgs(string anchorId) : EventArgs
+{
+    public string AnchorId { get; } = anchorId;
+}
+
 internal static class MarkdownRenderer
 {
+    public static event EventHandler<AnchorLinkEventArgs>? AnchorLinkClicked;
+
     public static FontFamily MonoFamily { get; set; } =
         new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
 
@@ -120,6 +128,7 @@ internal static class MarkdownRenderer
             Foreground = new SolidColorBrush(Theme.Foreground),
             Margin = new Thickness(0, heading.Level == 1 ? 8 : 12, 0, 4),
             TextWrapping = TextWrapping.Wrap,
+            Tag = heading.TryGetAttributes()?.Id,
         };
         FillInlines(block.Inlines!, heading.Inline);
         return block;
@@ -423,12 +432,29 @@ internal static class MarkdownRenderer
     private static InlineUIContainer BuildLink(LinkInline link)
     {
         var label = link.FirstChild is LiteralInline first ? first.Content.ToString() : link.Url;
+        if (link.Url is { } url && url.StartsWith('#'))
+        {
+            return MakeAnchorInline(label ?? string.Empty, url[1..]);
+        }
         return MakeClickableInline(label ?? string.Empty, link.Url);
     }
 
     private static InlineUIContainer BuildAutoLink(AutolinkInline auto)
     {
         return MakeClickableInline(auto.Url, auto.Url);
+    }
+
+    private static InlineUIContainer MakeAnchorInline(string text, string anchorId)
+    {
+        var tb = new TextBlock
+        {
+            Text = text,
+            TextDecorations = TextDecorations.Underline,
+            Foreground = new SolidColorBrush(Theme.Accent),
+            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+        };
+        tb.PointerPressed += (_, _) => AnchorLinkClicked?.Invoke(null, new AnchorLinkEventArgs(anchorId));
+        return new InlineUIContainer(tb);
     }
 
     private static InlineUIContainer MakeClickableInline(string text, string? url)

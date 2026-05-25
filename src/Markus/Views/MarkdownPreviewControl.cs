@@ -105,10 +105,12 @@ internal sealed class MarkdownPreviewControl : UserControl
         _debounceTimer.Tick += OnDebounceElapsed;
         _forceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ForceMs) };
         _forceTimer.Tick += OnForceElapsed;
+        MarkdownRenderer.AnchorLinkClicked += OnAnchorLinkClicked;
         DetachedFromVisualTree += (_, _) =>
         {
             _debounceTimer.Stop();
             _forceTimer.Stop();
+            MarkdownRenderer.AnchorLinkClicked -= OnAnchorLinkClicked;
         };
     }
 
@@ -329,6 +331,23 @@ internal sealed class MarkdownPreviewControl : UserControl
             bestLine = pair.Key;
         }
         return bestLine < 0 ? null : bestLine;
+    }
+
+    private void OnAnchorLinkClicked(object? sender, AnchorLinkEventArgs e)
+    {
+        ScrollToAnchor(e.AnchorId);
+    }
+
+    private void ScrollToAnchor(string anchorId)
+    {
+        foreach (var child in ActivePanel.Children)
+        {
+            if (child is Control c && c.Tag is string id && string.Equals(id, anchorId, StringComparison.Ordinal))
+            {
+                c.BringIntoView();
+                return;
+            }
+        }
     }
 
     private void ApplySearchOnActive()
