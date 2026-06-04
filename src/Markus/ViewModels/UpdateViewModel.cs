@@ -58,6 +58,8 @@ internal sealed partial class UpdateViewModel : ViewModelBase
                 .CheckAsync(_version.Current, settings.UpdateChannel, _rid, ct)
                 .ConfigureAwait(true);
 
+            // Record the successful check before applying the result. Failed checks
+            // (caught below) do not advance LastUpdateCheckUtc, so the user retries.
             settings.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
             _settings.Save(settings);
 
@@ -70,7 +72,13 @@ internal sealed partial class UpdateViewModel : ViewModelBase
                 Apply(result);
             }
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        catch (Exception ex)
+            when (ex
+                    is HttpRequestException
+                        or OperationCanceledException
+                        or InvalidOperationException
+                        or System.Text.Json.JsonException
+            )
         {
             // Launch checks fail silently; the manual command surfaces errors.
         }
@@ -85,15 +93,23 @@ internal sealed partial class UpdateViewModel : ViewModelBase
         {
             var settings = _settings.Load();
             var result = await _checker
-                .CheckAsync(_version.Current, settings.UpdateChannel, _rid, CancellationToken.None)
+                .CheckAsync(_version.Current, settings.UpdateChannel, _rid, Markus.App.ShutdownToken)
                 .ConfigureAwait(true);
 
+            // Record the successful check before applying the result. Failed checks
+            // (caught below) do not advance LastUpdateCheckUtc, so the user retries.
             settings.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
             _settings.Save(settings);
 
             ApplyManualResult(result);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        catch (Exception ex)
+            when (ex
+                    is HttpRequestException
+                        or OperationCanceledException
+                        or InvalidOperationException
+                        or System.Text.Json.JsonException
+            )
         {
             StatusMessage = "Could not check for updates.";
         }
@@ -137,12 +153,18 @@ internal sealed partial class UpdateViewModel : ViewModelBase
         {
             var dir = Path.Combine(_settings.SettingsDirectory, "updates");
             var path = await _downloader
-                .DownloadAndVerifyAsync(_asset, dir, CancellationToken.None)
+                .DownloadAndVerifyAsync(_asset, dir, Markus.App.ShutdownToken)
                 .ConfigureAwait(true);
             _launcher.OpenArtifact(path);
             StatusMessage = "Opening installer...";
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        catch (Exception ex)
+            when (ex
+                    is HttpRequestException
+                        or OperationCanceledException
+                        or InvalidOperationException
+                        or System.Text.Json.JsonException
+            )
         {
             StatusMessage = "Download failed. Opening the release page instead.";
             _launcher.OpenReleasePage(_release.HtmlUrl);
