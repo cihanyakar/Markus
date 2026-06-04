@@ -39,9 +39,30 @@ internal sealed partial class App : Application
             var vm = new MainWindowViewModel();
             desktop.MainWindow = new MainWindow { DataContext = vm };
             var isSpawnedChild = FileOpenRouter.IsSpawnMarker(desktop.Args);
+            var updateVm = new ViewModels.UpdateViewModel(
+                new Services.Updates.UpdateChecker(new Services.Updates.GitHubReleaseFeed()),
+                new Services.Updates.AssemblyVersionProvider(),
+                new Services.Updates.UpdateDownloader(),
+                new Services.Updates.UpdateLauncher(),
+                Services.ServiceLocator.Settings,
+                Services.Updates.RuntimeRid.Current
+            );
+            vm.Update = updateVm;
             FileOpenRouter.OpenInitial(vm, desktop.Args);
             FileOpenRouter.MaybeRestoreSession(vm, settings, isSpawnedChild);
             Views.Platform.MacosAppleEventHandler.Register(path => FileOpenRouter.OpenSingle(vm, path));
+            if (
+                Services.Updates.UpdatePolicy.ShouldAutoCheck(
+                    settings.CheckForUpdatesOnLaunch,
+                    isSpawnedChild,
+                    settings.LastUpdateCheckUtc,
+                    DateTimeOffset.UtcNow,
+                    TimeSpan.FromHours(20)
+                )
+            )
+            {
+                Dispatcher.UIThread.Post(() => _ = updateVm.CheckOnLaunchAsync(App.ShutdownToken));
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
