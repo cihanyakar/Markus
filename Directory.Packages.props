@@ -4,10 +4,10 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup Label="Runtime">
-    <PackageVersion Include="Avalonia" Version="12.0.3" />
-    <PackageVersion Include="Avalonia.Desktop" Version="12.0.3" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.0.3" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.3" />
+    <PackageVersion Include="Avalonia" Version="12.0.4" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.4" />
     <PackageVersion Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
     <PackageVersion Include="AvaloniaEdit.TextMate" Version="12.0.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
@@ -15,7 +15,7 @@
     <PackageVersion Include="Fonts.Avalonia.Iosevka" Version="0.14.0" />
     <PackageVersion Include="Fonts.Avalonia.JetBrainsMono" Version="0.14.0" />
     <PackageVersion Include="Fonts.Avalonia.CascadiaCode" Version="0.14.0" />
-    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="Markdig" Version="1.2.0" />
     <PackageVersion Include="Svg.Controls.Skia.Avalonia" Version="12.0.0" />
