@@ -105,6 +105,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(DocumentStats))]
     private string _lastModifiedText = string.Empty;
 
+    [ObservableProperty]
+    private UpdateViewModel? _update;
+
     public MainWindowViewModel()
         : this(ServiceLocator.Settings) { }
 
