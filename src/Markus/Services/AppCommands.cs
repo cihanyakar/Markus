@@ -13,6 +13,8 @@ internal static class AppCommands
 
     public static ICommand About { get; } = new RelayCommand(ShowAbout);
 
+    public static ICommand CheckForUpdates { get; } = new RelayCommand(RunCheckForUpdates);
+
     public static ICommand Quit { get; } = new RelayCommand(QuitApp);
 
     private static void OpenPreferences()
@@ -40,6 +42,18 @@ internal static class AppCommands
             return;
         }
         _ = window.ShowDialog(owner);
+    }
+
+    private static void RunCheckForUpdates()
+    {
+        if (
+            Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            && desktop.MainWindow?.DataContext is MainWindowViewModel vm
+            && vm.Update is not null
+        )
+        {
+            vm.Update.CheckForUpdatesCommand.Execute(null);
+        }
     }
 
     private static void QuitApp()

@@ -8,6 +8,8 @@
     <NativeMenu>
       <NativeMenuItem Header="About Markus"
                       Command="{x:Static services:AppCommands.About}"/>
+      <NativeMenuItem Header="Check for Updates…"
+                      Command="{x:Static services:AppCommands.CheckForUpdates}"/>
       <NativeMenuItemSeparator/>
       <NativeMenuItem Header="Preferences…" Gesture="Cmd+,"
                       Command="{x:Static services:AppCommands.Preferences}"/>
