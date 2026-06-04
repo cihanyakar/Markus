@@ -81,9 +81,13 @@ internal sealed class MarkdownPreviewControl : UserControl
         _bufferGrid.Children.Add(_panelA);
         _bufferGrid.Children.Add(_panelB);
 
-        // Right padding clears the vertical scrollbar's overlay zone so wrap
-        // and horizontal-scroll endings never tuck under it.
-        var wrapper = new Border { Padding = new Thickness(20, 18, 32, 18), Child = _bufferGrid };
+        // Cap the body to a comfortable reading measure and center it so a wide
+        // window doesn't stretch paragraphs and code blocks edge-to-edge. The
+        // side padding doubles as the minimum gutter once the window is
+        // narrower than the column.
+        _bufferGrid.MaxWidth = 820;
+        _bufferGrid.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+        var wrapper = new Border { Padding = new Thickness(40, 28, 40, 40), Child = _bufferGrid };
         Scroll = new ScrollViewer
         {
             Padding = new Thickness(0),

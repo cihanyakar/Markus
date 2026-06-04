@@ -229,7 +229,11 @@ internal static class MarkdownRenderer
             {
                 Text = bullet,
                 FontSize = Fs(15),
-                Margin = new Thickness(4, 0, 8, 0),
+                // Match the paragraph's line box (LineHeight) and its top margin
+                // so the glyph sits on the first text line instead of floating
+                // above it.
+                LineHeight = Fs(24),
+                Margin = new Thickness(4, 6, 8, 0),
                 MinWidth = 18,
                 Foreground = new SolidColorBrush(Color.FromArgb(180, 128, 128, 128)),
                 VerticalAlignment = VerticalAlignment.Top,
