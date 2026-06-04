@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.5.0](https://github.com/cihanyakar/Markus/compare/v0.4.0...v0.5.0) (2026-06-04)
+
+
+### Features
+
+* **editor:** add dirty tracking, save flow, and discard guards ([a01b623](https://github.com/cihanyakar/Markus/commit/a01b623daa22cfc618c6590aa0f7d4705ddb461a))
+* **math:** integrate CSharpMath for native LaTeX rendering ([7a59ff6](https://github.com/cihanyakar/Markus/commit/7a59ff697dcc3be6942d0ee284f33162fdfec1fa))
+* **mermaid:** SVG-based diagram rendering with bundled mmdr ([4cb62a0](https://github.com/cihanyakar/Markus/commit/4cb62a077cf5b2af6d3fe5c4ce09faa1820fabd4))
+* **preview:** scroll to anchor on in-document link click ([68ec073](https://github.com/cihanyakar/Markus/commit/68ec073387549a2387c4c54b16d86889c60b9c96))
+* **status:** show file last-modified time in footer ([d95ac14](https://github.com/cihanyakar/Markus/commit/d95ac146de6e91870b0c8a476d51b751907d4d9b))
+* **updates:** add artifact downloader ([b050380](https://github.com/cihanyakar/Markus/commit/b050380fd3e8aae6f3a34f1b3bbe1c0f45d59441))
+* **updates:** add assembly version provider ([eee456c](https://github.com/cihanyakar/Markus/commit/eee456cd423600a8740c677a7561bb0002c0d41b))
+* **updates:** add auto-check debounce policy ([c3743a6](https://github.com/cihanyakar/Markus/commit/c3743a623a46fab83627a58fb5f920ee2c7e8bde))
+* **updates:** add check-for-updates button to about ([429bb0f](https://github.com/cihanyakar/Markus/commit/429bb0f9181daf56fab323fcbf156d9198af9317))
+* **updates:** add check-for-updates menu item ([7061c92](https://github.com/cihanyakar/Markus/commit/7061c92f96b0b5e3e33415f2b37c2bb6fcbdb5a1))
+* **updates:** add github release dtos and mapper ([3ef2bee](https://github.com/cihanyakar/Markus/commit/3ef2bee497a4162859b08066f47a6322a6408427))
+* **updates:** add github release feed ([f6b9d63](https://github.com/cihanyakar/Markus/commit/f6b9d6315637c70c5193181b2ba193330141f10e))
+* **updates:** add release asset selector ([82ea35d](https://github.com/cihanyakar/Markus/commit/82ea35d2c9f6b619874534a21da903e56e15b651))
+* **updates:** add release domain models ([4f54f31](https://github.com/cihanyakar/Markus/commit/4f54f3169b33283c975bbf402fb78d9552b62c7c))
+* **updates:** add runtime identifier helper ([ac73276](https://github.com/cihanyakar/Markus/commit/ac73276a974c4a168af2c9714e021ddfd9a3d2fb))
+* **updates:** add SemVer value type ([2650beb](https://github.com/cihanyakar/Markus/commit/2650beb981a139f760dfa308e7d3e4c3560bb4da))
+* **updates:** add sha256 verifier ([eea6ab0](https://github.com/cihanyakar/Markus/commit/eea6ab0bdfc947943c5b1d44a991d21d44aed1bb))
+* **updates:** add update banner to main window ([c00ed11](https://github.com/cihanyakar/Markus/commit/c00ed11b35cda7f9228754c75b4343da820f85d8))
+* **updates:** add update channel and on-launch settings ([920dd4b](https://github.com/cihanyakar/Markus/commit/920dd4bc4d5cb46a61fd1b255bc1a7eeacf1d644))
+* **updates:** add update checker ([a790dfe](https://github.com/cihanyakar/Markus/commit/a790dfe5c8deaaba64c4803e805a7bf5e66d7bfc))
+* **updates:** add update launcher ([cd735fb](https://github.com/cihanyakar/Markus/commit/cd735fb870e438e96994bf3a32b74560c9720409))
+* **updates:** add update view model ([3764740](https://github.com/cihanyakar/Markus/commit/376474024721550a8a5e92973b465427212f8ca2))
+* **updates:** add updates settings category ([eaac56e](https://github.com/cihanyakar/Markus/commit/eaac56e0757b4e18cafe01c83c88ecc0065701c8))
+* **updates:** auto-update via GitHub Releases ([3cfdd9c](https://github.com/cihanyakar/Markus/commit/3cfdd9cc933e7f2dab8f915e5e380201af377669))
+* **updates:** compose update services and launch check ([bceae5a](https://github.com/cihanyakar/Markus/commit/bceae5a733daa3cd19cd06c36dbf860c657a1e05))
+* **updates:** expose update view model on main window ([1649eb7](https://github.com/cihanyakar/Markus/commit/1649eb781a914618f6c3d4a9ea02a7ec840d500b))
+
+
+### Bug Fixes
+
+* **open:** focus existing window and stop spawn cascade ([6b54532](https://github.com/cihanyakar/Markus/commit/6b545326cc6af6837bda5465b6f3ee78b2dfa5b6))
+* resolve 7 bugs and expand test suite to 207 tests ([ce15f2b](https://github.com/cihanyakar/Markus/commit/ce15f2bb3d2312597aed112828431c742b933a30))
+* **updates:** harden cancellation and json failure handling ([3971c3f](https://github.com/cihanyakar/Markus/commit/3971c3f61f68dbaca3c2e105ba598da32d386e8f))
+* **updates:** reject leading-zero numeric identifiers in SemVer ([c08ac98](https://github.com/cihanyakar/Markus/commit/c08ac98e359a27216c68b5b860061dd091a6750f))
+
+
+### Documentation
+
+* **updates:** add auto-update implementation plan ([adace94](https://github.com/cihanyakar/Markus/commit/adace944f84a7771ba111dd899f7e241979c0088))
+* **updates:** add auto-update via GitHub Releases design spec ([fb6f22c](https://github.com/cihanyakar/Markus/commit/fb6f22c415a5c41abf93de71f3777fa70f04f914))
+
 ## [0.4.0](https://github.com/cihanyakar/Markus/compare/v0.3.0...v0.4.0) (2026-05-20)
 
 
