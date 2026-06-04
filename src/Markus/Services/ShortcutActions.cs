@@ -22,6 +22,13 @@ internal static class ShortcutActions
         new KeyGesture(Key.O, KeyModifiers.Meta)
     );
 
+    public static readonly ShortcutAction Save = new(
+        "file.save",
+        "Save",
+        CategoryFile,
+        new KeyGesture(Key.S, KeyModifiers.Meta)
+    );
+
     public static readonly ShortcutAction Reload = new(
         "file.reload",
         "Reload",
@@ -151,6 +158,7 @@ internal static class ShortcutActions
     public static readonly IReadOnlyList<ShortcutAction> All = new[]
     {
         OpenFile,
+        Save,
         Reload,
         NewScratch,
         Find,

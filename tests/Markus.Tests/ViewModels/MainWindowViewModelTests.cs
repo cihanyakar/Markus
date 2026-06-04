@@ -197,55 +197,547 @@ public sealed class MainWindowViewModelTests
     // --- NewScratch ---
 
     [Fact]
-    public void NewScratch_ClearsSourceText()
+    public async Task NewScratch_ClearsSourceText()
     {
         var sut = new MainWindowViewModel { SourceText = "some content" };
 
-        sut.NewScratchCommand.Execute(null);
+        await sut.NewScratchCommand.ExecuteAsync(null);
 
         sut.SourceText.ShouldBeEmpty();
     }
 
     [Fact]
-    public void NewScratch_SetsScratchBufferFlag()
+    public async Task NewScratch_SetsScratchBufferFlag()
     {
         var sut = new MainWindowViewModel();
 
-        sut.NewScratchCommand.Execute(null);
+        await sut.NewScratchCommand.ExecuteAsync(null);
 
         sut.IsScratchBuffer.ShouldBeTrue();
     }
 
     [Fact]
-    public void NewScratch_SetsDocumentTitleToUntitled()
+    public async Task NewScratch_SetsDocumentTitleToUntitled()
     {
         var sut = new MainWindowViewModel();
 
-        sut.NewScratchCommand.Execute(null);
+        await sut.NewScratchCommand.ExecuteAsync(null);
 
         sut.DocumentTitle.ShouldBe("Untitled");
     }
 
     [Fact]
-    public void NewScratch_ClearsLastModifiedText()
+    public async Task NewScratch_ClearsLastModifiedText()
     {
         var sut = new MainWindowViewModel { LastModifiedText = "modified 2024-01-01" };
 
-        sut.NewScratchCommand.Execute(null);
+        await sut.NewScratchCommand.ExecuteAsync(null);
 
         sut.LastModifiedText.ShouldBeEmpty();
     }
 
     [Fact]
-    public void NewScratch_MakesWelcomeInvisible()
+    public async Task NewScratch_MakesWelcomeInvisible()
     {
         // After NewScratch, IsScratchBuffer is true so IsWelcomeVisible should be false
         // even though CurrentFilePath is null.
         var sut = new MainWindowViewModel();
 
-        sut.NewScratchCommand.Execute(null);
+        await sut.NewScratchCommand.ExecuteAsync(null);
 
         sut.IsWelcomeVisible.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task SaveToFileAsync_WritesSourceTextToProvidedPath()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-save-{Guid.NewGuid():N}.md");
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "# Saved\n\nHello" };
+
+        try
+        {
+            await sut.SaveToFileAsync(path, TestContext.Current.CancellationToken);
+
+            var saved = await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken);
+            saved.ShouldBe("# Saved\n\nHello");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SaveToFileAsync_UpdatesDocumentIdentity()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-save-{Guid.NewGuid():N}.md");
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "content" };
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        try
+        {
+            await sut.SaveToFileAsync(path, TestContext.Current.CancellationToken);
+
+            sut.CurrentFilePath.ShouldBe(path);
+            sut.DocumentTitle.ShouldBe(Path.GetFileName(path));
+            sut.IsScratchBuffer.ShouldBeFalse();
+            sut.StatusText.ShouldContain("saved");
+            sut.LastModifiedText.ShouldNotBeEmpty();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SaveCommand_WithExistingFileWritesCurrentSource()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-save-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentFilePath = path, SourceText = "new" };
+
+        try
+        {
+            await sut.SaveCommand.ExecuteAsync(null);
+
+            var saved = await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken);
+            saved.ShouldBe("new");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SaveCommand_WithoutFile_PromptsForSavePathAndWrites()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-saveas-{Guid.NewGuid():N}.md");
+        var interaction = new FakeDocumentInteraction { SavePathToReturn = path };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "draft", Interaction = interaction };
+
+        try
+        {
+            await sut.SaveCommand.ExecuteAsync(null);
+
+            interaction.PickSaveCalls.ShouldBe(1);
+            var saved = await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken);
+            saved.ShouldBe("draft");
+            sut.CurrentFilePath.ShouldBe(path);
+            sut.IsDirty.ShouldBeFalse();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SaveCommand_WithoutFile_CancelledPicker_DoesNotSave()
+    {
+        var interaction = new FakeDocumentInteraction { SavePathToReturn = null };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "draft", Interaction = interaction };
+
+        await sut.SaveCommand.ExecuteAsync(null);
+
+        interaction.PickSaveCalls.ShouldBe(1);
+        sut.CurrentFilePath.ShouldBeNull();
+        sut.IsDirty.ShouldBeTrue();
+    }
+
+    // --- IsDirty ---
+
+    [Fact]
+    public void EditingSourceText_MarksDirty()
+    {
+        var sut = new MainWindowViewModel(CreateTempSettings());
+        sut.IsDirty.ShouldBeFalse();
+
+        sut.SourceText = "user typed this";
+
+        sut.IsDirty.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task LoadFile_LeavesDocumentClean()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-dirty-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "from disk", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "typed" };
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+
+            sut.IsDirty.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task Save_ClearsDirty()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-dirty-{Guid.NewGuid():N}.md");
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentFilePath = path, SourceText = "edited" };
+        sut.IsDirty.ShouldBeTrue();
+
+        try
+        {
+            await sut.SaveToFileAsync(path, TestContext.Current.CancellationToken);
+
+            sut.IsDirty.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task NewScratch_StartsClean()
+    {
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "typed" };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.IsDirty.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DisplayTitle_PrefixesBullet_WhenDirty()
+    {
+        var sut = new MainWindowViewModel(CreateTempSettings()) { DocumentTitle = "readme.md", SourceText = "edit" };
+
+        sut.DisplayTitle.ShouldBe("• readme.md");
+    }
+
+    [Fact]
+    public void DisplayTitle_NoBullet_WhenClean()
+    {
+        var sut = new MainWindowViewModel(CreateTempSettings()) { DocumentTitle = "readme.md" };
+
+        sut.DisplayTitle.ShouldBe("readme.md");
+    }
+
+    // --- Unsaved-changes guards ---
+
+    [Fact]
+    public async Task NewScratch_DirtyAndCancel_KeepsCurrentDocument()
+    {
+        var interaction = new FakeDocumentInteraction { DiscardChoice = UnsavedChangesChoice.Cancel };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "typed", Interaction = interaction };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        interaction.DiscardCalls.ShouldBe(1);
+        sut.SourceText.ShouldBe("typed");
+        sut.IsDirty.ShouldBeTrue();
+        sut.IsScratchBuffer.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task NewScratch_DirtyAndDiscard_ClearsBuffer()
+    {
+        var interaction = new FakeDocumentInteraction { DiscardChoice = UnsavedChangesChoice.Discard };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "typed", Interaction = interaction };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.SourceText.ShouldBeEmpty();
+        sut.IsScratchBuffer.ShouldBeTrue();
+        sut.IsDirty.ShouldBeFalse();
+        sut.CurrentFilePath.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task NewScratch_DirtyAndSave_PersistsThenClears()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-guard-{Guid.NewGuid():N}.md");
+        var interaction = new FakeDocumentInteraction
+        {
+            DiscardChoice = UnsavedChangesChoice.Save,
+            SavePathToReturn = path,
+        };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "old work", Interaction = interaction };
+
+        try
+        {
+            await sut.NewScratchCommand.ExecuteAsync(null);
+
+            var saved = await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken);
+            saved.ShouldBe("old work");
+            sut.IsScratchBuffer.ShouldBeTrue();
+            sut.SourceText.ShouldBeEmpty();
+            sut.IsDirty.ShouldBeFalse();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Reload_DirtyAndDeclined_KeepsEdits()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-guard-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "orig", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.SourceText = "edited";
+            sut.Interaction = new FakeDocumentInteraction { ReloadConfirm = false };
+
+            await sut.ReloadCommand.ExecuteAsync(null);
+
+            sut.SourceText.ShouldBe("edited");
+            sut.IsDirty.ShouldBeTrue();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task Reload_DirtyAndConfirmed_LoadsDiskVersion()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-guard-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "orig", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.SourceText = "edited";
+            sut.Interaction = new FakeDocumentInteraction { ReloadConfirm = true };
+
+            await sut.ReloadCommand.ExecuteAsync(null);
+
+            sut.SourceText.ShouldBe("orig");
+            sut.IsDirty.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenRecent_DirtyAndCancel_DoesNotLoad()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-guard-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "other file", TestContext.Current.CancellationToken);
+        var interaction = new FakeDocumentInteraction { DiscardChoice = UnsavedChangesChoice.Cancel };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "typed", Interaction = interaction };
+
+        try
+        {
+            await sut.OpenRecentCommand.ExecuteAsync(path);
+
+            sut.SourceText.ShouldBe("typed");
+            sut.CurrentFilePath.ShouldBeNull();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    // --- External change on disk ---
+
+    [Fact]
+    public async Task ExternalChange_DiskMatchesLastSync_DoesNotReloadOrPrompt()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-ext-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "orig", TestContext.Current.CancellationToken);
+        var interaction = new FakeDocumentInteraction();
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.SourceText = "edited";
+            sut.Interaction = interaction;
+
+            // Disk is still "orig" (e.g. our own earlier save); the user typed after.
+            await sut.HandleExternalChangeAsync(path, WatcherChangeTypes.Changed);
+
+            sut.SourceText.ShouldBe("edited");
+            sut.IsDirty.ShouldBeTrue();
+            interaction.ReloadCalls.ShouldBe(0);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ExternalChange_GenuineChangeWhileClean_ReloadsSilently()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-ext-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "orig", TestContext.Current.CancellationToken);
+        var interaction = new FakeDocumentInteraction();
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.Interaction = interaction;
+            await File.WriteAllTextAsync(path, "external edit", TestContext.Current.CancellationToken);
+
+            await sut.HandleExternalChangeAsync(path, WatcherChangeTypes.Changed);
+
+            sut.SourceText.ShouldBe("external edit");
+            sut.IsDirty.ShouldBeFalse();
+            interaction.ReloadCalls.ShouldBe(0);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ExternalChange_GenuineChangeWhileDirty_Declined_KeepsEdits()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-ext-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "orig", TestContext.Current.CancellationToken);
+        var interaction = new FakeDocumentInteraction { ReloadConfirm = false };
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.SourceText = "my edits";
+            sut.Interaction = interaction;
+            await File.WriteAllTextAsync(path, "external edit", TestContext.Current.CancellationToken);
+
+            await sut.HandleExternalChangeAsync(path, WatcherChangeTypes.Changed);
+
+            sut.SourceText.ShouldBe("my edits");
+            interaction.ReloadCalls.ShouldBe(1);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ExternalChange_GenuineChangeWhileDirty_Confirmed_Reloads()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-ext-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "orig", TestContext.Current.CancellationToken);
+        var interaction = new FakeDocumentInteraction { ReloadConfirm = true };
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.SourceText = "my edits";
+            sut.Interaction = interaction;
+            await File.WriteAllTextAsync(path, "external edit", TestContext.Current.CancellationToken);
+
+            await sut.HandleExternalChangeAsync(path, WatcherChangeTypes.Changed);
+
+            sut.SourceText.ShouldBe("external edit");
+            sut.IsDirty.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ExternalChange_Deleted_SetsStatusWithoutClearing()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-ext-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "orig", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+
+            await sut.HandleExternalChangeAsync(path, WatcherChangeTypes.Deleted);
+
+            sut.StatusText.ShouldContain("deleted");
+            sut.SourceText.ShouldBe("orig");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenFile_DirtyAndCancel_DoesNotRequestOpen()
+    {
+        var interaction = new FakeDocumentInteraction { DiscardChoice = UnsavedChangesChoice.Cancel };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "typed", Interaction = interaction };
+        var raised = false;
+        sut.OpenRequested += (_, _) => raised = true;
+
+        await sut.OpenFileCommand.ExecuteAsync(null);
+
+        raised.ShouldBeFalse();
+        interaction.DiscardCalls.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task OpenFile_Clean_RequestsOpen()
+    {
+        var sut = new MainWindowViewModel(CreateTempSettings());
+        var raised = false;
+        sut.OpenRequested += (_, _) => raised = true;
+
+        await sut.OpenFileCommand.ExecuteAsync(null);
+
+        raised.ShouldBeTrue();
+    }
+
+    // --- Save availability ---
+
+    [Fact]
+    public void SaveCommand_DisabledOnWelcome()
+    {
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        sut.IsWelcomeVisible.ShouldBeTrue();
+        sut.SaveCommand.CanExecute(null).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task SaveCommand_EnabledAfterNewScratch()
+    {
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.SaveCommand.CanExecute(null).ShouldBeTrue();
     }
 
     // --- IsWelcomeVisible ---
