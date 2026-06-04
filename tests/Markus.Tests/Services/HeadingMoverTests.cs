@@ -154,6 +154,32 @@ public sealed class HeadingMoverTests
             .ShouldBe(source);
     }
 
+    [Fact]
+    public void Move_First_Section_Before_Last_Of_Three_Siblings()
+    {
+        // Bug: FindHeadingByMatch scans from i=0 and returns the FIRST line
+        // whose prefix matches the target level. When moving A before C in a
+        // three-sibling document, it incorrectly resolves the target to B
+        // (the first "# " match in remaining) instead of C, so A lands
+        // before B instead of before C.
+        var source = "# A\nbody A\n\n# B\nbody B\n\n# C\nbody C";
+        var outline = BuildOutline(source);
+
+        // Drag A to sit before C.
+        var moved = HeadingMover.Move(
+            source,
+            outline,
+            draggedLine: outline[0].SourceLine,
+            targetLine: outline[2].SourceLine,
+            DropPosition.Before
+        );
+
+        var headings = moved.Split('\n').Where(l => l.StartsWith('#')).ToList();
+        // Expected: B, A, C. The bug produces A, B, C (no visible move)
+        // because adjustedTargetLine points at B instead of C.
+        headings.ShouldBe(["# B", "# A", "# C"]);
+    }
+
     private static IReadOnlyList<OutlineNode> BuildOutline(string source)
     {
         // OutlineBuilder.Build is the same producer the live VM uses, so the

@@ -6,19 +6,31 @@ using Avalonia.Media;
 using Markdig.Extensions.Mathematics;
 using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
+using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
 namespace Markus.Rendering;
 
+internal sealed class AnchorLinkEventArgs(string anchorId) : EventArgs
+{
+    public string AnchorId { get; } = anchorId;
+}
+
 internal static class MarkdownRenderer
 {
+    public static event EventHandler<AnchorLinkEventArgs>? AnchorLinkClicked;
+
     public static FontFamily MonoFamily { get; set; } =
         new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
 
     public static MarkdownTheme Theme { get; set; } = MarkdownThemes.GitHubDark;
 
     public static bool WrapCode { get; set; } = true;
+
+    public static double BaseFontSize { get; set; } = 16.0;
+
+    public static double MermaidScale { get; set; } = 1.0;
 
     public static IEnumerable<RenderedBlock> Render(MarkdownDocument? document)
     {
@@ -41,8 +53,8 @@ internal static class MarkdownRenderer
     {
         return block switch
         {
-            MathBlock math => RenderPlaceholder("math", math.Lines.ToString()),
-            FencedCodeBlock f when IsMermaid(f) => RenderPlaceholder("mermaid", f.Lines.ToString()),
+            MathBlock math => RenderMathBlock(math),
+            FencedCodeBlock f when IsMermaid(f) => RenderMermaid(f),
             HeadingBlock h => RenderHeading(h),
             ParagraphBlock p => RenderParagraph(p),
             FencedCodeBlock f => RenderFencedCode(f),
@@ -111,11 +123,12 @@ internal static class MarkdownRenderer
 
         var block = new SelectableTextBlock
         {
-            FontSize = size,
+            FontSize = Fs(size),
             FontWeight = FontWeight.SemiBold,
             Foreground = new SolidColorBrush(Theme.Foreground),
             Margin = new Thickness(0, heading.Level == 1 ? 8 : 12, 0, 4),
             TextWrapping = TextWrapping.Wrap,
+            Tag = heading.TryGetAttributes()?.Id,
         };
         FillInlines(block.Inlines!, heading.Inline);
         return block;
@@ -125,8 +138,8 @@ internal static class MarkdownRenderer
     {
         var block = new SelectableTextBlock
         {
-            FontSize = 15,
-            LineHeight = 24,
+            FontSize = Fs(15),
+            LineHeight = Fs(24),
             Foreground = new SolidColorBrush(Theme.Foreground),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 8),
@@ -159,7 +172,7 @@ internal static class MarkdownRenderer
             {
                 Text = text,
                 FontFamily = MonoFamily,
-                FontSize = 13,
+                FontSize = Fs(13),
                 Foreground = new SolidColorBrush(Theme.CodeForeground),
                 TextWrapping = WrapCode ? TextWrapping.Wrap : TextWrapping.NoWrap,
             },
@@ -215,7 +228,7 @@ internal static class MarkdownRenderer
             var marker = new TextBlock
             {
                 Text = bullet,
-                FontSize = 15,
+                FontSize = Fs(15),
                 Margin = new Thickness(4, 0, 8, 0),
                 MinWidth = 18,
                 Foreground = new SolidColorBrush(Color.FromArgb(180, 128, 128, 128)),
@@ -267,7 +280,7 @@ internal static class MarkdownRenderer
             {
                 Text = html.Lines.ToString(),
                 FontFamily = MonoFamily,
-                FontSize = 12,
+                FontSize = Fs(12),
                 Foreground = new SolidColorBrush(Theme.CodeForeground),
                 TextWrapping = TextWrapping.Wrap,
             },
@@ -383,7 +396,7 @@ internal static class MarkdownRenderer
                 target.Add(new Run(raw.Tag));
                 return;
             case MathInline math:
-                target.Add(BuildInlineMathPlaceholder(math));
+                target.Add(BuildInlineMath(math));
                 return;
             default:
                 target.Add(new Run(inline.ToString() ?? string.Empty));
@@ -419,12 +432,29 @@ internal static class MarkdownRenderer
     private static InlineUIContainer BuildLink(LinkInline link)
     {
         var label = link.FirstChild is LiteralInline first ? first.Content.ToString() : link.Url;
+        if (link.Url is { } url && url.StartsWith('#'))
+        {
+            return MakeAnchorInline(label ?? string.Empty, url[1..]);
+        }
         return MakeClickableInline(label ?? string.Empty, link.Url);
     }
 
     private static InlineUIContainer BuildAutoLink(AutolinkInline auto)
     {
         return MakeClickableInline(auto.Url, auto.Url);
+    }
+
+    private static InlineUIContainer MakeAnchorInline(string text, string anchorId)
+    {
+        var tb = new TextBlock
+        {
+            Text = text,
+            TextDecorations = TextDecorations.Underline,
+            Foreground = new SolidColorBrush(Theme.Accent),
+            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+        };
+        tb.PointerPressed += (_, _) => AnchorLinkClicked?.Invoke(null, new AnchorLinkEventArgs(anchorId));
+        return new InlineUIContainer(tb);
     }
 
     private static InlineUIContainer MakeClickableInline(string text, string? url)
@@ -512,14 +542,63 @@ internal static class MarkdownRenderer
         }
     }
 
-    private static Run BuildInlineMathPlaceholder(MathInline math)
+    private static Avalonia.Controls.Documents.Inline BuildInlineMath(MathInline math)
     {
-        return new Run(math.Content.ToString())
+        var latex = math.Content.ToString();
+        var painter = new CSharpMath.Avalonia.MathPainter
         {
-            FontFamily = MonoFamily,
-            FontSize = 13,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6E, 0x84)),
-            Background = new SolidColorBrush(Color.FromArgb(28, 0xFF, 0x3D, 0x55)),
+            LaTeX = latex,
+            FontSize = (float)Fs(15),
+            TextColor = Theme.Foreground,
         };
+        var size = painter.Measure();
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            return new Run(latex)
+            {
+                FontFamily = MonoFamily,
+                FontSize = Fs(13),
+                Foreground = new SolidColorBrush(Theme.CodeForeground),
+            };
+        }
+        var control = new MathPainterControl(painter, size.Width, size.Height);
+        return new InlineUIContainer(control);
+    }
+
+    private static Control RenderMermaid(FencedCodeBlock fenced)
+    {
+        var source = fenced.Lines.ToString();
+        if (!Services.MermaidRenderer.IsAvailable)
+        {
+            return RenderPlaceholder("mermaid", source);
+        }
+
+        return new MermaidControl(source);
+    }
+
+    private static Control RenderMathBlock(MathBlock math)
+    {
+        var latex = math.Lines.ToString().Trim();
+        var painter = new CSharpMath.Avalonia.MathPainter
+        {
+            LaTeX = latex,
+            FontSize = (float)Fs(20),
+            TextColor = Theme.Foreground,
+        };
+        var size = painter.Measure();
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            return RenderPlaceholder("math", latex);
+        }
+        return new MathPainterControl(painter, size.Width, size.Height)
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 8, 0, 12),
+        };
+    }
+
+    private static double Fs(double size)
+    {
+        return size * BaseFontSize / 16.0;
     }
 }

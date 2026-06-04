@@ -11,7 +11,7 @@
         x:Class="Markus.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         MinWidth="720" MinHeight="480"
-        Title="{Binding DocumentTitle, StringFormat='{}{0} — Markus'}"
+        Title="{Binding DisplayTitle, StringFormat='{}{0} — Markus'}"
         Background="Transparent"
         TransparencyLevelHint="AcrylicBlur"
         WindowDecorations="Full">
@@ -27,6 +27,8 @@
           <NativeMenu>
             <NativeMenuItem Header="Open…" Gesture="Cmd+O"
                             Command="{Binding OpenFileCommand}"/>
+            <NativeMenuItem Header="Save" Gesture="Cmd+S"
+                            Command="{Binding SaveCommand}"/>
             <NativeMenuItem Header="Open Recent">
               <NativeMenuItem.Menu>
                 <NativeMenu/>
@@ -269,7 +271,7 @@
       </Rectangle>
     </Panel>
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
 
       <!-- ============ Toolbar (glass, also serves as draggable title bar) ============ -->
       <Border Grid.Row="0" Classes="glass toolbar"
@@ -285,6 +287,12 @@
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Folder}"/>
                 <TextBlock Text="Open" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+            <Button Classes="tool" Command="{Binding SaveCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <PathIcon Data="{x:Static views:IconData.ContentSave}"/>
+                <TextBlock Text="Save" VerticalAlignment="Center"/>
               </StackPanel>
             </Button>
             <Button Classes="tool" Command="{Binding ReloadCommand}">
@@ -331,8 +339,31 @@
         </Grid>
       </Border>
 
+      <!-- Update banner: shown only when a newer release was found. -->
+      <Border Grid.Row="1"
+              IsVisible="{Binding Update.IsUpdateAvailable, FallbackValue=False}"
+              Background="{DynamicResource AccentSoft}"
+              BorderBrush="{DynamicResource GlassBorder}"
+              BorderThickness="0,0,0,1"
+              Padding="16,8">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+          <TextBlock Grid.Column="0"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource TextHigh}"
+                     Text="{Binding Update.AvailableVersion, StringFormat='A new version of Markus ({0}) is available'}"/>
+          <Button Grid.Column="1" Margin="8,0,0,0" Content="Download"
+                  Command="{Binding Update.DownloadCommand}"/>
+          <Button Grid.Column="2" Margin="8,0,0,0" Content="Release notes"
+                  Command="{Binding Update.ViewReleaseNotesCommand}"/>
+          <Button Grid.Column="3" Margin="8,0,0,0" Content="Skip"
+                  Command="{Binding Update.SkipCommand}"/>
+          <Button Grid.Column="4" Margin="8,0,0,0" Content="Dismiss"
+                  Command="{Binding Update.DismissCommand}"/>
+        </Grid>
+      </Border>
+
       <!-- ============ Content ============ -->
-      <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+      <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
 
         <!-- Outline on the LEFT (placement = Left). -->
         <Border Grid.Column="0"
@@ -433,7 +464,7 @@
       </Grid>
 
       <!-- ============ Status bar (glass) ============ -->
-      <Border Grid.Row="2" Classes="glass statusbar" IsVisible="{Binding !IsFocusMode}">
+      <Border Grid.Row="3" Classes="glass statusbar" IsVisible="{Binding !IsFocusMode}">
         <DockPanel LastChildFill="False">
           <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10">
             <TextBlock Classes="section" Text="STATUS"/>

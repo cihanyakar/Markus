@@ -56,7 +56,7 @@ else
         -p:DebuggerSupport=false \
         -p:UseSystemResourceKeys=true \
         -p:DebugType=embedded \
-        -p:NoWarn=IL2104 \
+        -p:NoWarn=IL2104%3BIL2026%3BIL3050 \
         -p:IlcOptimizationPreference=Speed \
         -o "$PUBLISH_DIR" \
         | tail -3
@@ -69,6 +69,10 @@ mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
 cp "$PUBLISH_DIR/Markus" "$APP_DIR/Contents/MacOS/"
 cp "$PUBLISH_DIR"/*.dylib "$APP_DIR/Contents/MacOS/"
+if [ -f "$ROOT/tools/${RID}/mmdr" ]; then
+    cp "$ROOT/tools/${RID}/mmdr" "$APP_DIR/Contents/MacOS/"
+    chmod +x "$APP_DIR/Contents/MacOS/mmdr"
+fi
 chmod +x "$APP_DIR/Contents/MacOS/Markus"
 cp "$ROOT/src/Markus/Assets/markus.png" "$APP_DIR/Contents/Resources/"
 cp "$ROOT/src/Markus/Build/Markus.icns" "$APP_DIR/Contents/Resources/"
@@ -83,8 +87,8 @@ sed -e "s/__VERSION__/$VERSION/g" \
 echo "==> Ad-hoc signing (no hardened runtime)"
 # Sign every Mach-O inside the bundle individually so each dylib's signature
 # matches Markus's expectations under library validation.
-for lib in "$APP_DIR/Contents/MacOS/"*.dylib; do
-    codesign --sign - --force "$lib"
+for lib in "$APP_DIR/Contents/MacOS/"*.dylib "$APP_DIR/Contents/MacOS/mmdr"; do
+    [ -f "$lib" ] && codesign --sign - --force "$lib"
 done
 # Final pass on the bundle root seals Info.plist + Resources.
 codesign --sign - --deep --force "$APP_DIR"

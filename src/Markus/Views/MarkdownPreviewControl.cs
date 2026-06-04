@@ -51,6 +51,12 @@ internal sealed class MarkdownPreviewControl : UserControl
     private string _pendingSource = string.Empty;
     private string _lastRenderedSource = string.Empty;
 
+    // Monotonically increasing counter bumped by InvalidateRender so that a
+    // forced re-render (theme/font change, same text) is detected even when
+    // _pendingSource == _lastRenderedSource.
+    private int _renderGeneration;
+    private int _lastRenderedGeneration;
+
     // Renders are serialized through this flag: a tick handler returns early
     // if a render is already in flight; the in-flight render's loop will
     // pick up _pendingSource if it changed during streaming. No cancellation
@@ -99,10 +105,12 @@ internal sealed class MarkdownPreviewControl : UserControl
         _debounceTimer.Tick += OnDebounceElapsed;
         _forceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ForceMs) };
         _forceTimer.Tick += OnForceElapsed;
+        MarkdownRenderer.AnchorLinkClicked += OnAnchorLinkClicked;
         DetachedFromVisualTree += (_, _) =>
         {
             _debounceTimer.Stop();
             _forceTimer.Stop();
+            MarkdownRenderer.AnchorLinkClicked -= OnAnchorLinkClicked;
         };
     }
 
@@ -141,6 +149,12 @@ internal sealed class MarkdownPreviewControl : UserControl
     private Dictionary<int, Control> ActiveLineMap => _activeIsA ? _lineMapA : _lineMapB;
 
     private Dictionary<int, Control> PendingLineMap => _activeIsA ? _lineMapB : _lineMapA;
+
+    public void InvalidateRender()
+    {
+        _renderGeneration++;
+        ScheduleRender(Source ?? string.Empty);
+    }
 
     public bool ScrollToLine(int sourceLine)
     {
@@ -319,6 +333,23 @@ internal sealed class MarkdownPreviewControl : UserControl
         return bestLine < 0 ? null : bestLine;
     }
 
+    private void OnAnchorLinkClicked(object? sender, AnchorLinkEventArgs e)
+    {
+        ScrollToAnchor(e.AnchorId);
+    }
+
+    private void ScrollToAnchor(string anchorId)
+    {
+        foreach (var child in ActivePanel.Children)
+        {
+            if (child is Control c && c.Tag is string id && string.Equals(id, anchorId, StringComparison.Ordinal))
+            {
+                c.BringIntoView();
+                return;
+            }
+        }
+    }
+
     private void ApplySearchOnActive()
     {
         _searcher.Highlight(ActiveLineMap.Values, SearchTerm ?? string.Empty, SearchCaseSensitive);
@@ -361,11 +392,15 @@ internal sealed class MarkdownPreviewControl : UserControl
         {
             while (
                 !App.ShutdownToken.IsCancellationRequested
-                && !string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal)
+                && (
+                    !string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal)
+                    || _renderGeneration != _lastRenderedGeneration
+                )
             )
             {
                 var source = _pendingSource;
                 _lastRenderedSource = source;
+                _lastRenderedGeneration = _renderGeneration;
                 await RenderAsync(source);
             }
             _forceTimer.Stop();

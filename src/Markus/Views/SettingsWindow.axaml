@@ -308,6 +308,20 @@
                          Text="Default view applies the next time you open a document."/>
             </StackPanel>
           </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Diagram scale:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+              <Slider Width="220"
+                      Minimum="0.5" Maximum="3.0"
+                      TickFrequency="0.25"
+                      IsSnapToTickEnabled="True"
+                      Value="{Binding MermaidScale}"/>
+              <TextBlock VerticalAlignment="Center"
+                         Foreground="{DynamicResource SettingsLabelMuted}"
+                         Text="{Binding MermaidScale, StringFormat='{}{0:0.##}x'}"/>
+            </StackPanel>
+          </Grid>
         </StackPanel>
 
         <!-- ====== Shortcuts ====== -->
@@ -378,6 +392,31 @@
                         IsChecked="{Binding RestoreSessionOnLaunch}"/>
               <TextBlock Classes="hint"
                          Text="Markus restores the file and scroll position you had on quit. When off, the welcome screen shows instead."/>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+
+        <!-- ====== Updates ====== -->
+        <StackPanel IsVisible="{Binding IsUpdatesSelected}" Spacing="0">
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="On launch:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <CheckBox Content="Check for updates automatically"
+                        IsChecked="{Binding CheckForUpdatesOnLaunch}"/>
+              <TextBlock Classes="hint"
+                         Text="Markus checks GitHub at most once a day and shows a banner when a newer version is available."/>
+            </StackPanel>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Channel:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <ComboBox MinWidth="220"
+                        HorizontalAlignment="Left"
+                        ItemsSource="{x:Static vm:SettingsViewModel.AvailableUpdateChannels}"
+                        SelectedItem="{Binding UpdateChannel}"/>
+              <TextBlock Classes="hint"
+                         Text="Stable offers released versions. Prerelease also offers alpha and beta builds."/>
             </StackPanel>
           </Grid>
         </StackPanel>

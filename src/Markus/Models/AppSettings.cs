@@ -26,6 +26,8 @@ internal sealed class AppSettings
 
     public bool IsPreviewSoftWrap { get; set; } = true;
 
+    public double MermaidScale { get; set; } = 1.0;
+
     public List<string> RecentFiles { get; set; } = new List<string>();
 
     public string? LastOpenedFile { get; set; }
@@ -33,6 +35,14 @@ internal sealed class AppSettings
     public int LastScrollLine { get; set; }
 
     public bool RestoreSessionOnLaunch { get; set; }
+
+    public bool CheckForUpdatesOnLaunch { get; set; } = true;
+
+    public UpdateChannel UpdateChannel { get; set; } = UpdateChannel.Stable;
+
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
+
+    public string? SkippedVersion { get; set; }
 
     public AppSettings Clone()
     {
@@ -50,10 +60,15 @@ internal sealed class AppSettings
             MonoFont = MonoFont,
             IsSourceSoftWrap = IsSourceSoftWrap,
             IsPreviewSoftWrap = IsPreviewSoftWrap,
+            MermaidScale = MermaidScale,
             RecentFiles = new List<string>(RecentFiles),
             LastOpenedFile = LastOpenedFile,
             LastScrollLine = LastScrollLine,
             RestoreSessionOnLaunch = RestoreSessionOnLaunch,
+            CheckForUpdatesOnLaunch = CheckForUpdatesOnLaunch,
+            UpdateChannel = UpdateChannel,
+            LastUpdateCheckUtc = LastUpdateCheckUtc,
+            SkippedVersion = SkippedVersion,
         };
     }
 }

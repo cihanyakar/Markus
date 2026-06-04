@@ -6,4 +6,5 @@ internal enum SettingsCategory
     View,
     Shortcuts,
     General,
+    Updates,
 }

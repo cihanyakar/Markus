@@ -38,13 +38,42 @@ internal sealed partial class App : Application
 
             var vm = new MainWindowViewModel();
             desktop.MainWindow = new MainWindow { DataContext = vm };
+            var isSpawnedChild = FileOpenRouter.IsSpawnMarker(desktop.Args);
+            var updateVm = new ViewModels.UpdateViewModel(
+                new Services.Updates.UpdateChecker(new Services.Updates.GitHubReleaseFeed()),
+                new Services.Updates.AssemblyVersionProvider(),
+                new Services.Updates.UpdateDownloader(),
+                new Services.Updates.UpdateLauncher(),
+                Services.ServiceLocator.Settings,
+                Services.Updates.RuntimeRid.Current
+            );
+            vm.Update = updateVm;
             FileOpenRouter.OpenInitial(vm, desktop.Args);
-            FileOpenRouter.MaybeRestoreSession(vm, settings);
+            FileOpenRouter.MaybeRestoreSession(vm, settings, isSpawnedChild);
             Views.Platform.MacosAppleEventHandler.Register(path => FileOpenRouter.OpenSingle(vm, path));
+            if (
+                Services.Updates.UpdatePolicy.ShouldAutoCheck(
+                    settings.CheckForUpdatesOnLaunch,
+                    isSpawnedChild,
+                    settings.LastUpdateCheckUtc,
+                    DateTimeOffset.UtcNow,
+                    TimeSpan.FromHours(20)
+                )
+            )
+            {
+                Dispatcher.UIThread.Post(() => _ = updateVm.CheckOnLaunchAsync(App.ShutdownToken));
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
     }
+}
+
+internal enum FileOpenDecision
+{
+    FocusExisting,
+    LoadInCurrent,
+    SpawnNewInstance,
 }
 
 internal static class FileOpenRouter
@@ -80,23 +109,42 @@ internal static class FileOpenRouter
         return true;
     }
 
-    public static void MaybeRestoreSession(MainWindowViewModel vm, Markus.Models.AppSettings settings)
+    public static void MaybeRestoreSession(
+        MainWindowViewModel vm,
+        Markus.Models.AppSettings settings,
+        bool isSpawnedChild
+    )
     {
         if (_hasInitialDoc)
         {
             return;
         }
-        if (!settings.RestoreSessionOnLaunch)
-        {
-            return;
-        }
         var path = settings.LastOpenedFile;
-        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+        var lastFileExists = !string.IsNullOrEmpty(path) && System.IO.File.Exists(path);
+        if (!ShouldRestoreSession(isSpawnedChild, settings.RestoreSessionOnLaunch, lastFileExists))
         {
             return;
         }
         _hasInitialDoc = true;
-        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
+        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path!, App.ShutdownToken));
+    }
+
+    // A spawned child (launched by TrySpawnNewInstance) must NOT restore the
+    // last session: it exists solely to display the document delivered by the
+    // open event. Restoring would consume the initial-doc slot before that
+    // event arrives, forcing the document down the spawn path again and
+    // cascading new windows on every open while restore-on-launch is enabled.
+    public static bool ShouldRestoreSession(bool isSpawnedChild, bool restoreEnabled, bool lastFileExists)
+    {
+        return !isSpawnedChild && restoreEnabled && lastFileExists;
+    }
+
+    // The spawn flag is delivered as a plain argv token (after `open --args`)
+    // rather than an environment variable, because LaunchServices does not
+    // propagate the parent's environment to the launched bundle.
+    public static bool IsSpawnMarker(IReadOnlyList<string>? args)
+    {
+        return args is not null && args.Contains("--spawned", StringComparer.Ordinal);
     }
 
     public static void OpenSingle(MainWindowViewModel vm, string rawPath)
@@ -106,24 +154,42 @@ internal static class FileOpenRouter
         {
             return;
         }
-        // First open event this process sees becomes the initial document.
-        // Covers Finder launches where argv is empty and the file arrives via
-        // AppleEvent only — including the spawned child below.
-        if (!_hasInitialDoc)
+        switch (DecideOpen(_hasInitialDoc, vm.CurrentFilePath, path))
         {
-            _hasInitialDoc = true;
-            Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
-            return;
+            case FileOpenDecision.FocusExisting:
+                // The requested file is already on screen here: surface this
+                // window instead of opening a duplicate copy.
+                Dispatcher.UIThread.Post(ActivateMainWindow);
+                return;
+            case FileOpenDecision.LoadInCurrent:
+                _hasInitialDoc = true;
+                Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
+                return;
+            default:
+                if (TrySpawnNewInstance(path))
+                {
+                    return;
+                }
+                // Fallback (non-macOS, missing bundle): load in current as a
+                // graceful degradation.
+                Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
+                return;
         }
-        // Already have a document: every subsequent open lands in a fresh
-        // process so users get one window per document.
-        if (TrySpawnNewInstance(path))
+    }
+
+    // Routing decision for an incoming open request, factored out so it can be
+    // unit-tested without the process/dispatcher side effects.
+    public static FileOpenDecision DecideOpen(bool hasInitialDoc, string? currentPath, string requestedPath)
+    {
+        if (SamePath(currentPath, requestedPath))
         {
-            return;
+            return FileOpenDecision.FocusExisting;
         }
-        // Fallback (non-macOS, missing bundle): load in current as a graceful
-        // degradation.
-        Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
+        if (!hasInitialDoc)
+        {
+            return FileOpenDecision.LoadInCurrent;
+        }
+        return FileOpenDecision.SpawnNewInstance;
     }
 
     public static string? FirstReadableFile(IReadOnlyList<string> candidates)
@@ -150,6 +216,35 @@ internal static class FileOpenRouter
             return raw;
         }
         return uri.LocalPath;
+    }
+
+    private static bool SamePath(string? a, string b)
+    {
+        if (string.IsNullOrEmpty(a))
+        {
+            return false;
+        }
+        return string.Equals(Canonical(a), Canonical(b), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string Canonical(string path)
+    {
+        try
+        {
+            return System.IO.Path.GetFullPath(path);
+        }
+        catch (Exception)
+        {
+            return path;
+        }
+    }
+
+    private static void ActivateMainWindow()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.MainWindow?.Activate();
+        }
     }
 
     private static bool TrySpawnNewInstance(string path)
@@ -182,6 +277,12 @@ internal static class FileOpenRouter
             psi.ArgumentList.Add("-a");
             psi.ArgumentList.Add(bundlePath);
             psi.ArgumentList.Add(path);
+            // Everything after --args reaches the child as argv. The file stays
+            // before it so LaunchServices still delivers it via the openURLs
+            // AppleEvent, while --spawned marks the child so it skips session
+            // restore (see ShouldRestoreSession).
+            psi.ArgumentList.Add("--args");
+            psi.ArgumentList.Add("--spawned");
             System.Diagnostics.Process.Start(psi);
             return true;
         }

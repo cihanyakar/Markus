@@ -26,6 +26,10 @@ internal sealed partial class MainWindow : Window
     private bool _syncingScroll;
     private int _suppressedRenderCount;
 
+    // Set once the user has resolved the unsaved-changes prompt so the second,
+    // programmatic Close() pass runs the real shutdown instead of re-prompting.
+    private bool _forceClose;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -117,6 +121,7 @@ internal sealed partial class MainWindow : Window
         return action.Id switch
         {
             "file.open" => vm.OpenFileCommand,
+            "file.save" => vm.SaveCommand,
             "file.reload" => vm.ReloadCommand,
             "file.new" => vm.NewScratchCommand,
             "edit.find" => vm.FindCommand,
@@ -503,6 +508,7 @@ internal sealed partial class MainWindow : Window
         return new[]
         {
             new Markus.Models.CommandItem("Open File", "File", "⌘O", () => vm.OpenFileCommand.Execute(null)),
+            new Markus.Models.CommandItem("Save", "File", "⌘S", () => vm.SaveCommand.Execute(null)),
             new Markus.Models.CommandItem("Reload", "File", "⌘R", () => vm.ReloadCommand.Execute(null)),
             new Markus.Models.CommandItem("Settings", "App", "⌘,", () => vm.OpenSettingsCommand.Execute(null)),
         };
@@ -1022,11 +1028,13 @@ internal sealed partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm)
         {
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.Interaction = new MainWindowInteraction(this);
             vm.OpenRequested += OnOpenRequested;
             vm.SettingsRequested += OnSettingsRequested;
             vm.FindRequested += OnFindRequested;
             vm.FindNextRequested += OnFindNextRequested;
             vm.FindPreviousRequested += OnFindPreviousRequested;
+            vm.PreviewInvalidated += OnPreviewInvalidated;
             UpdateDetachedWindows(vm);
             RefreshRecentMenu();
             ApplyEditorWordWrap(vm.IsSourceSoftWrap);
@@ -1048,6 +1056,14 @@ internal sealed partial class MainWindow : Window
     private void OnFindPreviousRequested(object? sender, EventArgs e)
     {
         MoveSearchMatch(forward: false);
+    }
+
+    private void OnPreviewInvalidated(object? sender, EventArgs e)
+    {
+        foreach (var preview in this.GetVisualDescendants().OfType<MarkdownPreviewControl>())
+        {
+            preview.InvalidateRender();
+        }
     }
 
     private void ApplyEditorWordWrap(bool wrap)
@@ -1210,6 +1226,15 @@ internal sealed partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
+        // Hold the window open while the user decides what to do with unsaved
+        // edits; ConfirmCloseAsync re-issues Close() once they've chosen.
+        if (!_forceClose && DataContext is MainWindowViewModel dirtyVm && dirtyVm.IsDirty)
+        {
+            e.Cancel = true;
+            _ = ConfirmCloseAsync(dirtyVm);
+            return;
+        }
+
         // Any unhandled exception thrown from a window-close handler bubbles
         // up to the AppKit run loop and macOS records the exit as
         // "unexpected quit" in the launch logs. Wrap the cleanup so a stray
@@ -1252,6 +1277,37 @@ internal sealed partial class MainWindow : Window
         {
             System.Diagnostics.Debug.WriteLine($"Markus shutdown (dispose): {ex.Message}");
         }
+    }
+
+    private async Task ConfirmCloseAsync(MainWindowViewModel vm)
+    {
+        UnsavedChangesChoice choice;
+        try
+        {
+            choice = await ConfirmDialog.AskDiscardAsync(this, vm.DocumentTitle);
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Close prompt failed: {ex.Message}");
+            return;
+        }
+
+        if (choice == UnsavedChangesChoice.Cancel)
+        {
+            return;
+        }
+        if (choice == UnsavedChangesChoice.Save)
+        {
+            await vm.SaveCommand.ExecuteAsync(null);
+            if (vm.IsDirty)
+            {
+                // Save-As was dismissed; leave the window open so edits survive.
+                return;
+            }
+        }
+
+        _forceClose = true;
+        Close();
     }
 
     private int ResolveFirstVisibleEditorLine()

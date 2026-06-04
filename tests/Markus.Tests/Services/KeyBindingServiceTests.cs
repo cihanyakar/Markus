@@ -41,6 +41,18 @@ public sealed class KeyBindingServiceTests : IDisposable
     }
 
     [Fact]
+    public void Save_Default_Is_CmdS()
+    {
+        var svc = new KeyBindingService(_tempDir);
+
+        var gesture = svc.GetGesture(ShortcutActions.Save);
+
+        gesture.ShouldNotBeNull();
+        gesture!.Key.ShouldBe(Key.S);
+        gesture.KeyModifiers.ShouldBe(KeyModifiers.Meta);
+    }
+
+    [Fact]
     public void Set_Custom_Gesture_Overrides_Default()
     {
         var svc = new KeyBindingService(_tempDir);

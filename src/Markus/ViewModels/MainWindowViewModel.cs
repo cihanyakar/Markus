@@ -14,6 +14,15 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _disposed;
     private bool _suppressOutlinePlacementSave;
 
+    // Set while the document is being replaced from disk (open/reload/save) so
+    // the resulting SourceText change is not mistaken for a user edit.
+    private bool _loadingDocument;
+
+    // The file content as we last read or wrote it. A watcher event whose disk
+    // content equals this is our own save (or spurious) rather than an external
+    // edit, even if the user has since typed more into the buffer.
+    private string _lastSyncedText = string.Empty;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSourceOnly))]
     [NotifyPropertyChangedFor(nameof(IsPreviewOnly))]
@@ -54,10 +63,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string _statusText = "No file open";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayTitle))]
     private string _documentTitle = "Markus";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayTitle))]
+    private bool _isDirty;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private string? _currentFilePath;
 
@@ -82,8 +97,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string _selectionStats = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private bool _isScratchBuffer;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DocumentStats))]
+    private string _lastModifiedText = string.Empty;
+
+    [ObservableProperty]
+    private UpdateViewModel? _update;
 
     public MainWindowViewModel()
         : this(ServiceLocator.Settings) { }
@@ -106,6 +129,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
         Rendering.MarkdownRenderer.Theme = Rendering.MarkdownThemes.Resolve(Settings.Theme);
         Rendering.MarkdownRenderer.WrapCode = Settings.IsPreviewSoftWrap;
+        Rendering.MarkdownRenderer.BaseFontSize = Settings.FontSize;
+        Rendering.MarkdownRenderer.MermaidScale = Settings.MermaidScale;
         Views.TextMateThemeResolver.Update(Settings.CodeTheme);
         RebuildOutline(_sourceText);
     }
@@ -116,11 +141,20 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public event EventHandler? FindRequested;
 
+    public event EventHandler? PreviewInvalidated;
+
     public event EventHandler? FindNextRequested;
 
     public event EventHandler? FindPreviousRequested;
 
     public AppSettings Settings { get; private set; }
+
+    // Supplied by the view so the view-model can prompt before losing unsaved
+    // work; null in headless tests, where guarded flows just proceed.
+    public IDocumentInteraction? Interaction { get; set; }
+
+    // The leading bullet flags unsaved edits in the window title.
+    public string DisplayTitle => IsDirty ? $"• {DocumentTitle}" : DocumentTitle;
 
     public bool IsSourceOnly => CurrentViewMode is ViewMode.Source;
 
@@ -141,7 +175,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // 250 words/min is a conservative reading-speed default for prose; rounded up.
     public int ReadingMinutes => Math.Max(1, (int)Math.Ceiling(WordCount / 250.0));
 
-    public string DocumentStats => $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min";
+    public string DocumentStats =>
+        string.IsNullOrEmpty(LastModifiedText)
+            ? $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min"
+            : $"{WordCount} words · {CharCount} chars · ~{ReadingMinutes} min · {LastModifiedText}";
 
     public bool IsOutlineLeftVisible => IsOutlineVisible && OutlinePlacement is OutlinePlacement.Left;
 
@@ -160,11 +197,28 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, App.ShutdownToken);
         var text = await File.ReadAllTextAsync(path, linked.Token);
-        SourceText = text;
+        SetSourceTextFromDisk(text);
         CurrentFilePath = path;
         IsScratchBuffer = false;
         DocumentTitle = Path.GetFileName(path);
+        LastModifiedText = FormatLastModified(path);
         StatusText = $"{DocumentTitle} • {text.Length:N0} chars";
+        _fileWatcher.Watch(path);
+        AddToRecent(path);
+    }
+
+    public async Task SaveToFileAsync(string path, CancellationToken ct = default)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, App.ShutdownToken);
+        var written = SourceText;
+        await File.WriteAllTextAsync(path, written, linked.Token);
+        _lastSyncedText = written;
+        CurrentFilePath = path;
+        IsScratchBuffer = false;
+        IsDirty = false;
+        DocumentTitle = Path.GetFileName(path);
+        LastModifiedText = FormatLastModified(path);
+        StatusText = $"{DocumentTitle} • saved • {SourceText.Length:N0} chars";
         _fileWatcher.Watch(path);
         AddToRecent(path);
     }
@@ -204,7 +258,60 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsService.Changed -= OnSettingsChanged;
         _fileWatcher.FileChanged -= OnFileChangedOnBackgroundThread;
         _fileWatcher.Dispose();
-        _outlineCts?.Dispose();
+        var cts = System.Threading.Interlocked.Exchange(ref _outlineCts, null);
+        cts?.Cancel();
+        cts?.Dispose();
+    }
+
+    // Reconciles the buffer with an on-disk change reported by the watcher.
+    // Internal so it can be driven directly in tests without the real
+    // FileSystemWatcher's timing.
+    internal async Task HandleExternalChangeAsync(string path, WatcherChangeTypes change)
+    {
+        if (change == WatcherChangeTypes.Deleted)
+        {
+            StatusText = $"{DocumentTitle} • file deleted on disk";
+            return;
+        }
+
+        string diskText;
+        try
+        {
+            diskText = await File.ReadAllTextAsync(path, App.ShutdownToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (IOException)
+        {
+            // The writer may still hold the file mid-save; a later settle event
+            // delivers the final content.
+            return;
+        }
+
+        // Disk matches what we last wrote or loaded: this is our own save (or a
+        // spurious event), not an external edit. Refresh metadata only so we
+        // never reload over the user's position or prompt about our own write.
+        if (string.Equals(diskText, _lastSyncedText, StringComparison.Ordinal))
+        {
+            CurrentFilePath = path;
+            DocumentTitle = Path.GetFileName(path);
+            LastModifiedText = FormatLastModified(path);
+            return;
+        }
+
+        if (IsDirty && Interaction is not null && !await Interaction.ConfirmReloadAsync(DocumentTitle))
+        {
+            StatusText = $"{DocumentTitle} • changed on disk • keeping your edits";
+            return;
+        }
+
+        CurrentFilePath = path;
+        DocumentTitle = Path.GetFileName(path);
+        SetSourceTextFromDisk(diskText);
+        LastModifiedText = FormatLastModified(path);
+        StatusText = $"{DocumentTitle} • reloaded • {diskText.Length:N0} chars";
     }
 
     private static int CountWords(string? text)
@@ -261,6 +368,21 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         return anyMatch;
     }
 
+    private static string FormatLastModified(string path)
+    {
+        try
+        {
+            var lastWrite = File.GetLastWriteTime(path);
+            return lastWrite.Date == DateTime.Today
+                ? $"modified {lastWrite:HH:mm}"
+                : $"modified {lastWrite:yyyy-MM-dd HH:mm}";
+        }
+        catch (IOException)
+        {
+            return string.Empty;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanReload))]
     private async Task ReloadAsync()
     {
@@ -269,10 +391,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        if (IsDirty && Interaction is not null && !await Interaction.ConfirmReloadAsync(DocumentTitle))
+        {
+            return;
+        }
+
         try
         {
             var text = await File.ReadAllTextAsync(path, App.ShutdownToken);
-            SourceText = text;
+            SetSourceTextFromDisk(text);
+            LastModifiedText = FormatLastModified(path);
             StatusText = $"{DocumentTitle} • reloaded • {text.Length:N0} chars";
         }
         catch (OperationCanceledException)
@@ -314,6 +442,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             return;
         }
+        if (!await EnsureSafeToDiscardAsync())
+        {
+            return;
+        }
         try
         {
             await LoadFileAsync(path);
@@ -352,9 +484,83 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void OpenFile()
+    private async Task OpenFileAsync()
     {
+        if (!await EnsureSafeToDiscardAsync())
+        {
+            return;
+        }
         OpenRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task SaveAsync()
+    {
+        var path = CurrentFilePath;
+        if (string.IsNullOrEmpty(path))
+        {
+            if (Interaction is null)
+            {
+                return;
+            }
+            path = await Interaction.PickSavePathAsync(SuggestedSaveName());
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+        }
+
+        try
+        {
+            await SaveToFileAsync(path);
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown interrupted the save.
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Save failed. {ex.Message}";
+        }
+    }
+
+    // Nothing meaningful to save while the welcome view is up (no file and no
+    // scratch buffer); a document or scratch buffer enables Save.
+    private bool CanSave()
+    {
+        return !IsWelcomeVisible;
+    }
+
+    private string SuggestedSaveName()
+    {
+        var name = DocumentTitle;
+        if (string.IsNullOrWhiteSpace(name) || string.Equals(name, "Markus", StringComparison.Ordinal))
+        {
+            return "Untitled.md";
+        }
+        return string.IsNullOrEmpty(Path.GetExtension(name)) ? $"{name}.md" : name;
+    }
+
+    // Gate before any action that replaces the buffer (open, new, switch). A
+    // clean document, or no view to prompt with, proceeds without asking.
+    private async Task<bool> EnsureSafeToDiscardAsync()
+    {
+        if (!IsDirty || Interaction is null)
+        {
+            return true;
+        }
+        switch (await Interaction.ConfirmDiscardAsync(DocumentTitle))
+        {
+            case UnsavedChangesChoice.Save:
+                await SaveAsync();
+                // A cancelled Save-As leaves the document dirty: abort the
+                // discard rather than silently dropping the edits.
+                return !IsDirty;
+            case UnsavedChangesChoice.Discard:
+                return true;
+            default:
+                return false;
+        }
     }
 
     [RelayCommand]
@@ -418,11 +624,21 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void NewScratch()
+    private async Task NewScratchAsync()
     {
-        SourceText = string.Empty;
+        if (!await EnsureSafeToDiscardAsync())
+        {
+            return;
+        }
+        // A scratch buffer has no backing file: drop the previous path and its
+        // watcher so a later Save prompts for a destination and an external
+        // change to the old file can't reload over the scratch.
+        _fileWatcher.Stop();
+        CurrentFilePath = null;
+        SetSourceTextFromDisk(string.Empty);
         IsScratchBuffer = true;
         DocumentTitle = "Untitled";
+        LastModifiedText = string.Empty;
         StatusText = "Scratch buffer · unsaved";
     }
 
@@ -490,37 +706,61 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings.IsPreviewSoftWrap = value;
         Rendering.MarkdownRenderer.WrapCode = value;
         _settingsService.Save(Settings);
-        // Force the preview re-render so already-rendered code blocks pick up
-        // the new wrap mode immediately.
-        var current = SourceText;
-        SourceText = string.Empty;
-        SourceText = current;
+        PreviewInvalidated?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         Settings = e.Settings;
         ThemeApplicator.Apply(e.Settings.ThemeMode);
-        // Mirror the Settings dialog's outline placement back to the live VM
-        // (without saving again — would loop through OnOutlinePlacementChanged).
-        if (e.Settings.OutlinePlacement != OutlinePlacement)
+        SyncOutlinePlacement(e.Settings);
+        SyncEditorFlags(e.Settings);
+
+        if (ApplyRendererSettings(e.Settings))
         {
-            _suppressOutlinePlacementSave = true;
-            try
-            {
-                OutlinePlacement = e.Settings.OutlinePlacement;
-            }
-            finally
-            {
-                _suppressOutlinePlacementSave = false;
-            }
+            PreviewInvalidated?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void SyncOutlinePlacement(AppSettings s)
+    {
+        if (s.OutlinePlacement == OutlinePlacement)
+        {
+            return;
         }
 
-        var fontStack = MonoFontStack.Build(e.Settings.MonoFont);
-        var fontChanged = !string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal);
+        _suppressOutlinePlacementSave = true;
+        try
+        {
+            OutlinePlacement = s.OutlinePlacement;
+        }
+        finally
+        {
+            _suppressOutlinePlacementSave = false;
+        }
+    }
 
-        var newTheme = Rendering.MarkdownThemes.Resolve(e.Settings.Theme);
+    private void SyncEditorFlags(AppSettings s)
+    {
+        if (IsSourceSoftWrap != s.IsSourceSoftWrap)
+        {
+            IsSourceSoftWrap = s.IsSourceSoftWrap;
+        }
+
+        if (IsPreviewSoftWrap != s.IsPreviewSoftWrap)
+        {
+            IsPreviewSoftWrap = s.IsPreviewSoftWrap;
+        }
+    }
+
+    private bool ApplyRendererSettings(AppSettings s)
+    {
+        var fontStack = MonoFontStack.Build(s.MonoFont);
+        var fontChanged = !string.Equals(fontStack, MonoFontFamily, StringComparison.Ordinal);
+        var newTheme = Rendering.MarkdownThemes.Resolve(s.Theme);
         var themeChanged = !ReferenceEquals(newTheme, Rendering.MarkdownRenderer.Theme);
+        var fontSizeChanged = Math.Abs(Rendering.MarkdownRenderer.BaseFontSize - s.FontSize) > 0.01;
+        var mermaidChanged = Math.Abs(Rendering.MarkdownRenderer.MermaidScale - s.MermaidScale) > 0.01;
 
         if (fontChanged)
         {
@@ -533,43 +773,51 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             Rendering.MarkdownRenderer.Theme = newTheme;
         }
 
-        // Code (TextMate) theme is independent from the preview theme.
-        Views.TextMateThemeResolver.Update(e.Settings.CodeTheme);
+        Rendering.MarkdownRenderer.BaseFontSize = s.FontSize;
+        Rendering.MarkdownRenderer.MermaidScale = s.MermaidScale;
+        Views.TextMateThemeResolver.Update(s.CodeTheme);
 
-        if (IsSourceSoftWrap != e.Settings.IsSourceSoftWrap)
-        {
-            IsSourceSoftWrap = e.Settings.IsSourceSoftWrap;
-        }
-
-        if (IsPreviewSoftWrap != e.Settings.IsPreviewSoftWrap)
-        {
-            IsPreviewSoftWrap = e.Settings.IsPreviewSoftWrap;
-        }
-
-        if (fontChanged || themeChanged)
-        {
-            // Nudge SourceText so preview re-renders with the new look.
-            var current = SourceText;
-            SourceText = string.Empty;
-            SourceText = current;
-        }
+        return fontChanged || themeChanged || fontSizeChanged || mermaidChanged;
     }
 
     partial void OnSourceTextChanged(string value)
     {
+        if (!_loadingDocument)
+        {
+            IsDirty = true;
+        }
         _ = RebuildOutlineAsync(value);
+    }
+
+    // Replaces the buffer with content that mirrors disk (open/reload), so the
+    // document is clean afterwards rather than flagged as a user edit.
+    private void SetSourceTextFromDisk(string text)
+    {
+        _loadingDocument = true;
+        try
+        {
+            SourceText = text;
+        }
+        finally
+        {
+            _loadingDocument = false;
+        }
+        _lastSyncedText = text;
+        IsDirty = false;
     }
 
     private async System.Threading.Tasks.Task RebuildOutlineAsync(string source)
     {
-        // Cancel the in-flight outline so rapid typing doesn't stack parses.
-        if (_outlineCts is { } previous)
+        // Swap atomically so two concurrent fire-and-forget calls never
+        // race on the same CTS reference.
+        var fresh = CancellationTokenSource.CreateLinkedTokenSource(App.ShutdownToken);
+        var previous = System.Threading.Interlocked.Exchange(ref _outlineCts, fresh);
+        if (previous is not null)
         {
             await previous.CancelAsync();
             previous.Dispose();
         }
-        _outlineCts = CancellationTokenSource.CreateLinkedTokenSource(App.ShutdownToken);
-        var token = _outlineCts.Token;
+        var token = fresh.Token;
         try
         {
             // Parse + tree-build on the threadpool; the result hop back to the
@@ -617,17 +865,6 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         // FileSystemWatcher fires on a thread-pool thread; hop to UI before
         // touching observable state.
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (e.Change == WatcherChangeTypes.Deleted)
-            {
-                StatusText = $"{DocumentTitle} • file deleted on disk";
-                return;
-            }
-
-            CurrentFilePath = e.Path;
-            DocumentTitle = Path.GetFileName(e.Path);
-            ReloadCommand.Execute(null);
-        });
+        Dispatcher.UIThread.Post(() => _ = HandleExternalChangeAsync(e.Path, e.Change));
     }
 }
