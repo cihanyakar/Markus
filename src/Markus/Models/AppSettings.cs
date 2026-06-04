@@ -36,6 +36,14 @@ internal sealed class AppSettings
 
     public bool RestoreSessionOnLaunch { get; set; }
 
+    public bool CheckForUpdatesOnLaunch { get; set; } = true;
+
+    public UpdateChannel UpdateChannel { get; set; } = UpdateChannel.Stable;
+
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
+
+    public string? SkippedVersion { get; set; }
+
     public AppSettings Clone()
     {
         return new AppSettings
@@ -57,6 +65,10 @@ internal sealed class AppSettings
             LastOpenedFile = LastOpenedFile,
             LastScrollLine = LastScrollLine,
             RestoreSessionOnLaunch = RestoreSessionOnLaunch,
+            CheckForUpdatesOnLaunch = CheckForUpdatesOnLaunch,
+            UpdateChannel = UpdateChannel,
+            LastUpdateCheckUtc = LastUpdateCheckUtc,
+            SkippedVersion = SkippedVersion,
         };
     }
 }
