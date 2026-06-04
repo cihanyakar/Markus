@@ -100,7 +100,16 @@ internal readonly struct SemVer : IComparable<SemVer>, IEquatable<SemVer>
             return false;
         }
 
-        if (pre is not null && pre.Length == 0)
+        // Strict SemVer 2.0 disallows leading zeros in numeric identifiers.
+        for (var i = 0; i < 3; i++)
+        {
+            if (parts[i].Length > 1 && parts[i][0] == '0')
+            {
+                return false;
+            }
+        }
+
+        if (pre is not null && !IsValidPreRelease(pre))
         {
             return false;
         }
@@ -218,5 +227,34 @@ internal readonly struct SemVer : IComparable<SemVer>, IEquatable<SemVer>
         }
 
         return string.CompareOrdinal(a, b);
+    }
+
+    private static bool IsValidPreRelease(string pre)
+    {
+        if (pre.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var ident in pre.Split('.'))
+        {
+            if (ident.Length == 0)
+            {
+                return false;
+            }
+
+            // Numeric identifiers must not have leading zeros.
+            if (ident.Length > 1 && ident[0] == '0' && AllDigits(ident))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AllDigits(string s)
+    {
+        return s.All(static c => c is >= '0' and <= '9');
     }
 }
