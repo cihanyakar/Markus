@@ -396,6 +396,31 @@
           </Grid>
         </StackPanel>
 
+        <!-- ====== Updates ====== -->
+        <StackPanel IsVisible="{Binding IsUpdatesSelected}" Spacing="0">
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="On launch:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <CheckBox Content="Check for updates automatically"
+                        IsChecked="{Binding CheckForUpdatesOnLaunch}"/>
+              <TextBlock Classes="hint"
+                         Text="Markus checks GitHub at most once a day and shows a banner when a newer version is available."/>
+            </StackPanel>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Channel:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <ComboBox MinWidth="220"
+                        HorizontalAlignment="Left"
+                        ItemsSource="{x:Static vm:SettingsViewModel.AvailableUpdateChannels}"
+                        SelectedItem="{Binding UpdateChannel}"/>
+              <TextBlock Classes="hint"
+                         Text="Stable offers released versions. Prerelease also offers alpha and beta builds."/>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+
       </Panel>
     </ScrollViewer>
   </DockPanel>

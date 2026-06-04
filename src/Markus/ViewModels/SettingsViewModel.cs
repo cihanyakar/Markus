@@ -45,6 +45,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     public static readonly IReadOnlyList<string> AvailableThemeModes = new[] { "System", "Light", "Dark" };
 
+    public static readonly IReadOnlyList<UpdateChannel> AvailableUpdateChannels = new UpdateChannel[]
+    {
+        UpdateChannel.Stable,
+        UpdateChannel.Prerelease,
+    };
+
     public static readonly IReadOnlyList<ThemeOption> AvailableThemes = new ThemeOption[]
     {
         new ThemeOption("GitHubLight", "GitHub Light", false),
@@ -80,6 +86,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         new SettingsCategoryItem(SettingsCategory.View, "View", IconData.ViewQuilt),
         new SettingsCategoryItem(SettingsCategory.Shortcuts, "Shortcuts", IconData.UnfoldLess),
         new SettingsCategoryItem(SettingsCategory.General, "General", IconData.Tune),
+        new SettingsCategoryItem(SettingsCategory.Updates, "Updates", IconData.Refresh),
     };
 
     [ObservableProperty]
@@ -87,6 +94,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsViewSelected))]
     [NotifyPropertyChangedFor(nameof(IsShortcutsSelected))]
     [NotifyPropertyChangedFor(nameof(IsGeneralSelected))]
+    [NotifyPropertyChangedFor(nameof(IsUpdatesSelected))]
     private SettingsCategoryItem _selectedCategory = Categories[0];
 
     [ObservableProperty]
@@ -131,6 +139,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private double _mermaidScale;
 
+    [ObservableProperty]
+    private bool _checkForUpdatesOnLaunch;
+
+    [ObservableProperty]
+    private UpdateChannel _updateChannel;
+
     public SettingsViewModel(SettingsService service, AppSettings settings)
     {
         Service = service;
@@ -149,6 +163,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _isSourceSoftWrap = settings.IsSourceSoftWrap;
         _isPreviewSoftWrap = settings.IsPreviewSoftWrap;
         _mermaidScale = settings.MermaidScale;
+        _checkForUpdatesOnLaunch = settings.CheckForUpdatesOnLaunch;
+        _updateChannel = settings.UpdateChannel;
     }
 
     public SettingsService Service { get; }
@@ -164,6 +180,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     public bool IsShortcutsSelected => SelectedCategory.Kind is SettingsCategory.Shortcuts;
 
     public bool IsGeneralSelected => SelectedCategory.Kind is SettingsCategory.General;
+
+    public bool IsUpdatesSelected => SelectedCategory.Kind is SettingsCategory.Updates;
 
     public IReadOnlyList<ShortcutBindingViewModel> Shortcuts { get; } =
         Markus
@@ -191,6 +209,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         IsSourceSoftWrap = defaults.IsSourceSoftWrap;
         IsPreviewSoftWrap = defaults.IsPreviewSoftWrap;
         MermaidScale = defaults.MermaidScale;
+        CheckForUpdatesOnLaunch = defaults.CheckForUpdatesOnLaunch;
+        UpdateChannel = defaults.UpdateChannel;
     }
 
     // ---- Auto-save on any property change ---------------------------------
@@ -276,6 +296,18 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnMermaidScaleChanged(double value)
     {
         Settings.MermaidScale = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnCheckForUpdatesOnLaunchChanged(bool value)
+    {
+        Settings.CheckForUpdatesOnLaunch = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnUpdateChannelChanged(UpdateChannel value)
+    {
+        Settings.UpdateChannel = value;
         Service.Save(Settings);
     }
 }
