@@ -131,37 +131,38 @@
   </NativeMenu.Menu>
 
   <Window.Styles>
-    <!-- ============ Liquid Glass tool platters (BorderBrush gradient edge) ============ -->
+    <!-- ============ Flat macOS-native toolbar controls ============ -->
+    <!-- No persistent platter: a subtle rounded highlight appears only on
+         hover/press, the way native toolbar buttons behave. -->
     <Style Selector="Button.tool, ToggleButton.tool">
-      <Setter Property="Background" Value="{DynamicResource PlatterBg}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource PlatterBorderBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="12"/>
-      <Setter Property="Padding" Value="14,6"/>
-      <Setter Property="Margin" Value="3,0"/>
-      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="CornerRadius" Value="7"/>
+      <Setter Property="Padding" Value="9,5"/>
+      <Setter Property="Margin" Value="1,0"/>
+      <Setter Property="MinHeight" Value="28"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
       <Setter Property="Transitions">
         <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.16"/>
+          <BrushTransition Property="Background" Duration="0:0:0.12"/>
         </Transitions>
       </Setter>
     </Style>
     <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource PlatterHoverBg}"/>
+      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
     </Style>
     <Style Selector="ToggleButton.tool:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource PlatterHoverBg}"/>
+      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
     </Style>
     <Style Selector="Button.tool:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource PlatterPressedBg}"/>
+      <Setter Property="Background" Value="{DynamicResource GlassPressed}"/>
     </Style>
     <Style Selector="ToggleButton.tool:checked /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource PlatterCheckedBg}"/>
+      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
     </Style>
     <Style Selector="Button.tool PathIcon, ToggleButton.tool PathIcon">
-      <Setter Property="Width" Value="14"/>
-      <Setter Property="Height" Value="14"/>
+      <Setter Property="Width" Value="15"/>
+      <Setter Property="Height" Value="15"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterIcon}"/>
     </Style>
     <Style Selector="ToggleButton.tool:checked PathIcon">
@@ -184,7 +185,7 @@
     <Style Selector="Border.toolbar">
       <Setter Property="Background" Value="{DynamicResource ToolbarSurface}"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="18,12,18,10"/>
+      <Setter Property="Padding" Value="16,8"/>
       <Setter Property="BoxShadow" Value="{DynamicResource ToolbarShadow}"/>
     </Style>
     <Style Selector="Border.statusbar">
@@ -212,20 +213,20 @@
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
 
-    <!-- ComboBox: simplified glass surface -->
+    <!-- ComboBox: a flat popup-button with a subtle border for affordance -->
     <Style Selector="ComboBox.glass">
-      <Setter Property="Background" Value="{DynamicResource PlatterBg}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource PlatterBorderBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="12"/>
-      <Setter Property="MinHeight" Value="30"/>
-      <Setter Property="Padding" Value="14,4"/>
+      <Setter Property="CornerRadius" Value="7"/>
+      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="Padding" Value="11,4"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
     </Style>
     <Style Selector="ComboBox.glass:pointerover /template/ Border#Background">
-      <Setter Property="Background" Value="{DynamicResource PlatterHoverBg}"/>
+      <Setter Property="Background" Value="{DynamicResource GlassPressed}"/>
     </Style>
 
     <!-- GridSplitter slim hairline -->
@@ -281,7 +282,7 @@
         <Grid ColumnDefinitions="Auto,*,Auto">
 
           <!-- Leading: traffic-light reservation + primary actions -->
-          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <Border Name="WindowControlsInset" Width="0"/>
             <Button Classes="tool" Click="Open_Click">
               <StackPanel Orientation="Horizontal" Spacing="7">
@@ -304,7 +305,7 @@
           </StackPanel>
 
           <!-- Trailing: outline / view / settings -->
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <ToggleButton Classes="tool" IsChecked="{Binding IsScrollLocked}"
                           ToolTip.Tip="Sync scroll source ↔ preview (Scroll Lock / ⌘⇧L)">
               <StackPanel Orientation="Horizontal" Spacing="7">
@@ -319,16 +320,14 @@
               </StackPanel>
             </ToggleButton>
 
-            <TextBlock VerticalAlignment="Center"
-                       Margin="16,0,8,0"
-                       Classes="section"
-                       Text="VIEW"/>
             <ComboBox Classes="glass"
+                      Margin="6,0,0,0"
                       SelectedItem="{Binding CurrentViewMode}"
                       ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
-                      MinWidth="170"/>
+                      MinWidth="148"
+                      ToolTip.Tip="View mode"/>
 
-            <Button Classes="tool" Margin="14,0,0,0" Click="Settings_Click">
+            <Button Classes="tool" Margin="2,0,0,0" Click="Settings_Click">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{x:Static views:IconData.Settings}"/>
                 <TextBlock Text="Settings" VerticalAlignment="Center"/>

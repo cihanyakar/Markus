@@ -203,7 +203,7 @@ internal static class MarkdownRenderer
 
     private static Control RenderList(ListBlock list)
     {
-        var panel = new StackPanel { Spacing = 2, Margin = new Thickness(0, 4, 0, 8) };
+        var panel = new StackPanel { Spacing = 6, Margin = new Thickness(0, 4, 0, 10) };
         // Honor the source's starting number ("5. foo / 6. bar" should render
         // as 5, 6, ...) and its delimiter (period vs. paren). Falls back to 1.
         var index =
@@ -225,31 +225,9 @@ internal static class MarkdownRenderer
             }
 
             var bullet = list.IsOrdered ? $"{index}{delimiter}" : "•";
-            var marker = new TextBlock
-            {
-                Text = bullet,
-                FontSize = Fs(15),
-                // Match the paragraph's line box (LineHeight) and its top margin
-                // so the glyph sits on the first text line instead of floating
-                // above it.
-                LineHeight = Fs(24),
-                Margin = new Thickness(4, 6, 8, 0),
-                MinWidth = 18,
-                Foreground = new SolidColorBrush(Color.FromArgb(180, 128, 128, 128)),
-                VerticalAlignment = VerticalAlignment.Top,
-            };
-
-            var content = new StackPanel { Spacing = 2 };
-            foreach (var child in item)
-            {
-                var rendered = RenderBlock(child);
-                if (rendered is not null)
-                {
-                    content.Children.Add(rendered);
-                }
-            }
-
             var row = new Grid { ColumnDefinitions = ColumnDefinitions.Parse("Auto,*") };
+            var marker = CreateListMarker(bullet);
+            var content = BuildListItemContent(item);
             Grid.SetColumn(marker, 0);
             Grid.SetColumn(content, 1);
             row.Children.Add(marker);
@@ -260,6 +238,45 @@ internal static class MarkdownRenderer
         }
 
         return panel;
+    }
+
+    private static TextBlock CreateListMarker(string bullet)
+    {
+        return new TextBlock
+        {
+            Text = bullet,
+            FontSize = Fs(15),
+            // Match the paragraph's line box (LineHeight) so the glyph sits on
+            // the first text line instead of floating above it. The list strips
+            // per-item paragraph margins, so the small top nudge is all that's
+            // needed to optically center the dot.
+            LineHeight = Fs(24),
+            Margin = new Thickness(4, 2, 8, 0),
+            MinWidth = 18,
+            Foreground = new SolidColorBrush(Color.FromArgb(180, 128, 128, 128)),
+            VerticalAlignment = VerticalAlignment.Top,
+        };
+    }
+
+    private static StackPanel BuildListItemContent(ListItemBlock item)
+    {
+        var content = new StackPanel { Spacing = 2 };
+        foreach (var child in item)
+        {
+            var rendered = RenderBlock(child);
+            if (rendered is null)
+            {
+                continue;
+            }
+            // The list owns its inter-item gap via the panel Spacing; drop a
+            // direct text block's prose margins so items stay compact.
+            if (rendered is SelectableTextBlock tb)
+            {
+                tb.Margin = new Thickness(0);
+            }
+            content.Children.Add(rendered);
+        }
+        return content;
     }
 
     private static Control RenderThematicBreak()
