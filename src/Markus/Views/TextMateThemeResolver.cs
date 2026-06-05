@@ -29,7 +29,10 @@ internal static class TextMateThemeResolver
         if (string.Equals(Key, AutoKey, StringComparison.Ordinal))
         {
             var variant = Application.Current?.ActualThemeVariant;
-            return variant == ThemeVariant.Light ? ThemeName.LightPlus : ThemeName.DarkPlus;
+            // Calm, low-contrast palettes for both variants: QuietLight and the
+            // warm, muted KimbieDark, so markdown headings and links read as
+            // soft tones rather than the saturated defaults.
+            return variant == ThemeVariant.Light ? ThemeName.QuietLight : ThemeName.KimbieDark;
         }
         return Enum.TryParse<ThemeName>(Key, ignoreCase: false, out var parsed) ? parsed : ThemeName.DarkPlus;
     }

@@ -39,6 +39,20 @@ internal static class IconData
             "M10,18H3V13H10V18M10,11H3V6H10V11M11,11H21V6H11V11M11,18H21V13H11V18M9,17V14H4V17H9M9,10V7H4V10H9M12,17H20V14H12V17M12,10H20V7H12V10Z"
         );
 
+    // Side-by-side panes (editor | preview), a vertical divider.
+    public static StreamGeometry SplitVertical { get; } =
+        StreamGeometry.Parse("M3,3V21H21V3H3M5,5H11V19H5V5M13,5H19V19H13V5Z");
+
+    // Stacked panes (editor over preview), a horizontal divider.
+    public static StreamGeometry SplitHorizontal { get; } =
+        StreamGeometry.Parse("M3,3V21H21V3H3M5,5H19V11H5V5M5,13H19V19H5V13Z");
+
+    // Preview pops out to its own window (detached mode).
+    public static StreamGeometry OpenInNew { get; } =
+        StreamGeometry.Parse(
+            "M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"
+        );
+
     public static StreamGeometry Tune { get; } =
         StreamGeometry.Parse(
             "M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"

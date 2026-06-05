@@ -71,7 +71,7 @@
           </LinearGradientBrush>
           <BoxShadows x:Key="ToolbarShadow">0 1 2 0 #0A000000</BoxShadows>
           <SolidColorBrush x:Key="ToolbarSurface" Color="#00FFFFFF"/>
-          <SolidColorBrush x:Key="PlatterIcon" Color="#CC000000"/>
+          <SolidColorBrush x:Key="PlatterIcon" Color="#8A000000"/>
           <SolidColorBrush x:Key="PlatterLabel" Color="#1A1A1F"/>
         </ResourceDictionary>
 
@@ -121,7 +121,7 @@
           </LinearGradientBrush>
           <BoxShadows x:Key="ToolbarShadow">0 1 2 0 #14FFFFFF</BoxShadows>
           <SolidColorBrush x:Key="ToolbarSurface" Color="#00FFFFFF"/>
-          <SolidColorBrush x:Key="PlatterIcon" Color="#E6FFFFFF"/>
+          <SolidColorBrush x:Key="PlatterIcon" Color="#C2FFFFFF"/>
           <SolidColorBrush x:Key="PlatterLabel" Color="#F0F0F4"/>
         </ResourceDictionary>
 
