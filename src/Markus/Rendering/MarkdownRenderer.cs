@@ -126,7 +126,7 @@ internal static class MarkdownRenderer
             FontSize = Fs(size),
             FontWeight = FontWeight.SemiBold,
             Foreground = new SolidColorBrush(Theme.Foreground),
-            Margin = new Thickness(0, heading.Level == 1 ? 8 : 12, 0, 4),
+            Margin = new Thickness(0, heading.Level == 1 ? 3 : 6, 0, 2),
             TextWrapping = TextWrapping.Wrap,
             Tag = heading.TryGetAttributes()?.Id,
         };
@@ -139,10 +139,10 @@ internal static class MarkdownRenderer
         var block = new SelectableTextBlock
         {
             FontSize = Fs(15),
-            LineHeight = Fs(24),
+            LineHeight = Fs(22),
             Foreground = new SolidColorBrush(Theme.Foreground),
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 4, 0, 8),
+            Margin = new Thickness(0, 1, 0, 4),
         };
         FillInlines(block.Inlines!, paragraph.Inline);
         return block;
@@ -166,8 +166,8 @@ internal static class MarkdownRenderer
             BorderBrush = new SolidColorBrush(Theme.CodeBorder),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(16, 12),
-            Margin = new Thickness(0, 6, 0, 10),
+            Padding = new Thickness(12, 9),
+            Margin = new Thickness(0, 3, 0, 5),
             Child = new SelectableTextBlock
             {
                 Text = text,
@@ -195,15 +195,15 @@ internal static class MarkdownRenderer
         {
             BorderBrush = new SolidColorBrush(Theme.QuoteAccent),
             BorderThickness = new Thickness(3, 0, 0, 0),
-            Padding = new Thickness(14, 4, 0, 4),
-            Margin = new Thickness(0, 6, 0, 10),
+            Padding = new Thickness(11, 2, 0, 2),
+            Margin = new Thickness(0, 3, 0, 5),
             Child = panel,
         };
     }
 
     private static Control RenderList(ListBlock list)
     {
-        var panel = new StackPanel { Spacing = 6, Margin = new Thickness(0, 4, 0, 10) };
+        var panel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 2, 0, 5) };
         // Honor the source's starting number ("5. foo / 6. bar" should render
         // as 5, 6, ...) and its delimiter (period vs. paren). Falls back to 1.
         var index =
@@ -250,9 +250,9 @@ internal static class MarkdownRenderer
             // the first text line instead of floating above it. The list strips
             // per-item paragraph margins, so the small top nudge is all that's
             // needed to optically center the dot.
-            LineHeight = Fs(24),
-            Margin = new Thickness(4, 2, 8, 0),
-            MinWidth = 18,
+            LineHeight = Fs(22),
+            Margin = new Thickness(2, 2, 4, 0),
+            MinWidth = 12,
             Foreground = new SolidColorBrush(Color.FromArgb(180, 128, 128, 128)),
             VerticalAlignment = VerticalAlignment.Top,
         };
@@ -467,28 +467,36 @@ internal static class MarkdownRenderer
 
     private static InlineUIContainer MakeAnchorInline(string text, string anchorId)
     {
-        var tb = new TextBlock
-        {
-            Text = text,
-            TextDecorations = TextDecorations.Underline,
-            Foreground = new SolidColorBrush(Theme.Accent),
-            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
-        };
+        var tb = MakeLinkTextBlock(text);
         tb.PointerPressed += (_, _) => AnchorLinkClicked?.Invoke(null, new AnchorLinkEventArgs(anchorId));
         return new InlineUIContainer(tb);
     }
 
     private static InlineUIContainer MakeClickableInline(string text, string? url)
     {
-        var tb = new TextBlock
+        var tb = MakeLinkTextBlock(text);
+        tb.PointerPressed += (_, _) => OpenUrl(url);
+        return new InlineUIContainer(tb);
+    }
+
+    private static TextBlock MakeLinkTextBlock(string text)
+    {
+        return new TextBlock
         {
             Text = text,
+            // Match the body font so the link doesn't render at the default
+            // size, and share the paragraph's line box.
+            FontSize = Fs(15),
+            LineHeight = Fs(22),
             TextDecorations = TextDecorations.Underline,
             Foreground = new SolidColorBrush(Theme.Accent),
             Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+            // InlineUIContainer rests the child's box on the text baseline, which
+            // lifts the link above the line. Drop it by roughly the font's
+            // descent so the link baseline matches the surrounding text.
+            RenderTransform = new TranslateTransform(0, Fs(3)),
+            RenderTransformOrigin = RelativePoint.TopLeft,
         };
-        tb.PointerPressed += (_, _) => OpenUrl(url);
-        return new InlineUIContainer(tb);
     }
 
     private static InlineUIContainer BuildImage(LinkInline image)

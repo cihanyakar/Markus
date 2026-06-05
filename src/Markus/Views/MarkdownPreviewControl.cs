@@ -85,9 +85,9 @@ internal sealed class MarkdownPreviewControl : UserControl
         // window doesn't stretch paragraphs and code blocks edge-to-edge. The
         // side padding doubles as the minimum gutter once the window is
         // narrower than the column.
-        _bufferGrid.MaxWidth = 820;
+        _bufferGrid.MaxWidth = 1000;
         _bufferGrid.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
-        var wrapper = new Border { Padding = new Thickness(40, 28, 40, 40), Child = _bufferGrid };
+        var wrapper = new Border { Padding = new Thickness(22, 14, 30, 18), Child = _bufferGrid };
         Scroll = new ScrollViewer
         {
             Padding = new Thickness(0),

@@ -69,7 +69,7 @@ internal sealed class MarkdownTextEditor : TextEditor
         FontSize = 14;
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-        Padding = new Thickness(28, 24);
+        Padding = new Thickness(18, 14);
     }
 
     public string? BoundText
