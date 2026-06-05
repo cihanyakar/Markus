@@ -137,10 +137,10 @@
     <Style Selector="Button.tool, ToggleButton.tool">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="7"/>
-      <Setter Property="Padding" Value="9,5"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="Padding" Value="7,3"/>
       <Setter Property="Margin" Value="1,0"/>
-      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="MinHeight" Value="22"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
       <Setter Property="Transitions">
         <Transitions>
@@ -161,15 +161,15 @@
       <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
     </Style>
     <Style Selector="Button.tool PathIcon, ToggleButton.tool PathIcon">
-      <Setter Property="Width" Value="15"/>
-      <Setter Property="Height" Value="15"/>
+      <Setter Property="Width" Value="13"/>
+      <Setter Property="Height" Value="13"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterIcon}"/>
     </Style>
     <Style Selector="ToggleButton.tool:checked PathIcon">
       <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
     </Style>
     <Style Selector="Button.tool TextBlock, ToggleButton.tool TextBlock">
-      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontSize" Value="11"/>
       <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
     </Style>
@@ -185,12 +185,12 @@
     <Style Selector="Border.toolbar">
       <Setter Property="Background" Value="{DynamicResource ToolbarSurface}"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="16,8"/>
+      <Setter Property="Padding" Value="8,3"/>
       <Setter Property="BoxShadow" Value="{DynamicResource ToolbarShadow}"/>
     </Style>
     <Style Selector="Border.statusbar">
       <Setter Property="BorderThickness" Value="0,1,0,0"/>
-      <Setter Property="Padding" Value="20,8"/>
+      <Setter Property="Padding" Value="10,3"/>
     </Style>
     <Style Selector="Border.sidebar">
       <Setter Property="BorderThickness" Value="1,0,0,0"/>
@@ -213,20 +213,57 @@
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
 
-    <!-- ComboBox: a flat popup-button with a subtle border for affordance -->
-    <Style Selector="ComboBox.glass">
+    <!-- ============ Segmented view-mode control ============ -->
+    <!-- A grouped pill track holding RadioButton segments; the active segment
+         lifts to a raised pill with an accent label, like a native segmented
+         control. -->
+    <Style Selector="Border.segmented">
       <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
-      <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="7"/>
-      <Setter Property="MinHeight" Value="28"/>
-      <Setter Property="Padding" Value="11,4"/>
-      <Setter Property="FontSize" Value="12"/>
-      <Setter Property="FontWeight" Value="Medium"/>
-      <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
+      <Setter Property="Padding" Value="2"/>
     </Style>
-    <Style Selector="ComboBox.glass:pointerover /template/ Border#Background">
-      <Setter Property="Background" Value="{DynamicResource GlassPressed}"/>
+    <Style Selector="RadioButton.segment">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{DynamicResource PlatterLabel}"/>
+      <Setter Property="CornerRadius" Value="5"/>
+      <Setter Property="Padding" Value="9,3"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="seg"
+                  Background="{TemplateBinding Background}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.12"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="RadioButton.segment:pointerover /template/ Border#seg">
+      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
+    </Style>
+    <Style Selector="RadioButton.segment:checked /template/ Border#seg">
+      <Setter Property="Background" Value="{DynamicResource PlatterPressedBg}"/>
+    </Style>
+    <Style Selector="RadioButton.segment:checked">
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="RadioButton.segment PathIcon">
+      <Setter Property="Width" Value="14"/>
+      <Setter Property="Height" Value="14"/>
+      <Setter Property="Foreground" Value="{DynamicResource PlatterIcon}"/>
+    </Style>
+    <Style Selector="RadioButton.segment:checked PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
     </Style>
 
     <!-- GridSplitter slim hairline -->
@@ -285,19 +322,19 @@
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <Border Name="WindowControlsInset" Width="0"/>
             <Button Classes="tool" Click="Open_Click">
-              <StackPanel Orientation="Horizontal" Spacing="7">
+              <StackPanel Orientation="Horizontal" Spacing="5">
                 <PathIcon Data="{x:Static views:IconData.Folder}"/>
                 <TextBlock Text="Open" VerticalAlignment="Center"/>
               </StackPanel>
             </Button>
             <Button Classes="tool" Command="{Binding SaveCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="7">
+              <StackPanel Orientation="Horizontal" Spacing="5">
                 <PathIcon Data="{x:Static views:IconData.ContentSave}"/>
                 <TextBlock Text="Save" VerticalAlignment="Center"/>
               </StackPanel>
             </Button>
             <Button Classes="tool" Command="{Binding ReloadCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="7">
+              <StackPanel Orientation="Horizontal" Spacing="5">
                 <PathIcon Data="{x:Static views:IconData.Refresh}"/>
                 <TextBlock Text="Reload" VerticalAlignment="Center"/>
               </StackPanel>
@@ -308,27 +345,65 @@
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <ToggleButton Classes="tool" IsChecked="{Binding IsScrollLocked}"
                           ToolTip.Tip="Sync scroll source ↔ preview (Scroll Lock / ⌘⇧L)">
-              <StackPanel Orientation="Horizontal" Spacing="7">
+              <StackPanel Orientation="Horizontal" Spacing="5">
                 <PathIcon Data="{x:Static views:IconData.Lock}"/>
                 <TextBlock Text="Sync" VerticalAlignment="Center"/>
               </StackPanel>
             </ToggleButton>
             <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
-              <StackPanel Orientation="Horizontal" Spacing="7">
+              <StackPanel Orientation="Horizontal" Spacing="5">
                 <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
                 <TextBlock Text="Outline" VerticalAlignment="Center"/>
               </StackPanel>
             </ToggleButton>
 
-            <ComboBox Classes="glass"
-                      Margin="6,0,0,0"
-                      SelectedItem="{Binding CurrentViewMode}"
-                      ItemsSource="{x:Static vm:SettingsViewModel.AvailableViewModes}"
-                      MinWidth="148"
-                      ToolTip.Tip="View mode"/>
+            <!-- View mode: (Source | Preview) + (Split V | Split H) segments -->
+            <Border Classes="segmented" Margin="6,0,0,0">
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <RadioButton Classes="segment" GroupName="viewmode"
+                             Content="Source"
+                             ToolTip.Tip="Source only (⌘1)"
+                             IsChecked="{Binding IsSourceOnly, Mode=OneWay}"
+                             Command="{Binding SetViewModeCommand}"
+                             CommandParameter="{x:Static models:ViewMode.Source}"/>
+                <RadioButton Classes="segment" GroupName="viewmode"
+                             Content="Preview"
+                             ToolTip.Tip="Preview only (⌘2)"
+                             IsChecked="{Binding IsPreviewOnly, Mode=OneWay}"
+                             Command="{Binding SetViewModeCommand}"
+                             CommandParameter="{x:Static models:ViewMode.Preview}"/>
+              </StackPanel>
+            </Border>
+            <Border Classes="segmented" Margin="4,0,0,0">
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <RadioButton Classes="segment" GroupName="viewmode"
+                             ToolTip.Tip="Split vertical (⌘3)"
+                             IsChecked="{Binding IsSplitVerticalActive, Mode=OneWay}"
+                             Command="{Binding SetViewModeCommand}"
+                             CommandParameter="{x:Static models:ViewMode.SplitVertical}">
+                  <PathIcon Data="{x:Static views:IconData.SplitVertical}"/>
+                </RadioButton>
+                <RadioButton Classes="segment" GroupName="viewmode"
+                             ToolTip.Tip="Split horizontal (⌘4)"
+                             IsChecked="{Binding IsSplitHorizontalActive, Mode=OneWay}"
+                             Command="{Binding SetViewModeCommand}"
+                             CommandParameter="{x:Static models:ViewMode.SplitHorizontal}">
+                  <PathIcon Data="{x:Static views:IconData.SplitHorizontal}"/>
+                </RadioButton>
+              </StackPanel>
+            </Border>
+            <Border Classes="segmented" Margin="4,0,0,0">
+              <RadioButton Classes="segment" GroupName="viewmode"
+                           ToolTip.Tip="Detached preview (⌘5)"
+                           IsChecked="{Binding IsDetachedActive, Mode=OneWay}"
+                           Command="{Binding SetViewModeCommand}"
+                           CommandParameter="{x:Static models:ViewMode.Detached}">
+                <PathIcon Data="{x:Static views:IconData.OpenInNew}"/>
+              </RadioButton>
+            </Border>
 
-            <Button Classes="tool" Margin="2,0,0,0" Click="Settings_Click">
-              <StackPanel Orientation="Horizontal" Spacing="7">
+            <Button Classes="tool" Margin="6,0,0,0" Click="Settings_Click">
+              <StackPanel Orientation="Horizontal" Spacing="5">
                 <PathIcon Data="{x:Static views:IconData.Settings}"/>
                 <TextBlock Text="Settings" VerticalAlignment="Center"/>
               </StackPanel>

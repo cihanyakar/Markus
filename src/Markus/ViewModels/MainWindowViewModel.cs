@@ -28,6 +28,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsPreviewOnly))]
     [NotifyPropertyChangedFor(nameof(IsSplitVerticalActive))]
     [NotifyPropertyChangedFor(nameof(IsSplitHorizontalActive))]
+    [NotifyPropertyChangedFor(nameof(IsDetachedActive))]
     [NotifyPropertyChangedFor(nameof(IsSourceVisibleInMain))]
     private ViewMode _currentViewMode;
 
@@ -163,6 +164,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     public bool IsSplitVerticalActive => CurrentViewMode is ViewMode.SplitVertical;
 
     public bool IsSplitHorizontalActive => CurrentViewMode is ViewMode.SplitHorizontal;
+
+    public bool IsDetachedActive => CurrentViewMode is ViewMode.Detached;
 
     // In detached mode the main window keeps showing the source (the preview
     // floats out into its own window). Source-only obviously stays visible too.
