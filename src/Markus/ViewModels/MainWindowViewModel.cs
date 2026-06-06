@@ -102,6 +102,14 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private bool _isScratchBuffer;
 
+    // True for a brief grace period at launch on macOS, where a double-clicked
+    // document is delivered via an AppleEvent that lands just after the window
+    // is shown. Suppressing the welcome screen during that window keeps the
+    // incoming document from flashing past an empty welcome render.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
+    private bool _isAwaitingInitialDocument;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DocumentStats))]
     private string _lastModifiedText = string.Empty;
@@ -194,7 +202,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // Welcome view shows while the user has neither opened a file nor typed
     // into the placeholder. Disappears the moment a document is loaded or
     // scratch buffer is started.
-    public bool IsWelcomeVisible => string.IsNullOrEmpty(CurrentFilePath) && !IsScratchBuffer;
+    public bool IsWelcomeVisible =>
+        string.IsNullOrEmpty(CurrentFilePath) && !IsScratchBuffer && !IsAwaitingInitialDocument;
 
     public async Task LoadFileAsync(string path, CancellationToken ct = default)
     {
