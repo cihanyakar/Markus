@@ -14,7 +14,21 @@ internal static class Sha256Verifier
 
     public static bool Matches(string expectedHex, byte[] fileBytes)
     {
-        return string.Equals(expectedHex.Trim(), ComputeHex(fileBytes), StringComparison.OrdinalIgnoreCase);
+        // Decode the expected digest and compare against the computed hash in
+        // constant time, avoiding the computed-hash hex-string allocation (and
+        // the timing side channel of an ordinal string comparison).
+        byte[] expected;
+        try
+        {
+            expected = Convert.FromHexString(expectedHex.AsSpan().Trim());
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        Span<byte> actual = stackalloc byte[32];
+        SHA256.HashData(fileBytes, actual);
+        return expected.Length == actual.Length && CryptographicOperations.FixedTimeEquals(actual, expected);
     }
 
     // Sidecar files written by the release workflow look like
