@@ -51,6 +51,7 @@ internal sealed partial class App : Application
             FileOpenRouter.OpenInitial(vm, desktop.Args);
             FileOpenRouter.MaybeRestoreSession(vm, settings, isSpawnedChild);
             Views.Platform.MacosAppleEventHandler.Register(path => FileOpenRouter.OpenSingle(vm, path));
+            FileOpenRouter.BeginAwaitInitialDocument(vm);
             if (
                 Services.Updates.UpdatePolicy.ShouldAutoCheck(
                     settings.CheckForUpdatesOnLaunch,
@@ -97,6 +98,22 @@ internal static class FileOpenRouter
         }
         _hasInitialDoc = true;
         Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
+    }
+
+    // A Finder double-click (or an "Open With" spawn) delivers its document
+    // through an AppleEvent that lands just after the window is shown, not via
+    // argv. Without this, the window paints the welcome screen first and the
+    // document flashes in a beat later. Hide the welcome for a short grace
+    // period so the incoming document takes its place with no empty render. If
+    // no document arrives (a plain Dock launch), the welcome is revealed.
+    public static void BeginAwaitInitialDocument(MainWindowViewModel vm)
+    {
+        if (!OperatingSystem.IsMacOS() || _hasInitialDoc)
+        {
+            return;
+        }
+        vm.IsAwaitingInitialDocument = true;
+        DispatcherTimer.RunOnce(() => vm.IsAwaitingInitialDocument = false, TimeSpan.FromMilliseconds(350));
     }
 
     public static bool ConsumeInitialDocSlot()
@@ -320,6 +337,9 @@ internal static class FileOpenRouter
         CancellationToken ct
     )
     {
+        // A document is on its way in; drop the welcome-suppression grace flag
+        // so the loaded content (not the welcome screen) is what appears.
+        vm.IsAwaitingInitialDocument = false;
         try
         {
             await vm.LoadFileAsync(path, ct);

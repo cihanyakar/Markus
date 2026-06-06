@@ -113,14 +113,14 @@ internal sealed class MermaidControl : ContentControl, IDisposable
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (svg is not null)
+                // Re-check on the UI thread: a detach (which deletes the temp
+                // file and won't run again) may have happened after the guard
+                // above, and building here would write a temp file that leaks.
+                if (ct.IsCancellationRequested)
                 {
-                    Content = BuildSvgDiagram(svg, userScale);
+                    return;
                 }
-                else
-                {
-                    Content = BuildErrorState();
-                }
+                Content = svg is not null ? BuildSvgDiagram(svg, userScale) : BuildErrorState();
             });
         }
         catch (OperationCanceledException)

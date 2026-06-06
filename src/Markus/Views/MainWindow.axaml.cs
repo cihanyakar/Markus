@@ -30,6 +30,10 @@ internal sealed partial class MainWindow : Window
     // programmatic Close() pass runs the real shutdown instead of re-prompting.
     private bool _forceClose;
 
+    // True while we close the detached preview ourselves (on a view-mode switch)
+    // so its Closed handler doesn't mistake it for the user closing the window.
+    private bool _closingPreviewProgrammatically;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -836,6 +840,12 @@ internal sealed partial class MainWindow : Window
         // has loaded. Loaded priority runs after layout so the editor's
         // ScrollViewer has its viewport sized.
         Avalonia.Threading.Dispatcher.UIThread.Post(RestoreSessionScroll, Avalonia.Threading.DispatcherPriority.Loaded);
+        // Now that the main window is visible, open the detached preview if the
+        // app launched directly in Detached mode (deferred from DataContextChanged).
+        if (DataContext is MainWindowViewModel vm)
+        {
+            UpdateDetachedWindows(vm);
+        }
     }
 
     private void RestoreSessionScroll()
@@ -937,8 +947,14 @@ internal sealed partial class MainWindow : Window
             // Images dropped onto the editor copy into <doc>/assets/ and a
             // Markdown image reference is inserted at the caret. Anything else
             // falls back to the existing "open as document" flow.
-            if (IsImageExtension(path) && TryInsertImageAtCaret(vm, path))
+            if (IsImageExtension(path))
             {
+                // Never open an image as a Markdown document (binary garbage).
+                // If there is no editor to insert into, tell the user instead.
+                if (!TryInsertImageAtCaret(vm, path))
+                {
+                    SetStatus("Open a document and show the editor to drop an image into it");
+                }
                 return;
             }
             await vm.LoadFileAsync(path);
@@ -1140,14 +1156,51 @@ internal sealed partial class MainWindow : Window
         {
             return;
         }
+        // Show(owner) throws if the owner isn't visible yet. When the app starts
+        // directly in Detached mode this runs from DataContextChanged before the
+        // main window is shown, so defer; OnWindowOpened reopens once visible.
+        if (!IsVisible)
+        {
+            return;
+        }
         _previewWindow = new DetachedPreviewWindow { DataContext = vm };
-        _previewWindow.Closed += (_, _) => _previewWindow = null;
+        _previewWindow.Closed += OnDetachedPreviewClosed;
         _previewWindow.Show(this);
+    }
+
+    private void OnDetachedPreviewClosed(object? sender, EventArgs e)
+    {
+        _previewWindow = null;
+        // If the user closed the floating preview themselves, leave Detached
+        // mode (otherwise CurrentViewMode stays Detached, the toolbar still
+        // shows it active, and re-selecting it can't reopen the window because
+        // the value never changes). A programmatic close from a mode switch
+        // already set the new mode, so skip it.
+        if (_closingPreviewProgrammatically)
+        {
+            return;
+        }
+        if (DataContext is MainWindowViewModel vm && vm.CurrentViewMode == Markus.Models.ViewMode.Detached)
+        {
+            vm.CurrentViewMode = Markus.Models.ViewMode.Preview;
+        }
     }
 
     private void CloseDetachedWindows()
     {
-        _previewWindow?.Close();
+        if (_previewWindow is null)
+        {
+            return;
+        }
+        _closingPreviewProgrammatically = true;
+        try
+        {
+            _previewWindow.Close();
+        }
+        finally
+        {
+            _closingPreviewProgrammatically = false;
+        }
     }
 
     private async void Open_Click(object? sender, RoutedEventArgs e)
@@ -1271,6 +1324,8 @@ internal sealed partial class MainWindow : Window
             vm.FindRequested -= OnFindRequested;
             vm.FindNextRequested -= OnFindNextRequested;
             vm.FindPreviousRequested -= OnFindPreviousRequested;
+            vm.PreviewInvalidated -= OnPreviewInvalidated;
+            Services.ServiceLocator.Keys.Changed -= OnKeyBindingsChanged;
             vm.Dispose();
         }
         catch (Exception ex)

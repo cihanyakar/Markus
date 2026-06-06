@@ -109,12 +109,10 @@ internal sealed class MarkdownPreviewControl : UserControl
         _debounceTimer.Tick += OnDebounceElapsed;
         _forceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ForceMs) };
         _forceTimer.Tick += OnForceElapsed;
-        MarkdownRenderer.AnchorLinkClicked += OnAnchorLinkClicked;
         DetachedFromVisualTree += (_, _) =>
         {
             _debounceTimer.Stop();
             _forceTimer.Stop();
-            MarkdownRenderer.AnchorLinkClicked -= OnAnchorLinkClicked;
         };
     }
 
@@ -274,6 +272,21 @@ internal sealed class MarkdownPreviewControl : UserControl
         }
     }
 
+    // Brings the block tagged with the given heading id into view. Called by the
+    // renderer when an in-document anchor link is clicked, scoped to this
+    // preview instance so split-view panes don't all scroll together.
+    internal void ScrollToAnchor(string anchorId)
+    {
+        foreach (var child in ActivePanel.Children)
+        {
+            if (child is Control c && c.Tag is string id && string.Equals(id, anchorId, StringComparison.Ordinal))
+            {
+                c.BringIntoView();
+                return;
+            }
+        }
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -335,23 +348,6 @@ internal sealed class MarkdownPreviewControl : UserControl
             bestLine = pair.Key;
         }
         return bestLine < 0 ? null : bestLine;
-    }
-
-    private void OnAnchorLinkClicked(object? sender, AnchorLinkEventArgs e)
-    {
-        ScrollToAnchor(e.AnchorId);
-    }
-
-    private void ScrollToAnchor(string anchorId)
-    {
-        foreach (var child in ActivePanel.Children)
-        {
-            if (child is Control c && c.Tag is string id && string.Equals(id, anchorId, StringComparison.Ordinal))
-            {
-                c.BringIntoView();
-                return;
-            }
-        }
     }
 
     private void ApplySearchOnActive()

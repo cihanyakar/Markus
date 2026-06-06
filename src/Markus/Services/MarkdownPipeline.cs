@@ -19,7 +19,10 @@ internal static class MarkdownPipeline
             .UseYamlFrontMatter()
             .UseAutoLinks()
             .UseTaskLists()
-            .UseEmojiAndSmiley()
+            // Smileys off: the ASCII smiley parser turns ordinary punctuation
+            // into emoji (e.g. the `:*` inside `**bold:**` becomes a kiss face
+            // and breaks the emphasis). Keep `:shortcode:` emoji, drop smileys.
+            .UseEmojiAndSmiley(false)
             .UseMathematics()
             .Build();
     }

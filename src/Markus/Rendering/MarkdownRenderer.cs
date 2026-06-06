@@ -12,15 +12,8 @@ using Markdig.Syntax.Inlines;
 
 namespace Markus.Rendering;
 
-internal sealed class AnchorLinkEventArgs(string anchorId) : EventArgs
-{
-    public string AnchorId { get; } = anchorId;
-}
-
 internal static class MarkdownRenderer
 {
-    public static event EventHandler<AnchorLinkEventArgs>? AnchorLinkClicked;
-
     public static FontFamily MonoFamily { get; set; } =
         new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
 
@@ -121,7 +114,7 @@ internal static class MarkdownRenderer
             _ => 14.0,
         };
 
-        var block = new SelectableTextBlock
+        var block = new Markus.Views.LinkInlineTextBlock
         {
             FontSize = Fs(size),
             FontWeight = FontWeight.SemiBold,
@@ -130,13 +123,15 @@ internal static class MarkdownRenderer
             TextWrapping = TextWrapping.Wrap,
             Tag = heading.TryGetAttributes()?.Id,
         };
-        FillInlines(block.Inlines!, heading.Inline);
+        var ctx = new InlineContext();
+        FillInlines(block.Inlines!, heading.Inline, ctx);
+        AttachLinks(block, ctx);
         return block;
     }
 
     private static Control RenderParagraph(ParagraphBlock paragraph)
     {
-        var block = new SelectableTextBlock
+        var block = new Markus.Views.LinkInlineTextBlock
         {
             FontSize = Fs(15),
             LineHeight = Fs(22),
@@ -144,7 +139,9 @@ internal static class MarkdownRenderer
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 1, 0, 4),
         };
-        FillInlines(block.Inlines!, paragraph.Inline);
+        var ctx = new InlineContext();
+        FillInlines(block.Inlines!, paragraph.Inline, ctx);
+        AttachLinks(block, ctx);
         return block;
     }
 
@@ -372,7 +369,7 @@ internal static class MarkdownRenderer
         };
     }
 
-    private static void FillInlines(InlineCollection target, ContainerInline? source)
+    private static void FillInlines(InlineCollection target, ContainerInline? source, InlineContext ctx)
     {
         if (source is null)
         {
@@ -381,61 +378,199 @@ internal static class MarkdownRenderer
 
         foreach (var inline in source)
         {
-            AppendInline(target, inline);
+            AppendInline(target, inline, ctx);
         }
     }
 
-    private static void AppendInline(InlineCollection target, Markdig.Syntax.Inlines.Inline inline)
+    private static void AppendInline(InlineCollection target, Markdig.Syntax.Inlines.Inline inline, InlineContext ctx)
     {
         switch (inline)
         {
             case LiteralInline lit:
-                target.Add(new Run(lit.Content.ToString()));
+                AppendText(target, lit.Content.ToString(), ctx);
                 return;
             case EmphasisInline em:
-                target.Add(BuildEmphasis(em));
+                target.Add(BuildEmphasis(em, ctx));
                 return;
             case CodeInline code:
                 target.Add(BuildInlineCode(code));
+                ctx.Offset += code.Content.Length;
                 return;
             case LinkInline link when link.IsImage:
                 target.Add(BuildImage(link));
+                ctx.Offset += 1;
                 return;
             case LinkInline link:
-                target.Add(BuildLink(link));
+                AppendLink(target, link, ctx);
+                return;
+            case LineBreakInline hardBreak when hardBreak.IsHard:
+                target.Add(new LineBreak());
+                ctx.Offset += 1;
                 return;
             case LineBreakInline:
-                target.Add(new LineBreak());
+                // A soft break is whitespace: render it as a space so the source
+                // lines flow and wrap, instead of forcing a hard line break.
+                AppendText(target, " ", ctx);
                 return;
             case TaskList task:
-                target.Add(new Run(task.Checked ? "☑ " : "☐ "));
+                AppendText(target, task.Checked ? "☑ " : "☐ ", ctx);
                 return;
             case AutolinkInline auto:
-                target.Add(BuildAutoLink(auto));
+                AppendLinkRun(target, auto.Url, auto.Url, isAnchor: false, ctx);
+                return;
+            case HtmlEntityInline entity:
+                // Decode &copy; / &amp; / &#42; to their characters rather than
+                // falling through to the default, which prints the type name.
+                AppendText(target, entity.Transcoded.ToString(), ctx);
                 return;
             case HtmlInline raw:
-                target.Add(new Run(raw.Tag));
+                AppendText(target, raw.Tag, ctx);
                 return;
             case MathInline math:
                 target.Add(BuildInlineMath(math));
+                ctx.Offset += 1;
                 return;
             default:
-                target.Add(new Run(inline.ToString() ?? string.Empty));
+                AppendText(target, inline.ToString() ?? string.Empty, ctx);
                 return;
         }
     }
 
-    private static Span BuildEmphasis(EmphasisInline em)
+    private static void AppendText(InlineCollection target, string text, InlineContext ctx)
+    {
+        // Emit emoji clusters in their own runs so a following space is shaped in
+        // the body font, not the wide emoji font (which otherwise leaves a large
+        // gap after the emoji). The total text length is unchanged, so the link
+        // offsets recorded elsewhere still line up.
+        if (text.Length > 0)
+        {
+            var sb = new System.Text.StringBuilder();
+            bool? segmentEmoji = null;
+            var clusters = System.Globalization.StringInfo.GetTextElementEnumerator(text);
+            while (clusters.MoveNext())
+            {
+                var cluster = (string)clusters.Current;
+                var clusterEmoji = IsEmojiCluster(cluster);
+                if (segmentEmoji is { } prev && prev != clusterEmoji && sb.Length > 0)
+                {
+                    target.Add(new Run(sb.ToString()));
+                    sb.Clear();
+                }
+                segmentEmoji = clusterEmoji;
+                sb.Append(cluster);
+            }
+            if (sb.Length > 0)
+            {
+                target.Add(new Run(sb.ToString()));
+            }
+        }
+        ctx.Offset += text.Length;
+    }
+
+    private static bool IsEmojiCluster(string cluster)
+    {
+        if (cluster.Length == 0)
+        {
+            return false;
+        }
+        // The base scalar carries the emoji identity; ZWJ/skin-tone/selector
+        // continuations live in the same grapheme cluster. A trailing U+FE0F
+        // also forces emoji presentation onto an otherwise text symbol.
+        var first =
+            char.IsHighSurrogate(cluster[0]) && cluster.Length > 1
+                ? char.ConvertToUtf32(cluster[0], cluster[1])
+                : cluster[0];
+        return IsEmojiScalar(first) || cluster.Contains('\uFE0F');
+    }
+
+    private static bool IsEmojiScalar(int v)
+    {
+        return v
+            is >= 0x1F000
+                and <= 0x1FAFF
+                or >= 0x2600
+                and <= 0x27BF
+                or >= 0x2B00
+                and <= 0x2BFF
+                or >= 0x2300
+                and <= 0x23FF;
+    }
+
+    private static void AppendLink(InlineCollection target, LinkInline link, InlineContext ctx)
+    {
+        var isAnchor = link.Url is { } url && url.StartsWith('#');
+        var dest = isAnchor ? link.Url![1..] : link.Url ?? string.Empty;
+        // Render the link's own children (which may be bold, code, multiple
+        // parts) inside an accent + underline span, instead of flattening to the
+        // first literal (which dropped formatted/multi-part text or fell back to
+        // the raw URL). The recorded range spans all of them for click hit-testing.
+        var start = ctx.Offset;
+        var span = new Span
+        {
+            Foreground = new SolidColorBrush(Theme.Accent),
+            TextDecorations = TextDecorations.Underline,
+        };
+        FillInlines(span.Inlines, link, ctx);
+        if (ctx.Offset == start)
+        {
+            // Empty link text: show the destination so the link is still visible.
+            var fallback = link.Url ?? string.Empty;
+            span.Inlines.Add(new Run(fallback));
+            ctx.Offset += fallback.Length;
+        }
+        target.Add(span);
+        ctx.Links.Add(new Markus.Views.LinkInlineTextBlock.LinkRange(start, ctx.Offset - start, dest, isAnchor));
+    }
+
+    // Links are plain runs (styled, not embedded controls) so they share the
+    // surrounding text's baseline. The character range is recorded so the
+    // owning LinkInlineTextBlock can resolve clicks by hit-testing the layout.
+    private static void AppendLinkRun(
+        InlineCollection target,
+        string label,
+        string dest,
+        bool isAnchor,
+        InlineContext ctx
+    )
+    {
+        target.Add(
+            new Run(label)
+            {
+                Foreground = new SolidColorBrush(Theme.Accent),
+                TextDecorations = TextDecorations.Underline,
+            }
+        );
+        ctx.Links.Add(new Markus.Views.LinkInlineTextBlock.LinkRange(ctx.Offset, label.Length, dest, isAnchor));
+        ctx.Offset += label.Length;
+    }
+
+    private static void AttachLinks(Markus.Views.LinkInlineTextBlock block, InlineContext ctx)
+    {
+        if (ctx.Links.Count == 0)
+        {
+            return;
+        }
+        block.SetLinks(ctx.Links);
+        // Scroll only the preview that owns the clicked link, not every preview
+        // (split view shows two), by walking up to the containing control.
+        block.AnchorActivated = id =>
+            Avalonia
+                .VisualTree.VisualExtensions.FindAncestorOfType<Markus.Views.MarkdownPreviewControl>(block)
+                ?.ScrollToAnchor(id);
+        block.UrlActivated = url => OpenUrl(url);
+    }
+
+    private static Span BuildEmphasis(EmphasisInline em, InlineContext ctx)
     {
         var span = new Span();
         if (em.DelimiterCount >= 2)
         {
             span.FontWeight = FontWeight.Bold;
-            FillInlines(span.Inlines, em);
+            FillInlines(span.Inlines, em, ctx);
             return span;
         }
         span.FontStyle = FontStyle.Italic;
-        FillInlines(span.Inlines, em);
+        FillInlines(span.Inlines, em, ctx);
         return span;
     }
 
@@ -447,55 +582,6 @@ internal static class MarkdownRenderer
             FontSize = 13,
             Foreground = new SolidColorBrush(Theme.CodeForeground),
             Background = new SolidColorBrush(Theme.CodeBackground),
-        };
-    }
-
-    private static InlineUIContainer BuildLink(LinkInline link)
-    {
-        var label = link.FirstChild is LiteralInline first ? first.Content.ToString() : link.Url;
-        if (link.Url is { } url && url.StartsWith('#'))
-        {
-            return MakeAnchorInline(label ?? string.Empty, url[1..]);
-        }
-        return MakeClickableInline(label ?? string.Empty, link.Url);
-    }
-
-    private static InlineUIContainer BuildAutoLink(AutolinkInline auto)
-    {
-        return MakeClickableInline(auto.Url, auto.Url);
-    }
-
-    private static InlineUIContainer MakeAnchorInline(string text, string anchorId)
-    {
-        var tb = MakeLinkTextBlock(text);
-        tb.PointerPressed += (_, _) => AnchorLinkClicked?.Invoke(null, new AnchorLinkEventArgs(anchorId));
-        return new InlineUIContainer(tb);
-    }
-
-    private static InlineUIContainer MakeClickableInline(string text, string? url)
-    {
-        var tb = MakeLinkTextBlock(text);
-        tb.PointerPressed += (_, _) => OpenUrl(url);
-        return new InlineUIContainer(tb);
-    }
-
-    private static TextBlock MakeLinkTextBlock(string text)
-    {
-        return new TextBlock
-        {
-            Text = text,
-            // Match the body font so the link doesn't render at the default
-            // size, and share the paragraph's line box.
-            FontSize = Fs(15),
-            LineHeight = Fs(22),
-            TextDecorations = TextDecorations.Underline,
-            Foreground = new SolidColorBrush(Theme.Accent),
-            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
-            // InlineUIContainer rests the child's box on the text baseline, which
-            // lifts the link above the line. Drop it by roughly the font's
-            // descent so the link baseline matches the surrounding text.
-            RenderTransform = new TranslateTransform(0, Fs(3)),
-            RenderTransformOrigin = RelativePoint.TopLeft,
         };
     }
 
@@ -629,5 +715,15 @@ internal static class MarkdownRenderer
     private static double Fs(double size)
     {
         return size * BaseFontSize / 16.0;
+    }
+
+    // Accumulates inline-fill state for one text block: the running character
+    // offset (so link ranges line up with the rendered TextLayout) and the
+    // links discovered while walking the inlines.
+    private sealed class InlineContext
+    {
+        public int Offset { get; set; }
+
+        public List<Markus.Views.LinkInlineTextBlock.LinkRange> Links { get; } = new();
     }
 }

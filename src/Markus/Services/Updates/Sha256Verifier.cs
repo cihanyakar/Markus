@@ -30,6 +30,18 @@ internal static class Sha256Verifier
         var tokens = sidecarContent
             .Trim()
             .Split(Whitespace, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return tokens.Length == 0 ? null : tokens[0];
+        if (tokens.Length == 0)
+        {
+            return null;
+        }
+        // Only accept a real 64-char hex digest. A soft error page or malformed
+        // sidecar would otherwise be taken as the "expected" hash and reject a
+        // perfectly good download.
+        return IsSha256Hex(tokens[0]) ? tokens[0] : null;
+    }
+
+    private static bool IsSha256Hex(string value)
+    {
+        return value.Length == 64 && value.All(Uri.IsHexDigit);
     }
 }
