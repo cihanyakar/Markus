@@ -403,15 +403,25 @@ internal static class MarkdownRenderer
             case LinkInline link:
                 AppendLink(target, link, ctx);
                 return;
-            case LineBreakInline:
+            case LineBreakInline hardBreak when hardBreak.IsHard:
                 target.Add(new LineBreak());
                 ctx.Offset += 1;
+                return;
+            case LineBreakInline:
+                // A soft break is whitespace: render it as a space so the source
+                // lines flow and wrap, instead of forcing a hard line break.
+                AppendText(target, " ", ctx);
                 return;
             case TaskList task:
                 AppendText(target, task.Checked ? "☑ " : "☐ ", ctx);
                 return;
             case AutolinkInline auto:
                 AppendLinkRun(target, auto.Url, auto.Url, isAnchor: false, ctx);
+                return;
+            case HtmlEntityInline entity:
+                // Decode &copy; / &amp; / &#42; to their characters rather than
+                // falling through to the default, which prints the type name.
+                AppendText(target, entity.Transcoded.ToString(), ctx);
                 return;
             case HtmlInline raw:
                 AppendText(target, raw.Tag, ctx);
