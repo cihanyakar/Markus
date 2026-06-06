@@ -14,6 +14,10 @@ namespace Markus.Rendering;
 
 internal static class MarkdownRenderer
 {
+    private static readonly FontFamily EmojiFamily = new FontFamily(
+        "Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji"
+    );
+
     public static FontFamily MonoFamily { get; set; } =
         new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
 
@@ -313,12 +317,12 @@ internal static class MarkdownRenderer
             return new SelectableTextBlock { Text = "(empty table)" };
         }
 
-        var grid = BuildTableGrid(rows);
+        var grid = BuildTableGrid(rows, table.ColumnDefinitions);
         grid.Margin = new Thickness(0, 6, 0, 10);
         return grid;
     }
 
-    private static Grid BuildTableGrid(List<TableRow> rows)
+    private static Grid BuildTableGrid(List<TableRow> rows, List<TableColumnDefinition> columns)
     {
         var grid = new Grid();
         var columnCount = rows.Max(r => r.Count);
@@ -335,7 +339,7 @@ internal static class MarkdownRenderer
         {
             for (int c = 0; c < rows[r].Count; c++)
             {
-                var cellBorder = RenderTableCell(rows[r][c] as TableCell);
+                var cellBorder = RenderTableCell(rows[r][c] as TableCell, ColumnAlignment(columns, c));
                 Grid.SetRow(cellBorder, r);
                 Grid.SetColumn(cellBorder, c);
                 grid.Children.Add(cellBorder);
@@ -345,18 +349,43 @@ internal static class MarkdownRenderer
         return grid;
     }
 
-    private static Border RenderTableCell(TableCell? cell)
+    private static HorizontalAlignment ColumnAlignment(List<TableColumnDefinition> columns, int column)
     {
-        var cellPanel = new StackPanel();
+        if (column >= columns.Count)
+        {
+            return HorizontalAlignment.Left;
+        }
+        return columns[column].Alignment switch
+        {
+            TableColumnAlign.Center => HorizontalAlignment.Center,
+            TableColumnAlign.Right => HorizontalAlignment.Right,
+            _ => HorizontalAlignment.Left,
+        };
+    }
+
+    private static Border RenderTableCell(TableCell? cell, HorizontalAlignment align)
+    {
+        var cellPanel = new StackPanel { HorizontalAlignment = align };
+        var textAlign = align switch
+        {
+            HorizontalAlignment.Center => TextAlignment.Center,
+            HorizontalAlignment.Right => TextAlignment.Right,
+            _ => TextAlignment.Left,
+        };
         if (cell is not null)
         {
             foreach (var child in cell)
             {
                 var rendered = RenderBlock(child);
-                if (rendered is not null)
+                if (rendered is null)
                 {
-                    cellPanel.Children.Add(rendered);
+                    continue;
                 }
+                if (rendered is TextBlock tb)
+                {
+                    tb.TextAlignment = textAlign;
+                }
+                cellPanel.Children.Add(rendered);
             }
         }
 
@@ -453,18 +482,31 @@ internal static class MarkdownRenderer
                 var clusterEmoji = IsEmojiCluster(cluster);
                 if (segmentEmoji is { } prev && prev != clusterEmoji && sb.Length > 0)
                 {
-                    target.Add(new Run(sb.ToString()));
-                    sb.Clear();
+                    FlushTextRun(target, sb, prev);
                 }
                 segmentEmoji = clusterEmoji;
                 sb.Append(cluster);
             }
-            if (sb.Length > 0)
+            if (segmentEmoji is { } last && sb.Length > 0)
             {
-                target.Add(new Run(sb.ToString()));
+                FlushTextRun(target, sb, last);
             }
         }
         ctx.Offset += text.Length;
+    }
+
+    private static void FlushTextRun(InlineCollection target, System.Text.StringBuilder sb, bool isEmoji)
+    {
+        var run = new Run(sb.ToString());
+        if (isEmoji)
+        {
+            // Render the whole emoji cluster in the color-emoji font so sequences
+            // whose base is ASCII (keycaps like 1 + combining enclosing keycap)
+            // form the emoji glyph instead of falling back to a tofu box.
+            run.FontFamily = EmojiFamily;
+        }
+        target.Add(run);
+        sb.Clear();
     }
 
     private static bool IsEmojiCluster(string cluster)
