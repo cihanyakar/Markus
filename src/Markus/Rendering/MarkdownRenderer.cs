@@ -563,15 +563,47 @@ internal static class MarkdownRenderer
     private static Span BuildEmphasis(EmphasisInline em, InlineContext ctx)
     {
         var span = new Span();
-        if (em.DelimiterCount >= 2)
-        {
-            span.FontWeight = FontWeight.Bold;
-            FillInlines(span.Inlines, em, ctx);
-            return span;
-        }
-        span.FontStyle = FontStyle.Italic;
+        ApplyEmphasisStyle(span, em.DelimiterChar, em.DelimiterCount);
         FillInlines(span.Inlines, em, ctx);
         return span;
+    }
+
+    // The delimiter character, not just its count, decides the style. A double
+    // tilde is strikethrough (it was being rendered bold); single tilde is
+    // subscript, caret is superscript, double plus is inserted, double equals is
+    // marked. Asterisk and underscore fall back to bold or italic.
+    private static void ApplyEmphasisStyle(Span span, char delimiter, int count)
+    {
+        switch (delimiter)
+        {
+            case '~' when count >= 2:
+                span.TextDecorations = TextDecorations.Strikethrough;
+                break;
+            case '~':
+                span.BaselineAlignment = BaselineAlignment.Subscript;
+                span.FontSize = Fs(11);
+                break;
+            case '^':
+                span.BaselineAlignment = BaselineAlignment.Superscript;
+                span.FontSize = Fs(11);
+                break;
+            case '+' when count >= 2:
+                span.TextDecorations = TextDecorations.Underline;
+                break;
+            case '=' when count >= 2:
+                span.Background = new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0xE0, 0x66));
+                break;
+            default:
+                if (count >= 2)
+                {
+                    span.FontWeight = FontWeight.Bold;
+                }
+                else
+                {
+                    span.FontStyle = FontStyle.Italic;
+                }
+                break;
+        }
     }
 
     private static Run BuildInlineCode(CodeInline code)

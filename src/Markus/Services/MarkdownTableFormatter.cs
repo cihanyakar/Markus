@@ -45,6 +45,18 @@ internal static class MarkdownTableFormatter
         return output.ToString();
     }
 
+    // Column width counts display columns, not UTF-16 units: CJK/emoji are two
+    // columns wide (UAX #11). Internal for conformance tests.
+    internal static int DisplayWidth(string text)
+    {
+        var width = 0;
+        foreach (var rune in text.EnumerateRunes())
+        {
+            width += IsWide(rune.Value) ? 2 : 1;
+        }
+        return width;
+    }
+
     private static bool TryParseTable(string[] lines, int start, out int consumed, out string formatted)
     {
         consumed = 0;
@@ -256,16 +268,6 @@ internal static class MarkdownTableFormatter
             CellAlignment.Center => new string(' ', pad / 2) + text + new string(' ', pad - (pad / 2)),
             _ => text + new string(' ', pad),
         };
-    }
-
-    private static int DisplayWidth(string text)
-    {
-        var width = 0;
-        foreach (var rune in text.EnumerateRunes())
-        {
-            width += IsWide(rune.Value) ? 2 : 1;
-        }
-        return width;
     }
 
     private static bool IsWide(int v)
