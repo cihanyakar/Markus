@@ -31,18 +31,62 @@ internal static class MermaidRenderer
 
         process.Start();
 
-        await process.StandardInput.WriteAsync(mermaidSource.AsMemory(), ct);
-        process.StandardInput.Close();
+        // Bound a hung mmdr so a malformed diagram can't block the render task
+        // forever.
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+        var token = timeoutCts.Token;
 
-        var svg = await process.StandardOutput.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
-
-        if (process.ExitCode != 0)
+        try
         {
-            return null;
-        }
+            // Drain stdout and stderr concurrently with writing stdin: writing
+            // the whole source first and only then reading would deadlock once
+            // mmdr's output (or stderr) fills its pipe buffer.
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(token);
+            var stderrTask = process.StandardError.ReadToEndAsync(token);
+            await process.StandardInput.WriteAsync(mermaidSource.AsMemory(), token);
+            process.StandardInput.Close();
 
-        return string.IsNullOrWhiteSpace(svg) ? null : svg;
+            var svg = await stdoutTask;
+            await stderrTask;
+            await process.WaitForExitAsync(token);
+
+            if (process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            return string.IsNullOrWhiteSpace(svg) ? null : svg;
+        }
+        finally
+        {
+            // Disposing the Process handle does not kill the OS process; a
+            // cancelled or timed-out mmdr would otherwise be orphaned.
+            TryKill(process);
+        }
+    }
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Process already exited between the check and the kill.
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Kill failed (already dead / permissions); nothing more we can do.
+        }
+        catch (NotSupportedException)
+        {
+            // Platform can't kill the tree; best-effort only.
+        }
     }
 
     private static string? FindMmdr()
