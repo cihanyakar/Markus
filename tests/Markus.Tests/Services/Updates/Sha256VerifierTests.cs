@@ -26,11 +26,18 @@ public sealed class Sha256VerifierTests
     }
 
     [Theory]
-    [InlineData("ba7816bf...  Markus-v0.5.0-osx-arm64.dmg", "ba7816bf...")]
-    [InlineData("ba7816bf...", "ba7816bf...")]
+    [InlineData(AbcHash + "  Markus-v0.5.0-osx-arm64.dmg", AbcHash)]
+    [InlineData(AbcHash, AbcHash)]
     public void ParseExpectedHash_ReadsSidecar(string content, string expected)
     {
         Sha256Verifier.ParseExpectedHash(content).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void ParseExpectedHash_RejectsNonHexToken()
+    {
+        // A CDN soft-error page or malformed sidecar must not be taken as a hash.
+        Sha256Verifier.ParseExpectedHash("404: Not Found").ShouldBeNull();
     }
 
     [Fact]

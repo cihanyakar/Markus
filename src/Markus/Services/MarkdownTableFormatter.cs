@@ -103,7 +103,7 @@ internal static class MarkdownTableFormatter
                 {
                     continue;
                 }
-                widest = Math.Max(widest, rows[r][c].Length);
+                widest = Math.Max(widest, DisplayWidth(rows[r][c]));
             }
             widths[c] = widest;
         }
@@ -243,24 +243,62 @@ internal static class MarkdownTableFormatter
 
     private static string Pad(string text, int width, CellAlignment alignment)
     {
-        if (text.Length >= width)
+        // Pad by display width, not UTF-16 length, so CJK/emoji cells (which
+        // render two columns wide) still line up in a monospace view.
+        var pad = width - DisplayWidth(text);
+        if (pad <= 0)
         {
             return text;
         }
         return alignment switch
         {
-            CellAlignment.Right => text.PadLeft(width),
-            CellAlignment.Center => PadCenter(text, width),
-            _ => text.PadRight(width),
+            CellAlignment.Right => new string(' ', pad) + text,
+            CellAlignment.Center => new string(' ', pad / 2) + text + new string(' ', pad - (pad / 2)),
+            _ => text + new string(' ', pad),
         };
     }
 
-    private static string PadCenter(string text, int width)
+    private static int DisplayWidth(string text)
     {
-        var total = width - text.Length;
-        var left = total / 2;
-        var right = total - left;
-        return new string(' ', left) + text + new string(' ', right);
+        var width = 0;
+        foreach (var rune in text.EnumerateRunes())
+        {
+            width += IsWide(rune.Value) ? 2 : 1;
+        }
+        return width;
+    }
+
+    private static bool IsWide(int v)
+    {
+        // `and` binds tighter than `or`, so each range stands on its own. Wide =
+        // East Asian Wide/Fullwidth plus emoji (rendered two columns wide).
+        return v
+            is >= 0x1100
+                and <= 0x115F // Hangul Jamo
+                or >= 0x2E80
+                and <= 0x303E // CJK radicals, Kangxi
+                or >= 0x3041
+                and <= 0x33FF // Kana .. CJK compatibility
+                or >= 0x3400
+                and <= 0x4DBF // CJK Extension A
+                or >= 0x4E00
+                and <= 0x9FFF // CJK Unified Ideographs
+                or >= 0xA000
+                and <= 0xA4CF // Yi
+                or >= 0xAC00
+                and <= 0xD7A3 // Hangul syllables
+                or >= 0xF900
+                and <= 0xFAFF // CJK compatibility ideographs
+                or >= 0xFE30
+                and <= 0xFE4F // CJK compatibility forms
+                or >= 0xFF00
+                and <= 0xFF60 // Fullwidth forms
+                or >= 0xFFE0
+                and <= 0xFFE6 // Fullwidth signs
+                or >= 0x1F300
+                and <= 0x1FAFF // Emoji
+                or >= 0x20000
+                and <= 0x3FFFD; // CJK Extension B and beyond
     }
 
     private static string BuildDelimiter(int width, CellAlignment alignment)

@@ -6,6 +6,7 @@ internal sealed class FileWatcherService : IDisposable
 
     private FileSystemWatcher? _watcher;
     private Timer? _debounceTimer;
+    private int _generation;
     private bool _disposed;
 
     /// <summary>
@@ -55,6 +56,10 @@ internal sealed class FileWatcherService : IDisposable
             _watcher = null;
         }
 
+        // Invalidate any in-flight debounce callback: a Timer already queued on
+        // the thread pool is not cancelled by Dispose, so a stale notification
+        // could otherwise fire for a file we just stopped watching.
+        _generation++;
         _debounceTimer?.Dispose();
         _debounceTimer = null;
         WatchedPath = null;
@@ -86,8 +91,18 @@ internal sealed class FileWatcherService : IDisposable
     private void ScheduleNotify(string path, WatcherChangeTypes change)
     {
         _debounceTimer?.Dispose();
+        var generation = ++_generation;
         _debounceTimer = new Timer(
-            _ => FileChanged?.Invoke(this, new FileChangedEventArgs(path, change)),
+            _ =>
+            {
+                // Drop the notification if it was superseded by a newer event or
+                // by Stop()/Dispose() between scheduling and firing.
+                if (_disposed || generation != _generation)
+                {
+                    return;
+                }
+                FileChanged?.Invoke(this, new FileChangedEventArgs(path, change));
+            },
             null,
             DebounceInterval,
             Timeout.InfiniteTimeSpan

@@ -14,11 +14,23 @@ internal sealed class MarkdownFoldingStrategy
     {
         var foldings = new List<NewFolding>();
         var stack = new Stack<HeadingFrame>();
+        var inFence = false;
 
         for (var i = 1; i <= document.LineCount; i++)
         {
             var line = document.GetLineByNumber(i);
             var text = document.GetText(line);
+            // A `#` inside a fenced code block is code, not a heading. Toggle on
+            // the fence markers so those lines never start a fold.
+            if (IsFenceMarker(text))
+            {
+                inFence = !inFence;
+                continue;
+            }
+            if (inFence)
+            {
+                continue;
+            }
             var level = ParseHeadingLevel(text);
             if (level == 0)
             {
@@ -56,6 +68,13 @@ internal sealed class MarkdownFoldingStrategy
             return;
         }
         list.Add(new NewFolding(start, end));
+    }
+
+    private static bool IsFenceMarker(string lineText)
+    {
+        var trimmed = lineText.AsSpan().TrimStart();
+        return trimmed.StartsWith("```", StringComparison.Ordinal)
+            || trimmed.StartsWith("~~~", StringComparison.Ordinal);
     }
 
     private static int ParseHeadingLevel(string lineText)

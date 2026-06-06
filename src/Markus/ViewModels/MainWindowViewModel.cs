@@ -460,7 +460,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         catch (FileNotFoundException)
         {
             StatusText = $"{Path.GetFileName(path)} • file not found";
-            Settings.RecentFiles.Remove(path);
+            // Match the case-insensitive dedup used when adding, so a stale
+            // entry stored with different casing is still pruned.
+            Settings.RecentFiles.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
             _settingsService.Save(Settings);
         }
         catch (Exception ex)

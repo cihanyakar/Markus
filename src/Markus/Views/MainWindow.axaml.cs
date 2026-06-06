@@ -937,8 +937,14 @@ internal sealed partial class MainWindow : Window
             // Images dropped onto the editor copy into <doc>/assets/ and a
             // Markdown image reference is inserted at the caret. Anything else
             // falls back to the existing "open as document" flow.
-            if (IsImageExtension(path) && TryInsertImageAtCaret(vm, path))
+            if (IsImageExtension(path))
             {
+                // Never open an image as a Markdown document (binary garbage).
+                // If there is no editor to insert into, tell the user instead.
+                if (!TryInsertImageAtCaret(vm, path))
+                {
+                    SetStatus("Open a document and show the editor to drop an image into it");
+                }
                 return;
             }
             await vm.LoadFileAsync(path);
@@ -1271,6 +1277,8 @@ internal sealed partial class MainWindow : Window
             vm.FindRequested -= OnFindRequested;
             vm.FindNextRequested -= OnFindNextRequested;
             vm.FindPreviousRequested -= OnFindPreviousRequested;
+            vm.PreviewInvalidated -= OnPreviewInvalidated;
+            Services.ServiceLocator.Keys.Changed -= OnKeyBindingsChanged;
             vm.Dispose();
         }
         catch (Exception ex)
