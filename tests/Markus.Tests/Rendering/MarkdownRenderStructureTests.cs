@@ -58,6 +58,18 @@ public sealed class MarkdownRenderStructureTests
     }
 
     [Fact]
+    public void Link_WithFormattedText_RendersTheTextNotTheUrl()
+    {
+        // A link whose text is bold / code / multi-part must render that text,
+        // not collapse to the first literal or fall back to the raw URL.
+        var blocks = Render("[**bold** and `code`](https://example.com)");
+
+        var text = InlineText(blocks[0].Control);
+        text.ShouldBe("bold and code");
+        text.ShouldNotContain("example.com");
+    }
+
+    [Fact]
     public void FencedCode_ProducesBorderedCard()
     {
         var blocks = Render("```\ncode line\n```");

@@ -498,10 +498,28 @@ internal static class MarkdownRenderer
 
     private static void AppendLink(InlineCollection target, LinkInline link, InlineContext ctx)
     {
-        var label = link.FirstChild is LiteralInline first ? first.Content.ToString() : link.Url ?? string.Empty;
         var isAnchor = link.Url is { } url && url.StartsWith('#');
         var dest = isAnchor ? link.Url![1..] : link.Url ?? string.Empty;
-        AppendLinkRun(target, label, dest, isAnchor, ctx);
+        // Render the link's own children (which may be bold, code, multiple
+        // parts) inside an accent + underline span, instead of flattening to the
+        // first literal (which dropped formatted/multi-part text or fell back to
+        // the raw URL). The recorded range spans all of them for click hit-testing.
+        var start = ctx.Offset;
+        var span = new Span
+        {
+            Foreground = new SolidColorBrush(Theme.Accent),
+            TextDecorations = TextDecorations.Underline,
+        };
+        FillInlines(span.Inlines, link, ctx);
+        if (ctx.Offset == start)
+        {
+            // Empty link text: show the destination so the link is still visible.
+            var fallback = link.Url ?? string.Empty;
+            span.Inlines.Add(new Run(fallback));
+            ctx.Offset += fallback.Length;
+        }
+        target.Add(span);
+        ctx.Links.Add(new Markus.Views.LinkInlineTextBlock.LinkRange(start, ctx.Offset - start, dest, isAnchor));
     }
 
     // Links are plain runs (styled, not embedded controls) so they share the
