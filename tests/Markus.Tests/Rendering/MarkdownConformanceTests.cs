@@ -1,39 +1,106 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Markus.Rendering;
 using Markus.Services;
 
 namespace Markus.Tests.Rendering;
 
-// Conformance against GFM (strikethrough), Unicode emoji handling (UTS #51),
-// and East Asian Width (UAX #11).
+// Deep conformance against GFM (strikethrough, emphasis extras, table column
+// alignment), Unicode emoji handling (UTS #51 grapheme clusters), and East
+// Asian Width (UAX #11).
 public sealed class MarkdownConformanceTests
 {
+    // --- GFM emphasis: the delimiter character decides the style ---
+
     [Fact]
     public void Strikethrough_RendersStrikethroughNotBold()
     {
-        var block = Render("~~struck~~");
-
-        HasStrikethrough(block).ShouldBeTrue();
+        FindSpan(Render("~~struck~~"), s => HasDecoration(s, TextDecorationLocation.Strikethrough)).ShouldNotBeNull();
     }
 
     [Fact]
-    public void Emoji_IsIsolatedFromFollowingSpace()
+    public void Subscript_RendersBaselineSubscript()
     {
-        // The emoji must occupy its own run so the trailing space is shaped in
-        // the body font (otherwise it renders with a wide gap).
-        var block = Render("🚀 launch");
-
-        TopLevelRunTexts(block).ShouldContain("🚀");
+        FindSpan(Render("H~2~O"), s => s.BaselineAlignment == BaselineAlignment.Subscript).ShouldNotBeNull();
     }
 
+    [Fact]
+    public void Superscript_RendersBaselineSuperscript()
+    {
+        FindSpan(Render("x^2^"), s => s.BaselineAlignment == BaselineAlignment.Superscript).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Inserted_RendersUnderline()
+    {
+        FindSpan(Render("++ins++"), s => HasDecoration(s, TextDecorationLocation.Underline)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Marked_RendersBackgroundHighlight()
+    {
+        FindSpan(Render("==mark=="), s => s.Background is not null).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void BoldAndItalic_StillRender()
+    {
+        FindSpan(Render("**b**"), s => s.FontWeight == FontWeight.Bold).ShouldNotBeNull();
+        FindSpan(Render("*i*"), s => s.FontStyle == FontStyle.Italic).ShouldNotBeNull();
+    }
+
+    // --- GFM table column alignment ---
+
     [Theory]
-    [InlineData("ab", 2)] // plain ASCII
-    [InlineData("中文", 4)] // CJK ideographs are double width
+    [InlineData(0, HorizontalAlignment.Left)]
+    [InlineData(1, HorizontalAlignment.Center)]
+    [InlineData(2, HorizontalAlignment.Right)]
+    public void Table_AppliesColumnAlignment(int column, HorizontalAlignment expected)
+    {
+        var grid = (Grid)Render("| L | C | R |\n|:--|:-:|--:|\n| a | b | c |");
+
+        CellContent(grid, row: 1, column).HorizontalAlignment.ShouldBe(expected);
+    }
+
+    // --- UTS #51 emoji: grapheme clusters stay intact and isolated ---
+
+    [Theory]
+    [InlineData("🚀")] // single
+    [InlineData("👨‍💻")] // ZWJ sequence
+    [InlineData("👨‍👩‍👧‍👦")] // multi-person ZWJ
+    [InlineData("🇹🇷")] // flag (regional indicators)
+    [InlineData("👍🏽")] // skin-tone modifier
+    [InlineData("1️⃣")] // keycap sequence
+    public void Emoji_ClusterStaysIntactAndIsolated(string emoji)
+    {
+        // The whole cluster occupies a single run (not split mid-sequence), kept
+        // apart from the following text so the trailing space stays body-font.
+        TopLevelRunTexts(Render($"{emoji} tail")).ShouldContain(emoji);
+    }
+
+    [Fact]
+    public void Emoji_RunUsesEmojiFont()
+    {
+        var emojiRun = TopLevelRuns(Render("🚀 x")).First(r => string.Equals(r.Text, "🚀", StringComparison.Ordinal));
+
+        emojiRun.FontFamily.Name.ShouldContain("Emoji");
+    }
+
+    // --- UAX #11 East Asian Width ---
+
+    [Theory]
+    [InlineData("ab", 2)] // ASCII narrow
+    [InlineData("中文", 4)] // CJK ideographs (wide)
+    [InlineData("日本語", 6)] // Kanji
+    [InlineData("한국어", 6)] // Hangul syllables (wide)
+    [InlineData("ひらがな", 8)] // Hiragana (wide)
+    [InlineData("ａｂ", 4)] // fullwidth latin (wide)
+    [InlineData("ｱｲｳ", 3)] // halfwidth katakana (narrow)
     [InlineData("a中", 3)] // mixed
-    [InlineData("🚀", 2)] // emoji is double width
-    [InlineData("ｱ", 1)] // halfwidth katakana is single width
+    [InlineData("🚀", 2)] // emoji (wide)
+    [InlineData("𠀀", 2)] // CJK Extension B (surrogate pair, wide)
     public void DisplayWidth_FollowsEastAsianWidth(string text, int expected)
     {
         MarkdownTableFormatter.DisplayWidth(text).ShouldBe(expected);
@@ -44,45 +111,53 @@ public sealed class MarkdownConformanceTests
         return MarkdownRenderer.Render(MarkdownPipeline.Parse(markdown)).First().Control;
     }
 
-    private static bool HasStrikethrough(Control control)
+    private static StackPanel CellContent(Grid grid, int row, int column)
     {
-        return control is TextBlock tb && InlinesHaveStrikethrough(tb.Inlines);
+        var cell = grid.Children.OfType<Border>().First(b => Grid.GetRow(b) == row && Grid.GetColumn(b) == column);
+        return (StackPanel)cell.Child!;
     }
 
-    private static bool InlinesHaveStrikethrough(InlineCollection? inlines)
+    private static Span? FindSpan(Control control, Func<Span, bool> predicate)
+    {
+        return control is TextBlock tb ? FindSpan(tb.Inlines, predicate) : null;
+    }
+
+    private static Span? FindSpan(InlineCollection? inlines, Func<Span, bool> predicate)
     {
         if (inlines is null)
         {
-            return false;
+            return null;
         }
         foreach (var inline in inlines)
         {
             if (inline is Span span)
             {
-                var decorated =
-                    span.TextDecorations?.Any(d => d.Location == TextDecorationLocation.Strikethrough) == true;
-                if (decorated || InlinesHaveStrikethrough(span.Inlines))
+                if (predicate(span))
                 {
-                    return true;
+                    return span;
+                }
+                var nested = FindSpan(span.Inlines, predicate);
+                if (nested is not null)
+                {
+                    return nested;
                 }
             }
         }
-        return false;
+        return null;
+    }
+
+    private static bool HasDecoration(Span span, TextDecorationLocation location)
+    {
+        return span.TextDecorations?.Any(d => d.Location == location) == true;
+    }
+
+    private static List<Run> TopLevelRuns(Control control)
+    {
+        return control is TextBlock tb ? tb.Inlines!.OfType<Run>().ToList() : new List<Run>();
     }
 
     private static List<string> TopLevelRunTexts(Control control)
     {
-        var texts = new List<string>();
-        if (control is TextBlock tb)
-        {
-            foreach (var inline in tb.Inlines!)
-            {
-                if (inline is Run run && run.Text is { } t)
-                {
-                    texts.Add(t);
-                }
-            }
-        }
-        return texts;
+        return TopLevelRuns(control).Where(r => r.Text is not null).Select(r => r.Text!).ToList();
     }
 }
