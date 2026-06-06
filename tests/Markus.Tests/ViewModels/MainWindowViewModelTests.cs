@@ -15,6 +15,37 @@ public sealed class MainWindowViewModelTests
         sut.CurrentViewMode.ShouldBe(sut.Settings.DefaultViewMode);
     }
 
+    [Fact]
+    public void ToggleOutline_PersistsShowOutlineFlag()
+    {
+        var dir = Directory.CreateTempSubdirectory("markus-test").FullName;
+        var service = new SettingsService(dir);
+        var sut = new MainWindowViewModel(service);
+        var initial = sut.IsOutlineVisible;
+
+        sut.ToggleOutlineCommand.Execute(null);
+
+        sut.IsOutlineVisible.ShouldBe(!initial);
+        service.Load().ShowOutline.ShouldBe(!initial);
+        Directory.Delete(dir, recursive: true);
+    }
+
+    [Fact]
+    public void ShowOutlineSettingChange_UpdatesLiveVisibility()
+    {
+        var dir = Directory.CreateTempSubdirectory("markus-test").FullName;
+        var service = new SettingsService(dir);
+        var sut = new MainWindowViewModel(service);
+        var initial = sut.IsOutlineVisible;
+
+        var changed = service.Load();
+        changed.ShowOutline = !initial;
+        service.Save(changed);
+
+        sut.IsOutlineVisible.ShouldBe(!initial);
+        Directory.Delete(dir, recursive: true);
+    }
+
     // --- ViewMode mutual-exclusivity (parameterized) ---
 
     [Theory]

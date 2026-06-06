@@ -13,6 +13,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private System.Threading.CancellationTokenSource? _outlineCts;
     private bool _disposed;
     private bool _suppressOutlinePlacementSave;
+    private bool _suppressOutlineVisibleSave;
 
     // Set while the document is being replaced from disk (open/reload/save) so
     // the resulting SourceText change is not mistaken for a user edit.
@@ -709,6 +710,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsService.Save(Settings);
     }
 
+    partial void OnIsOutlineVisibleChanged(bool value)
+    {
+        if (_suppressOutlineVisibleSave)
+        {
+            return;
+        }
+        Settings.ShowOutline = value;
+        _settingsService.Save(Settings);
+    }
+
     partial void OnIsSourceSoftWrapChanged(bool value)
     {
         Settings.IsSourceSoftWrap = value;
@@ -727,12 +738,33 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         Settings = e.Settings;
         ThemeApplicator.Apply(e.Settings.ThemeMode);
+        SyncOutlineVisible(e.Settings);
         SyncOutlinePlacement(e.Settings);
         SyncEditorFlags(e.Settings);
 
         if (ApplyRendererSettings(e.Settings))
         {
             PreviewInvalidated?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void SyncOutlineVisible(AppSettings s)
+    {
+        if (s.ShowOutline == IsOutlineVisible)
+        {
+            return;
+        }
+
+        // Apply the persisted flag to the live window without echoing it back to
+        // disk through OnIsOutlineVisibleChanged.
+        _suppressOutlineVisibleSave = true;
+        try
+        {
+            IsOutlineVisible = s.ShowOutline;
+        }
+        finally
+        {
+            _suppressOutlineVisibleSave = false;
         }
     }
 
