@@ -134,16 +134,19 @@ internal sealed class FileWatcherService : IDisposable
 
     private void FireIfCurrent(int generation, string path, WatcherChangeTypes change)
     {
-        // Read the guard under the lock, but raise the event outside it so a
-        // subscriber can never deadlock against Watch/Stop on the UI thread.
+        // Capture the guard result and the handler under the lock, then raise the
+        // event outside it so a subscriber can never deadlock against Watch/Stop
+        // on the UI thread and so a concurrent unsubscribe is observed atomically.
+        EventHandler<FileChangedEventArgs>? handler;
         lock (_gate)
         {
             if (_disposed || generation != _generation)
             {
                 return;
             }
+            handler = FileChanged;
         }
-        FileChanged?.Invoke(this, new FileChangedEventArgs(path, change));
+        handler?.Invoke(this, new FileChangedEventArgs(path, change));
     }
 }
 
