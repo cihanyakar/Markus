@@ -148,7 +148,27 @@ public sealed class MarkdownConformanceTests
 
     private static bool HasDecoration(Span span, TextDecorationLocation location)
     {
-        return span.TextDecorations?.Any(d => d.Location == location) == true;
+        // Compare the decoration collection by reference instead of reading
+        // TextDecoration.Location. The renderer assigns Avalonia's shared static
+        // presets (TextDecorations.Strikethrough / .Underline), and reading a
+        // StyledProperty on those static objects calls Dispatcher.VerifyAccess,
+        // which throws when the runner schedules this test on a thread other than
+        // the one that first bound Dispatcher.UIThread. Reference identity needs
+        // no UI thread, so it stays deterministic regardless of scheduling.
+        var decorations = span.TextDecorations;
+        if (decorations is null)
+        {
+            return false;
+        }
+        var expected = location switch
+        {
+            TextDecorationLocation.Strikethrough => TextDecorations.Strikethrough,
+            TextDecorationLocation.Underline => TextDecorations.Underline,
+            TextDecorationLocation.Overline => TextDecorations.Overline,
+            TextDecorationLocation.Baseline => TextDecorations.Baseline,
+            _ => null,
+        };
+        return expected is not null && ReferenceEquals(decorations, expected);
     }
 
     private static List<Run> TopLevelRuns(Control control)
