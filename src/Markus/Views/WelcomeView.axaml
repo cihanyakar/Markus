@@ -53,14 +53,14 @@
       <!-- Brand -->
       <StackPanel Grid.Row="0" Spacing="6">
         <TextBlock Text="MARKUS"
-                   FontFamily="Manrope,Inter,sans-serif"
+                   FontFamily="Manrope,Inter,-apple-system,sans-serif"
                    FontSize="11"
                    FontWeight="Medium"
                    LetterSpacing="1.6"
                    Foreground="{DynamicResource TextLow}"/>
         <TextBlock Classes="display"
                    Text="A focused Markdown editor."/>
-        <TextBlock FontFamily="Inter,sans-serif"
+        <TextBlock FontFamily="Inter,-apple-system,sans-serif"
                    FontSize="14"
                    Foreground="{DynamicResource TextMedium}"
                    Text="Write, preview, repeat."/>
@@ -149,18 +149,18 @@
           <TextBlock Classes="section" Text="QUICK SYNTAX"/>
           <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto"
                 ColumnSpacing="22" RowSpacing="6">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="# heading" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="**bold**" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="0" Grid.Column="2" Text="*italic*" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="0" Grid.Column="3" Text="`code`" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="- list" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="1. ordered" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="2" Text="&gt; quote" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="3" Text="---" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="[link](url)" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="1" Text="![img](path)" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="2" Text="| a | b |" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="3" Text="```fenced" FontFamily="JetBrains Mono,Cascadia Code,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="# heading" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="**bold**" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="*italic*" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="3" Text="`code`" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="- list" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="1. ordered" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="&gt; quote" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="3" Text="---" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="[link](url)" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="![img](path)" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="| a | b |" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="3" Text="```fenced" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
           </Grid>
         </StackPanel>
       </Border>

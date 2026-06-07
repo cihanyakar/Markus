@@ -23,7 +23,7 @@
       <Setter Property="Padding" Value="32,36,32,24"/>
     </Style>
     <Style Selector="TextBlock.display">
-      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,-apple-system,sans-serif"/>
       <Setter Property="FontWeight" Value="Light"/>
       <Setter Property="FontSize" Value="34"/>
       <Setter Property="LetterSpacing" Value="-0.5"/>
@@ -31,13 +31,13 @@
       <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
     <Style Selector="TextBlock.version">
-      <Setter Property="FontFamily" Value="Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="Inter,Segoe UI,-apple-system,sans-serif"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
       <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
     <Style Selector="TextBlock.tagline">
-      <Setter Property="FontFamily" Value="Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="Inter,Segoe UI,-apple-system,sans-serif"/>
       <Setter Property="FontSize" Value="13"/>
       <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
       <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -45,7 +45,7 @@
       <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="TextBlock.copyright">
-      <Setter Property="FontFamily" Value="Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="Inter,Segoe UI,-apple-system,sans-serif"/>
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
       <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -57,7 +57,7 @@
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Padding" Value="10,6"/>
       <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
-      <Setter Property="FontFamily" Value="Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="Inter,Segoe UI,-apple-system,sans-serif"/>
       <Setter Property="FontSize" Value="12"/>
       <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Cursor" Value="Hand"/>
