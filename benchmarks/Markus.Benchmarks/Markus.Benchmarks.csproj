@@ -26,4 +26,11 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
   </ItemGroup>
+
+  <!-- The parse+render benchmark exercises the real preview pipeline
+       (MarkdownPipeline.Parse + MarkdownRenderer.Render building Avalonia
+       controls), so it references the app instead of copying the code. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Markus\Markus.csproj" />
+  </ItemGroup>
 </Project>

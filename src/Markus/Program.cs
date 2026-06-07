@@ -13,7 +13,10 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        Services.StartupTrace.Mark("main-entry");
+        var app = BuildAvaloniaApp();
+        Services.StartupTrace.Mark("avalonia-app-built");
+        app.StartWithClassicDesktopLifetime(args);
     }
 
     // Avalonia configuration. Don't remove. Also used by visual designer.

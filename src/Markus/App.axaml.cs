@@ -26,18 +26,22 @@ internal sealed partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        Services.StartupTrace.Mark("framework-init-start");
         PosixSignalRegistration.Create(PosixSignal.SIGINT, _ => ShutdownCts.Cancel());
         PosixSignalRegistration.Create(PosixSignal.SIGTERM, _ => ShutdownCts.Cancel());
 
         var settings = Services.ServiceLocator.Settings.Load();
         Services.ThemeApplicator.Apply(settings.ThemeMode);
+        Services.StartupTrace.Mark("settings-loaded");
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownRequested += (_, _) => ShutdownCts.Cancel();
 
             var vm = new MainWindowViewModel();
+            Services.StartupTrace.Mark("viewmodel-constructed");
             desktop.MainWindow = new MainWindow { DataContext = vm };
+            Services.StartupTrace.Mark("mainwindow-constructed");
             var isSpawnedChild = FileOpenRouter.IsSpawnMarker(desktop.Args);
             var updateVm = new ViewModels.UpdateViewModel(
                 new Services.Updates.UpdateChecker(new Services.Updates.GitHubReleaseFeed()),
@@ -66,6 +70,7 @@ internal sealed partial class App : Application
             }
         }
 
+        Services.StartupTrace.Mark("framework-init-complete");
         base.OnFrameworkInitializationCompleted();
     }
 }
