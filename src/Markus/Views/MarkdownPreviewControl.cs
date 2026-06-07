@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Markus.Rendering;
 using Markus.Services;
@@ -98,12 +99,13 @@ internal sealed class MarkdownPreviewControl : UserControl
         };
 
         Content = Scroll;
+        // Keep the reading position fixed when the window regains focus. A
+        // ScrollViewer otherwise scrolls the previously-focused inline back into
+        // view on re-activation, which jumps the preview to a different spot.
+        ScrollViewer.SetBringIntoViewOnFocusChange(Scroll, false);
+        Styles.Add(BuildSelectableTextStyle());
         Focusable = true;
-        // Children consume click events for selection, so the bubbled
-        // pointerpressed never reaches us. Listen on the tunnel so a click
-        // anywhere in the preview surface focuses this control, letting Cmd+F
-        // target the preview.
-        AddHandler(PointerPressedEvent, (_, _) => Focus(), Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        AddHandler(PointerPressedEvent, OnSurfacePointerPressed, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
         _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(DebounceMs) };
         _debounceTimer.Tick += OnDebounceElapsed;
@@ -299,6 +301,38 @@ internal sealed class MarkdownPreviewControl : UserControl
         {
             ScheduleRender(Source ?? string.Empty);
         }
+    }
+
+    // Focus the preview on an empty-area click so Cmd+F targets it, but do not
+    // steal focus when the press lands on a text block: that focus theft cancels
+    // the SelectableTextBlock's mouse selection before it starts. Cmd+F still
+    // resolves this preview by walking up from the focused text block.
+    private static void OnSurfacePointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        if (sender is MarkdownPreviewControl preview && e.Source is not SelectableTextBlock)
+        {
+            preview.Focus();
+        }
+    }
+
+    // Make every rendered text block actually selectable: in this Avalonia build
+    // a SelectableTextBlock will not start a mouse selection unless it is
+    // focusable, and the selection stays invisible without an explicit brush. The
+    // selector matches LinkInlineTextBlock (paragraphs, headings) as well as the
+    // plain SelectableTextBlocks (code, quotes, table cells).
+    private static Style BuildSelectableTextStyle()
+    {
+        return new Style(x => x.Is<SelectableTextBlock>())
+        {
+            Setters =
+            {
+                new Setter(Avalonia.Input.InputElement.FocusableProperty, true),
+                new Setter(
+                    SelectableTextBlock.SelectionBrushProperty,
+                    new SolidColorBrush(Color.FromArgb(0x66, 0x4D, 0x9D, 0xF0))
+                ),
+            },
+        };
     }
 
     private static Control? FindNearestAtOrBefore(Dictionary<int, Control> map, int sourceLine)
