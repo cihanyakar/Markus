@@ -38,6 +38,31 @@ public sealed class MarkdownThemeContrastTests
         Contrast(theme.Muted, theme.Background).ShouldBeGreaterThanOrEqualTo(AaNormal);
     }
 
+    [Theory]
+    [MemberData(nameof(ThemeKeys))]
+    public void CodeText_MeetsAa(string key)
+    {
+        var theme = MarkdownThemes.Resolve(key);
+
+        // CodeBackground is a semi-transparent tint painted over the page, so the
+        // color a reader actually sees behind code is that tint composited onto
+        // the opaque theme background. Code text must stay legible against it.
+        var effectiveCodeBackground = Composite(theme.CodeBackground, theme.Background);
+
+        Contrast(theme.CodeForeground, effectiveCodeBackground).ShouldBeGreaterThanOrEqualTo(AaNormal);
+    }
+
+    private static Color Composite(Color over, Color under)
+    {
+        var alpha = over.A / 255.0;
+        byte Blend(byte o, byte u)
+        {
+            return (byte)Math.Round((alpha * o) + ((1 - alpha) * u));
+        }
+
+        return Color.FromRgb(Blend(over.R, under.R), Blend(over.G, under.G), Blend(over.B, under.B));
+    }
+
     private static double Contrast(Color a, Color b)
     {
         var la = RelativeLuminance(a);
