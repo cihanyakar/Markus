@@ -53,6 +53,25 @@ internal sealed partial class MainWindow : Window
         WireOutlinePanels();
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        // Unsubscribe from process-lifetime singletons unconditionally and once,
+        // independent of the VM-gated teardown in OnWindowClosing. Closing can be
+        // cancelled/re-raised and may be skipped on some app-quit paths, so a
+        // leaked handler on ServiceLocator.Keys (an app singleton) would otherwise
+        // pin this window for the process lifetime. -= is a no-op if already done.
+        Services.ServiceLocator.Keys.Changed -= OnKeyBindingsChanged;
+        if (this.FindControl<OutlinePanel>("OutlineLeft") is { } left)
+        {
+            left.NodeSelected -= OnOutlineNodeSelected;
+        }
+        if (this.FindControl<OutlinePanel>("OutlineRight") is { } right)
+        {
+            right.NodeSelected -= OnOutlineNodeSelected;
+        }
+        base.OnClosed(e);
+    }
+
     private void WireOutlinePanels()
     {
         if (this.FindControl<OutlinePanel>("OutlineLeft") is { } left)
@@ -1201,6 +1220,14 @@ internal sealed partial class MainWindow : Window
 
     private void OnDetachedPreviewClosed(object? sender, EventArgs e)
     {
+        // Detach the scroll/render handlers from the closing window's preview so
+        // the main window holds no delegate into a torn-down control.
+        if (_previewWindow?.FindDescendantPreview() is { } detachedPreview)
+        {
+            detachedPreview.Scroll.ScrollChanged -= OnPreviewScrollChanged;
+            detachedPreview.RenderStarted -= OnPreviewRenderStarted;
+            detachedPreview.RenderCompleted -= OnPreviewRenderCompleted;
+        }
         _previewWindow = null;
         // If the user closed the floating preview themselves, leave Detached
         // mode (otherwise CurrentViewMode stays Detached, the toolbar still
@@ -1356,7 +1383,6 @@ internal sealed partial class MainWindow : Window
             vm.FindNextRequested -= OnFindNextRequested;
             vm.FindPreviousRequested -= OnFindPreviousRequested;
             vm.PreviewInvalidated -= OnPreviewInvalidated;
-            Services.ServiceLocator.Keys.Changed -= OnKeyBindingsChanged;
             vm.Dispose();
         }
         catch (Exception ex)

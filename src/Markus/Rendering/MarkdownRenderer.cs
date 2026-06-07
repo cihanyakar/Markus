@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Markdig.Extensions.Mathematics;
 using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
@@ -17,6 +18,56 @@ internal static class MarkdownRenderer
     private static readonly FontFamily EmojiFamily = new FontFamily(
         "Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji"
     );
+
+    // Theme colors are constant for a whole render and these brushes are never
+    // mutated, so one shared immutable brush per color replaces the thousands of
+    // per-control SolidColorBrush allocations a large document used to make.
+    private static readonly IImmutableSolidColorBrush PlaceholderLabelBrush = new ImmutableSolidColorBrush(
+        Color.FromRgb(0xFF, 0x55, 0x70)
+    );
+
+    private static readonly IImmutableSolidColorBrush PlaceholderRawBrush = new ImmutableSolidColorBrush(
+        Color.FromRgb(0xFF, 0x6E, 0x84)
+    );
+
+    private static readonly IImmutableSolidColorBrush PlaceholderFillBrush = new ImmutableSolidColorBrush(
+        Color.FromArgb(20, 0xFF, 0x3D, 0x55)
+    );
+
+    private static readonly IImmutableSolidColorBrush PlaceholderBorderBrush = new ImmutableSolidColorBrush(
+        Color.FromArgb(90, 0xFF, 0x3D, 0x55)
+    );
+
+    private static readonly IImmutableSolidColorBrush ListMarkerBrush = new ImmutableSolidColorBrush(
+        Color.FromArgb(180, 128, 128, 128)
+    );
+
+    private static readonly IImmutableSolidColorBrush ThematicBreakBrush = new ImmutableSolidColorBrush(
+        Color.FromArgb(60, 128, 128, 128)
+    );
+
+    private static readonly IImmutableSolidColorBrush HtmlBlockBrush = new ImmutableSolidColorBrush(
+        Color.FromArgb(20, 128, 128, 128)
+    );
+
+    private static readonly IImmutableSolidColorBrush HighlightBrush = new ImmutableSolidColorBrush(
+        Color.FromArgb(0x55, 0xFF, 0xE0, 0x66)
+    );
+
+    private static readonly IImmutableSolidColorBrush TableBorderBrush = new ImmutableSolidColorBrush(
+        Color.FromArgb(80, 128, 128, 128)
+    );
+
+    // Theme-dependent brushes, rebuilt only when Theme changes (see
+    // EnsureThemeBrushes, called once per render before any block is built).
+    private static MarkdownTheme? _cachedTheme;
+    private static IImmutableSolidColorBrush _foreground = new ImmutableSolidColorBrush(Colors.Transparent);
+    private static IImmutableSolidColorBrush _accent = new ImmutableSolidColorBrush(Colors.Transparent);
+    private static IImmutableSolidColorBrush _muted = new ImmutableSolidColorBrush(Colors.Transparent);
+    private static IImmutableSolidColorBrush _codeForeground = new ImmutableSolidColorBrush(Colors.Transparent);
+    private static IImmutableSolidColorBrush _codeBackground = new ImmutableSolidColorBrush(Colors.Transparent);
+    private static IImmutableSolidColorBrush _codeBorder = new ImmutableSolidColorBrush(Colors.Transparent);
+    private static IImmutableSolidColorBrush _quoteAccent = new ImmutableSolidColorBrush(Colors.Transparent);
 
     public static FontFamily MonoFamily { get; set; } =
         new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
@@ -36,6 +87,7 @@ internal static class MarkdownRenderer
             yield break;
         }
 
+        EnsureThemeBrushes();
         foreach (var block in document)
         {
             var control = RenderBlock(block);
@@ -44,6 +96,38 @@ internal static class MarkdownRenderer
                 yield return new RenderedBlock(control, block.Line);
             }
         }
+    }
+
+    // Only web and mail links are handed to the OS shell. A markdown document is
+    // untrusted content, so file:// and custom schemes (which the shell could
+    // use to launch local apps or executables) are refused.
+    internal static bool IsLaunchableUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" or "mailto";
+    }
+
+    // Refreshes the theme-dependent brush cache when the active theme changes.
+    // Called once at the start of a render; the theme cannot change mid-render
+    // because building runs synchronously on the UI thread.
+    private static void EnsureThemeBrushes()
+    {
+        var theme = Theme;
+        if (ReferenceEquals(_cachedTheme, theme))
+        {
+            return;
+        }
+        _foreground = new ImmutableSolidColorBrush(theme.Foreground);
+        _accent = new ImmutableSolidColorBrush(theme.Accent);
+        _muted = new ImmutableSolidColorBrush(theme.Muted);
+        _codeForeground = new ImmutableSolidColorBrush(theme.CodeForeground);
+        _codeBackground = new ImmutableSolidColorBrush(theme.CodeBackground);
+        _codeBorder = new ImmutableSolidColorBrush(theme.CodeBorder);
+        _quoteAccent = new ImmutableSolidColorBrush(theme.QuoteAccent);
+        _cachedTheme = theme;
     }
 
     private static Control? RenderBlock(Block block)
@@ -77,7 +161,7 @@ internal static class MarkdownRenderer
             Text = $"{kind.ToUpperInvariant()} — not yet rendered",
             FontSize = 10,
             FontWeight = FontWeight.SemiBold,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x55, 0x70)),
+            Foreground = PlaceholderLabelBrush,
             Margin = new Thickness(0, 0, 0, 6),
         };
 
@@ -86,7 +170,7 @@ internal static class MarkdownRenderer
             Text = source.Trim(),
             FontFamily = MonoFamily,
             FontSize = 12,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6E, 0x84)),
+            Foreground = PlaceholderRawBrush,
             TextWrapping = TextWrapping.Wrap,
         };
 
@@ -96,8 +180,8 @@ internal static class MarkdownRenderer
 
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(20, 0xFF, 0x3D, 0x55)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(90, 0xFF, 0x3D, 0x55)),
+            Background = PlaceholderFillBrush,
+            BorderBrush = PlaceholderBorderBrush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(16, 12),
@@ -122,7 +206,7 @@ internal static class MarkdownRenderer
         {
             FontSize = Fs(size),
             FontWeight = FontWeight.SemiBold,
-            Foreground = new SolidColorBrush(Theme.Foreground),
+            Foreground = _foreground,
             Margin = new Thickness(0, heading.Level == 1 ? 3 : 6, 0, 2),
             TextWrapping = TextWrapping.Wrap,
             Tag = heading.TryGetAttributes()?.Id,
@@ -139,7 +223,7 @@ internal static class MarkdownRenderer
         {
             FontSize = Fs(15),
             LineHeight = Fs(22),
-            Foreground = new SolidColorBrush(Theme.Foreground),
+            Foreground = _foreground,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 1, 0, 4),
         };
@@ -163,8 +247,8 @@ internal static class MarkdownRenderer
     {
         return new Border
         {
-            Background = new SolidColorBrush(Theme.CodeBackground),
-            BorderBrush = new SolidColorBrush(Theme.CodeBorder),
+            Background = _codeBackground,
+            BorderBrush = _codeBorder,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(12, 9),
@@ -174,7 +258,7 @@ internal static class MarkdownRenderer
                 Text = text,
                 FontFamily = MonoFamily,
                 FontSize = Fs(13),
-                Foreground = new SolidColorBrush(Theme.CodeForeground),
+                Foreground = _codeForeground,
                 TextWrapping = WrapCode ? TextWrapping.Wrap : TextWrapping.NoWrap,
             },
         };
@@ -194,7 +278,7 @@ internal static class MarkdownRenderer
 
         return new Border
         {
-            BorderBrush = new SolidColorBrush(Theme.QuoteAccent),
+            BorderBrush = _quoteAccent,
             BorderThickness = new Thickness(3, 0, 0, 0),
             Padding = new Thickness(11, 2, 0, 2),
             Margin = new Thickness(0, 3, 0, 5),
@@ -254,7 +338,7 @@ internal static class MarkdownRenderer
             LineHeight = Fs(22),
             Margin = new Thickness(2, 2, 4, 0),
             MinWidth = 12,
-            Foreground = new SolidColorBrush(Color.FromArgb(180, 128, 128, 128)),
+            Foreground = ListMarkerBrush,
             VerticalAlignment = VerticalAlignment.Top,
         };
     }
@@ -286,7 +370,7 @@ internal static class MarkdownRenderer
         {
             Height = 1,
             Margin = new Thickness(0, 12, 0, 12),
-            Background = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)),
+            Background = ThematicBreakBrush,
         };
     }
 
@@ -294,7 +378,7 @@ internal static class MarkdownRenderer
     {
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(20, 128, 128, 128)),
+            Background = HtmlBlockBrush,
             Padding = new Thickness(12, 8),
             Margin = new Thickness(0, 4, 0, 8),
             CornerRadius = new CornerRadius(4),
@@ -303,7 +387,7 @@ internal static class MarkdownRenderer
                 Text = html.Lines.ToString(),
                 FontFamily = MonoFamily,
                 FontSize = Fs(12),
-                Foreground = new SolidColorBrush(Theme.CodeForeground),
+                Foreground = _codeForeground,
                 TextWrapping = TextWrapping.Wrap,
             },
         };
@@ -391,7 +475,7 @@ internal static class MarkdownRenderer
 
         return new Border
         {
-            BorderBrush = new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
+            BorderBrush = TableBorderBrush,
             BorderThickness = new Thickness(1),
             Padding = new Thickness(8, 4),
             Child = cellPanel,
@@ -459,13 +543,27 @@ internal static class MarkdownRenderer
                 AppendText(target, raw.Tag, ctx);
                 return;
             case MathInline math:
-                target.Add(BuildInlineMath(math));
-                ctx.Offset += 1;
+                AppendMath(target, math, ctx);
                 return;
             default:
-                AppendText(target, inline.ToString() ?? string.Empty, ctx);
+                // Walk into unknown container inlines instead of emitting their
+                // type name; unknown leaf inlines contribute nothing.
+                if (inline is ContainerInline unknownContainer)
+                {
+                    FillInlines(target, unknownContainer, ctx);
+                }
                 return;
         }
+    }
+
+    private static void AppendMath(InlineCollection target, MathInline math, InlineContext ctx)
+    {
+        var rendered = BuildInlineMath(math);
+        target.Add(rendered);
+        // A successful equation is one InlineUIContainer, so it occupies a single
+        // layout position. A failed one falls back to a Run, whose text length must
+        // advance the offset or links after it hit-test to the wrong range.
+        ctx.Offset += rendered is Run run ? run.Text?.Length ?? 0 : 1;
     }
 
     private static bool IsLineBreakTag(string tag)
@@ -569,11 +667,7 @@ internal static class MarkdownRenderer
         // first literal (which dropped formatted/multi-part text or fell back to
         // the raw URL). The recorded range spans all of them for click hit-testing.
         var start = ctx.Offset;
-        var span = new Span
-        {
-            Foreground = new SolidColorBrush(Theme.Accent),
-            TextDecorations = TextDecorations.Underline,
-        };
+        var span = new Span { Foreground = _accent, TextDecorations = TextDecorations.Underline };
         FillInlines(span.Inlines, link, ctx);
         if (ctx.Offset == start)
         {
@@ -597,13 +691,7 @@ internal static class MarkdownRenderer
         InlineContext ctx
     )
     {
-        target.Add(
-            new Run(label)
-            {
-                Foreground = new SolidColorBrush(Theme.Accent),
-                TextDecorations = TextDecorations.Underline,
-            }
-        );
+        target.Add(new Run(label) { Foreground = _accent, TextDecorations = TextDecorations.Underline });
         ctx.Links.Add(new Markus.Views.LinkInlineTextBlock.LinkRange(ctx.Offset, label.Length, dest, isAnchor));
         ctx.Offset += label.Length;
     }
@@ -655,7 +743,7 @@ internal static class MarkdownRenderer
                 span.TextDecorations = TextDecorations.Underline;
                 break;
             case '=' when count >= 2:
-                span.Background = new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0xE0, 0x66));
+                span.Background = HighlightBrush;
                 break;
             default:
                 if (count >= 2)
@@ -675,9 +763,9 @@ internal static class MarkdownRenderer
         return new Run(code.Content)
         {
             FontFamily = MonoFamily,
-            FontSize = 13,
-            Foreground = new SolidColorBrush(Theme.CodeForeground),
-            Background = new SolidColorBrush(Theme.CodeBackground),
+            FontSize = Fs(13),
+            Foreground = _codeForeground,
+            Background = _codeBackground,
         };
     }
 
@@ -696,7 +784,7 @@ internal static class MarkdownRenderer
             {
                 Text = $"[image: {alt ?? url ?? "?"}]",
                 FontStyle = FontStyle.Italic,
-                Foreground = new SolidColorBrush(Theme.Muted),
+                Foreground = _muted,
             };
         }
         return new Image
@@ -733,7 +821,7 @@ internal static class MarkdownRenderer
 
     private static void OpenUrl(string? url)
     {
-        if (string.IsNullOrWhiteSpace(url))
+        if (!IsLaunchableUrl(url))
         {
             return;
         }
@@ -769,7 +857,7 @@ internal static class MarkdownRenderer
             {
                 FontFamily = MonoFamily,
                 FontSize = Fs(13),
-                Foreground = new SolidColorBrush(Theme.CodeForeground),
+                Foreground = _codeForeground,
             };
         }
         var control = new MathPainterControl(painter, size.Width, size.Height);

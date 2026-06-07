@@ -29,8 +29,26 @@ internal static class MermaidRenderer
             },
         };
 
-        process.Start();
+        try
+        {
+            process.Start();
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // mmdr is missing or not executable; treat as "no diagram" rather
+            // than faulting the fire-and-forget render task.
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
 
+        return await DrainSvgAsync(process, mermaidSource, ct);
+    }
+
+    private static async Task<string?> DrainSvgAsync(Process process, string mermaidSource, CancellationToken ct)
+    {
         // Bound a hung mmdr so a malformed diagram can't block the render task
         // forever.
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
