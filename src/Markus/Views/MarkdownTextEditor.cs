@@ -57,6 +57,7 @@ internal sealed class MarkdownTextEditor : TextEditor
 
     private RegistryOptions? _registry;
     private TextMate.Installation? _textMate;
+    private bool _textMateInstallScheduled;
     private SearchPanel? _searchPanel;
     private FoldingManager? _foldingManager;
     private MarkdownFoldingStrategy? _foldingStrategy;
@@ -299,15 +300,30 @@ internal sealed class MarkdownTextEditor : TextEditor
         EnsureTextMate();
     }
 
-    // Installs TextMate the first time this editor is the active view. Deferring
-    // the hidden view-mode copies keeps their grammar/theme load off the launch
-    // critical path.
+    // Installs TextMate the first time this editor is the active view, but does
+    // it after the first frame (Background priority) so grammar + theme loading
+    // (~90ms on the UI thread) never blocks the window from painting. The editor
+    // shows plain text immediately and colorizes a beat later. At most one
+    // install is queued at a time, and visibility is re-checked when it runs so a
+    // quick view-mode toggle does not install a now-hidden copy.
     private void EnsureTextMate()
     {
-        if (ShouldInstallTextMate(_textMate is not null, IsEffectivelyVisible))
+        if (_textMateInstallScheduled || !ShouldInstallTextMate(_textMate is not null, IsEffectivelyVisible))
         {
-            InstallTextMate();
+            return;
         }
+        _textMateInstallScheduled = true;
+        Avalonia.Threading.Dispatcher.UIThread.Post(
+            () =>
+            {
+                _textMateInstallScheduled = false;
+                if (ShouldInstallTextMate(_textMate is not null, IsEffectivelyVisible))
+                {
+                    InstallTextMate();
+                }
+            },
+            Avalonia.Threading.DispatcherPriority.Background
+        );
     }
 
     private void InstallTextMate()
