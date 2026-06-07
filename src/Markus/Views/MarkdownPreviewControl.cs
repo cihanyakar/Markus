@@ -9,6 +9,16 @@ using Markus.Services;
 
 namespace Markus.Views;
 
+// How a source change should be turned into a render: skipped while the panel
+// is hidden, painted at once on the first real content, or coalesced behind the
+// typing debounce.
+internal enum PreviewRenderSchedule
+{
+    Defer,
+    Immediate,
+    Debounced,
+}
+
 // Timers are disposed in DetachedFromVisualTree, which Avalonia raises on
 // teardown. Wrapping the UserControl in IDisposable just to satisfy CA1001
 // would conflict with Avalonia's own lifecycle.
@@ -51,6 +61,10 @@ internal sealed class MarkdownPreviewControl : UserControl
     private readonly DispatcherTimer _forceTimer;
     private string _pendingSource = string.Empty;
     private string _lastRenderedSource = string.Empty;
+
+    // Set when a source change arrived while this panel was hidden (an inactive
+    // view-mode copy). The deferred render runs when the panel becomes visible.
+    private bool _renderDeferredWhileHidden;
 
     // Monotonically increasing counter bumped by InvalidateRender so that a
     // forced re-render (theme/font change, same text) is detected even when
@@ -116,6 +130,11 @@ internal sealed class MarkdownPreviewControl : UserControl
             _debounceTimer.Stop();
             _forceTimer.Stop();
         };
+        // A hidden view-mode copy defers its render; paint it when it becomes
+        // the active view (its container is shown). EffectiveViewportChanged is
+        // the public signal for that transition; the copy's own IsVisible stays
+        // true inside a hidden container, so it can't be used here.
+        EffectiveViewportChanged += OnEffectiveViewportChanged;
     }
 
     public event EventHandler? RenderStarted;
@@ -282,6 +301,28 @@ internal sealed class MarkdownPreviewControl : UserControl
         return string.IsNullOrEmpty(lastRendered) && !string.IsNullOrEmpty(pending);
     }
 
+    // The window keeps one preview per view mode (source/preview/split) in the
+    // tree at once, toggled through their container's IsVisible. A hidden copy
+    // still receives Source changes, so without this gate every copy would build
+    // the full control tree on each document change. Effective visibility (not
+    // the copy's own IsVisible, which stays true inside a hidden container) is
+    // the right signal. Defer hidden panels; paint the first real content at
+    // once; debounce the rest.
+    internal static PreviewRenderSchedule DecidePreviewRender(
+        bool isEffectivelyVisible,
+        string? lastRendered,
+        string pending
+    )
+    {
+        if (!isEffectivelyVisible)
+        {
+            return PreviewRenderSchedule.Defer;
+        }
+        return ShouldRenderImmediately(lastRendered, pending)
+            ? PreviewRenderSchedule.Immediate
+            : PreviewRenderSchedule.Debounced;
+    }
+
     // Brings the block tagged with the given heading id into view. Called by the
     // renderer when an in-document anchor link is clicked, scoped to this
     // preview instance so split-view panes don't all scroll together.
@@ -401,22 +442,41 @@ internal sealed class MarkdownPreviewControl : UserControl
         }
     }
 
+    private void OnEffectiveViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e)
+    {
+        if (IsEffectivelyVisible && _renderDeferredWhileHidden)
+        {
+            // This view-mode copy just became active: paint the content that
+            // changed while it was hidden.
+            ScheduleRender(Source ?? string.Empty);
+        }
+    }
+
     private void ScheduleRender(string source)
     {
         _pendingSource = source;
-        if (ShouldRenderImmediately(_lastRenderedSource, source))
+        switch (DecidePreviewRender(IsEffectivelyVisible, _lastRenderedSource, source))
         {
-            // First real paint: skip the typing debounce so opening a document
-            // shows content immediately instead of lagging by DebounceMs.
-            _debounceTimer.Stop();
-            _ = DoRenderLoopAsync();
-            return;
-        }
-        _debounceTimer.Stop();
-        _debounceTimer.Start();
-        if (!_forceTimer.IsEnabled)
-        {
-            _forceTimer.Start();
+            case PreviewRenderSchedule.Defer:
+                _renderDeferredWhileHidden = true;
+                return;
+            case PreviewRenderSchedule.Immediate:
+                // First real paint: skip the typing debounce so opening a
+                // document shows content immediately instead of lagging by
+                // DebounceMs.
+                _renderDeferredWhileHidden = false;
+                _debounceTimer.Stop();
+                _ = DoRenderLoopAsync();
+                return;
+            default:
+                _renderDeferredWhileHidden = false;
+                _debounceTimer.Stop();
+                _debounceTimer.Start();
+                if (!_forceTimer.IsEnabled)
+                {
+                    _forceTimer.Start();
+                }
+                return;
         }
     }
 

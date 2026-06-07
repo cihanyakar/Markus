@@ -5,7 +5,7 @@ namespace Markus.Tests.Views;
 // The preview debounces renders to coalesce rapid keystrokes, but the very
 // first paint (an empty buffer receiving its initial document) must skip that
 // wait so opening a file feels instant rather than lagging by the debounce
-// interval.
+// interval. A hidden view-mode copy must not render at all until it is shown.
 public sealed class MarkdownPreviewRenderSchedulingTests
 {
     [Theory]
@@ -24,5 +24,32 @@ public sealed class MarkdownPreviewRenderSchedulingTests
     public void SubsequentOrEmptyRender_IsDebounced(string? lastRendered, string pending)
     {
         MarkdownPreviewControl.ShouldRenderImmediately(lastRendered, pending).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("", "content")] // initial load while hidden
+    [InlineData("old", "new")] // edit while hidden
+    [InlineData("content", "")] // clear while hidden
+    public void HiddenPanel_DefersRender(string? lastRendered, string pending)
+    {
+        MarkdownPreviewControl
+            .DecidePreviewRender(isEffectivelyVisible: false, lastRendered, pending)
+            .ShouldBe(PreviewRenderSchedule.Defer);
+    }
+
+    [Fact]
+    public void VisiblePanel_FirstContent_RendersImmediately()
+    {
+        MarkdownPreviewControl
+            .DecidePreviewRender(isEffectivelyVisible: true, lastRendered: string.Empty, pending: "content")
+            .ShouldBe(PreviewRenderSchedule.Immediate);
+    }
+
+    [Fact]
+    public void VisiblePanel_SubsequentEdit_Debounces()
+    {
+        MarkdownPreviewControl
+            .DecidePreviewRender(isEffectivelyVisible: true, lastRendered: "old", pending: "new")
+            .ShouldBe(PreviewRenderSchedule.Debounced);
     }
 }

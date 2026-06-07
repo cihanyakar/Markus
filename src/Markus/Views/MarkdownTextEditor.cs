@@ -164,10 +164,24 @@ internal sealed class MarkdownTextEditor : TextEditor
         return Markus.Services.TextSearchMath.CurrentMatchIndex(Document.Text, term, anchor, caseSensitive);
     }
 
+    // TextMate must load once, only when this editor is the active view. The
+    // window holds one editor per view mode (source/split); loading grammar and
+    // theme for the hidden copies blocks the window from showing for nothing.
+    internal static bool ShouldInstallTextMate(bool alreadyInstalled, bool isEffectivelyVisible)
+    {
+        return !alreadyInstalled && isEffectivelyVisible;
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        InstallTextMate();
+        // TextMate grammar/theme loading costs tens to ~150ms on the UI thread.
+        // The window holds one editor per view mode (source/split), all attached
+        // at once; loading TextMate for the hidden copies blocks the window from
+        // showing for nothing. Install only when this editor is the active view;
+        // EffectiveViewportChanged fires that transition.
+        EnsureTextMate();
+        EffectiveViewportChanged += OnEffectiveViewportChanged;
         ApplyBoundText(BoundText);
         EnsureSearchPanel();
         InstallFolding();
@@ -189,6 +203,7 @@ internal sealed class MarkdownTextEditor : TextEditor
             app.PropertyChanged -= OnApplicationPropertyChanged;
         }
         TextMateThemeResolver.Changed -= OnCodeThemeChanged;
+        EffectiveViewportChanged -= OnEffectiveViewportChanged;
         TextArea.TextEntering -= OnTextEntering;
         TextArea.RemoveHandler(KeyDownEvent, OnKeyDown);
         TextArea.Caret.PositionChanged -= OnCaretPositionChanged;
@@ -274,6 +289,22 @@ internal sealed class MarkdownTextEditor : TextEditor
     private void OnCodeThemeChanged(object? sender, EventArgs e)
     {
         if (_textMate is not null)
+        {
+            InstallTextMate();
+        }
+    }
+
+    private void OnEffectiveViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e)
+    {
+        EnsureTextMate();
+    }
+
+    // Installs TextMate the first time this editor is the active view. Deferring
+    // the hidden view-mode copies keeps their grammar/theme load off the launch
+    // critical path.
+    private void EnsureTextMate()
+    {
+        if (ShouldInstallTextMate(_textMate is not null, IsEffectivelyVisible))
         {
             InstallTextMate();
         }
