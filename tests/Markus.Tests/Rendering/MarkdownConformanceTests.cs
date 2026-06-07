@@ -121,6 +121,31 @@ public sealed class MarkdownConformanceTests
         MarkdownTableFormatter.DisplayWidth(text).ShouldBe(expected);
     }
 
+    // --- GFM raw inline HTML: <br> is a hard line break (GitHub behavior) ---
+
+    [Theory]
+    [InlineData("a<br>b")]
+    [InlineData("a<br/>b")]
+    [InlineData("a<br />b")]
+    [InlineData("a<BR>b")]
+    public void HtmlBreakTag_RendersAsLineBreak(string markdown)
+    {
+        var block = (TextBlock)Render(markdown);
+
+        block.Inlines!.OfType<LineBreak>().ShouldNotBeEmpty();
+        TopLevelRunTexts(block).Any(t => t.Contains('<')).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void HtmlNonBreakTag_StaysLiteral()
+    {
+        // Other raw inline HTML is still shown verbatim, not turned into a break.
+        var block = (TextBlock)Render("a<span>b");
+
+        block.Inlines!.OfType<LineBreak>().ShouldBeEmpty();
+        TopLevelRunTexts(block).Any(t => t.Contains("<span>", StringComparison.Ordinal)).ShouldBeTrue();
+    }
+
     private static Control Render(string markdown)
     {
         return MarkdownRenderer.Render(MarkdownPipeline.Parse(markdown)).First().Control;
