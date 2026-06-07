@@ -71,4 +71,54 @@ public sealed class SemVerTests
     {
         SemVer.TryParse(text, out _).ShouldBeFalse();
     }
+
+    // SemVer 2.0.0 spec, item 11: the canonical precedence example chain.
+    [Fact]
+    public void Precedence_FollowsSpecExampleChain()
+    {
+        string[] chain =
+        [
+            "1.0.0-alpha",
+            "1.0.0-alpha.1",
+            "1.0.0-alpha.beta",
+            "1.0.0-beta",
+            "1.0.0-beta.2",
+            "1.0.0-beta.11",
+            "1.0.0-rc.1",
+            "1.0.0",
+        ];
+
+        for (var i = 0; i < chain.Length - 1; i++)
+        {
+            (SemVer.Parse(chain[i]) < SemVer.Parse(chain[i + 1])).ShouldBeTrue(
+                $"{chain[i]} should precede {chain[i + 1]}"
+            );
+        }
+    }
+
+    [Theory]
+    [InlineData("0.0.4")]
+    [InlineData("10.20.30")]
+    [InlineData("1.0.0-alpha.1")]
+    [InlineData("1.0.0-0.3.7")]
+    [InlineData("1.0.0-x.7.z.92")]
+    [InlineData("1.0.0-alpha+001")]
+    [InlineData("1.0.0+20130313144700")]
+    [InlineData("1.0.0-beta+exp.sha.5114f85")]
+    public void TryParse_AcceptsSpecValidVersions(string text)
+    {
+        SemVer.TryParse(text, out _).ShouldBeTrue(text);
+    }
+
+    [Theory]
+    [InlineData("1")]
+    [InlineData("1.2.3-0123")]
+    [InlineData("1.2.3-0123.0123")]
+    [InlineData("1.0.0-")]
+    [InlineData("1.0.0-..")]
+    [InlineData("+invalid")]
+    public void TryParse_RejectsSpecInvalidVersions(string text)
+    {
+        SemVer.TryParse(text, out _).ShouldBeFalse(text);
+    }
 }

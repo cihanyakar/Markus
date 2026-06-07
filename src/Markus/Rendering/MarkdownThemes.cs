@@ -41,12 +41,14 @@ internal static class MarkdownThemes
         IsDark = false,
         Background = Color.FromRgb(0xFD, 0xF6, 0xE3),
         Foreground = Color.FromRgb(0x58, 0x6E, 0x75),
-        Accent = Color.FromRgb(0x26, 0x8B, 0xD2),
+        // Darkened from Solarized's #268BD2 / #657B83 to clear WCAG AA (4.5:1)
+        // for links and muted text on the light base3 background.
+        Accent = Color.FromRgb(0x1F, 0x72, 0xAC),
         CodeBackground = Color.FromArgb(0x55, 0xEE, 0xE8, 0xD5),
         CodeForeground = Color.FromRgb(0x58, 0x6E, 0x75),
         CodeBorder = Color.FromArgb(0x55, 0x93, 0xA1, 0xA1),
         QuoteAccent = Color.FromArgb(0xAA, 0xB5, 0x89, 0x00),
-        Muted = Color.FromRgb(0x65, 0x7B, 0x83),
+        Muted = Color.FromRgb(0x5D, 0x71, 0x79),
     };
 
     public static readonly MarkdownTheme SolarizedDark = new MarkdownTheme
@@ -76,7 +78,8 @@ internal static class MarkdownThemes
         CodeForeground = Color.FromRgb(0xEC, 0xEF, 0xF4),
         CodeBorder = Color.FromArgb(0x55, 0x4C, 0x56, 0x6A),
         QuoteAccent = Color.FromArgb(0xAA, 0x81, 0xA1, 0xC1),
-        Muted = Color.FromRgb(0x81, 0x8C, 0x9F),
+        // Lightened from Nord's #818C9F to clear WCAG AA on the dark polar bg.
+        Muted = Color.FromRgb(0x95, 0x9E, 0xAE),
     };
 
     public static readonly MarkdownTheme TokyoNight = new MarkdownTheme

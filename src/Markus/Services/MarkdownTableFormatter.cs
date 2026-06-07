@@ -45,6 +45,18 @@ internal static class MarkdownTableFormatter
         return output.ToString();
     }
 
+    // Column width counts display columns, not UTF-16 units: CJK/emoji are two
+    // columns wide (UAX #11). Internal for conformance tests.
+    internal static int DisplayWidth(string text)
+    {
+        var width = 0;
+        foreach (var rune in text.EnumerateRunes())
+        {
+            width += IsWide(rune.Value) ? 2 : 1;
+        }
+        return width;
+    }
+
     private static bool TryParseTable(string[] lines, int start, out int consumed, out string formatted)
     {
         consumed = 0;
@@ -186,37 +198,28 @@ internal static class MarkdownTableFormatter
 
     private static List<string> SplitCells(string line)
     {
-        var trimmed = line.Trim();
-        if (trimmed.StartsWith('|'))
+        var span = line.AsSpan().Trim();
+        if (span.Length > 0 && span[0] == '|')
         {
-            trimmed = trimmed[1..];
+            span = span[1..];
         }
-        if (trimmed.EndsWith('|'))
+        if (span.Length > 0 && span[^1] == '|')
         {
-            trimmed = trimmed[..^1];
+            span = span[..^1];
         }
 
         var cells = new List<string>();
-        var current = new StringBuilder();
-        for (var i = 0; i < trimmed.Length; i++)
+        var start = 0;
+        for (var i = 0; i < span.Length; i++)
         {
-            if (trimmed[i] == '|' && i > 0 && trimmed[i - 1] == '\\')
+            // Split on an unescaped pipe; an escaped \| stays inside the cell.
+            if (span[i] == '|' && (i == 0 || span[i - 1] != '\\'))
             {
-                // Escaped pipe. Replace the trailing backslash with \| in the cell.
-                current[^1] = '\\';
-                current.Append('|');
-            }
-            else if (trimmed[i] == '|')
-            {
-                cells.Add(current.ToString().Trim());
-                current.Clear();
-            }
-            else
-            {
-                current.Append(trimmed[i]);
+                cells.Add(span[start..i].Trim().ToString());
+                start = i + 1;
             }
         }
-        cells.Add(current.ToString().Trim());
+        cells.Add(span[start..].Trim().ToString());
         return cells;
     }
 
@@ -256,16 +259,6 @@ internal static class MarkdownTableFormatter
             CellAlignment.Center => new string(' ', pad / 2) + text + new string(' ', pad - (pad / 2)),
             _ => text + new string(' ', pad),
         };
-    }
-
-    private static int DisplayWidth(string text)
-    {
-        var width = 0;
-        foreach (var rune in text.EnumerateRunes())
-        {
-            width += IsWide(rune.Value) ? 2 : 1;
-        }
-        return width;
     }
 
     private static bool IsWide(int v)
