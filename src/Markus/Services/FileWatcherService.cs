@@ -4,6 +4,11 @@ internal sealed class FileWatcherService : IDisposable
 {
     private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(150);
 
+    // Guards all mutable state below. Watch/Stop/Dispose run on the UI thread
+    // while the FileSystemWatcher and debounce-timer callbacks run on pool
+    // threads, so every field access is serialized through this lock.
+    private readonly Lock _gate = new Lock();
+
     private FileSystemWatcher? _watcher;
     private Timer? _debounceTimer;
     private int _generation;
@@ -21,8 +26,6 @@ internal sealed class FileWatcherService : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        Stop();
-
         var dir = Path.GetDirectoryName(filePath);
         var name = Path.GetFileName(filePath);
         if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(name))
@@ -30,20 +33,45 @@ internal sealed class FileWatcherService : IDisposable
             return;
         }
 
-        WatchedPath = filePath;
-        _watcher = new FileSystemWatcher(dir, name)
+        lock (_gate)
         {
-            NotifyFilter =
-                NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime | NotifyFilters.FileName,
-            EnableRaisingEvents = true,
-        };
-        _watcher.Changed += OnFsEvent;
-        _watcher.Created += OnFsEvent;
-        _watcher.Renamed += OnRenamed;
-        _watcher.Deleted += OnFsEvent;
+            StopLocked();
+            WatchedPath = filePath;
+            _watcher = new FileSystemWatcher(dir, name)
+            {
+                NotifyFilter =
+                    NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime | NotifyFilters.FileName,
+                EnableRaisingEvents = true,
+            };
+            _watcher.Changed += OnFsEvent;
+            _watcher.Created += OnFsEvent;
+            _watcher.Renamed += OnRenamed;
+            _watcher.Deleted += OnFsEvent;
+        }
     }
 
     public void Stop()
+    {
+        lock (_gate)
+        {
+            StopLocked();
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+            StopLocked();
+        }
+    }
+
+    private void StopLocked()
     {
         if (_watcher is { } w)
         {
@@ -65,17 +93,6 @@ internal sealed class FileWatcherService : IDisposable
         WatchedPath = null;
     }
 
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
-        Stop();
-    }
-
     private void OnFsEvent(object? sender, FileSystemEventArgs e)
     {
         ScheduleNotify(e.FullPath, e.ChangeType);
@@ -83,30 +100,53 @@ internal sealed class FileWatcherService : IDisposable
 
     private void OnRenamed(object? sender, RenamedEventArgs e)
     {
-        WatchedPath = e.FullPath;
-        _watcher?.Filter = Path.GetFileName(e.FullPath);
+        lock (_gate)
+        {
+            if (_watcher is null)
+            {
+                return;
+            }
+            WatchedPath = e.FullPath;
+            _watcher.Filter = Path.GetFileName(e.FullPath);
+        }
         ScheduleNotify(e.FullPath, WatcherChangeTypes.Renamed);
     }
 
     private void ScheduleNotify(string path, WatcherChangeTypes change)
     {
-        _debounceTimer?.Dispose();
-        var generation = ++_generation;
-        _debounceTimer = new Timer(
-            _ =>
+        int generation;
+        lock (_gate)
+        {
+            if (_disposed)
             {
-                // Drop the notification if it was superseded by a newer event or
-                // by Stop()/Dispose() between scheduling and firing.
-                if (_disposed || generation != _generation)
-                {
-                    return;
-                }
-                FileChanged?.Invoke(this, new FileChangedEventArgs(path, change));
-            },
-            null,
-            DebounceInterval,
-            Timeout.InfiniteTimeSpan
-        );
+                return;
+            }
+            _debounceTimer?.Dispose();
+            generation = ++_generation;
+            _debounceTimer = new Timer(
+                _ => FireIfCurrent(generation, path, change),
+                null,
+                DebounceInterval,
+                Timeout.InfiniteTimeSpan
+            );
+        }
+    }
+
+    private void FireIfCurrent(int generation, string path, WatcherChangeTypes change)
+    {
+        // Capture the guard result and the handler under the lock, then raise the
+        // event outside it so a subscriber can never deadlock against Watch/Stop
+        // on the UI thread and so a concurrent unsubscribe is observed atomically.
+        EventHandler<FileChangedEventArgs>? handler;
+        lock (_gate)
+        {
+            if (_disposed || generation != _generation)
+            {
+                return;
+            }
+            handler = FileChanged;
+        }
+        handler?.Invoke(this, new FileChangedEventArgs(path, change));
     }
 }
 

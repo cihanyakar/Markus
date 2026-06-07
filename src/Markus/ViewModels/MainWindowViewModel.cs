@@ -8,6 +8,10 @@ namespace Markus.ViewModels;
 
 internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
+    // Outline rebuild waits this long after the last edit so fast typing does
+    // not parse the whole document on every keystroke.
+    private const int OutlineDebounceMs = 200;
+
     private readonly SettingsService _settingsService;
     private readonly FileWatcherService _fileWatcher;
     private System.Threading.CancellationTokenSource? _outlineCts;
@@ -109,6 +113,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // incoming document from flashing past an empty welcome render.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     private bool _isAwaitingInitialDocument;
 
     [ObservableProperty]
@@ -180,7 +185,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // floats out into its own window). Source-only obviously stays visible too.
     public bool IsSourceVisibleInMain => CurrentViewMode is ViewMode.Source or ViewMode.Detached;
 
-    public int WordCount => CountWords(SourceText);
+    // Cached so DocumentStats / ReadingMinutes do not re-scan the whole document
+    // on every read; refreshed once per SourceText change.
+    public int WordCount { get; private set; }
 
     public int CharCount => SourceText?.Length ?? 0;
 
@@ -300,6 +307,13 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             // The writer may still hold the file mid-save; a later settle event
             // delivers the final content.
+            return;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Permissions changed under us; surface it instead of faulting the
+            // fire-and-forget task that drives this reload.
+            StatusText = $"{DocumentTitle} • permission denied on disk";
             return;
         }
 
@@ -828,6 +842,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     partial void OnSourceTextChanged(string value)
     {
+        // Refresh the cached count before the generated WordCount/DocumentStats
+        // change notifications fire, so the status bar reads it without re-scanning.
+        WordCount = CountWords(value);
         if (!_loadingDocument)
         {
             IsDirty = true;
@@ -866,6 +883,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         var token = fresh.Token;
         try
         {
+            // Debounce: a newer keystroke cancels this token before the delay
+            // elapses, so the document is parsed only after typing settles.
+            await System.Threading.Tasks.Task.Delay(OutlineDebounceMs, token);
             // Parse + tree-build on the threadpool; the result hop back to the
             // UI thread via the captured sync context for the property assign.
             var nodes = await System.Threading.Tasks.Task.Run(
