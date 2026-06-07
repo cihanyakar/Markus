@@ -106,6 +106,21 @@ public sealed class MarkdownConformanceTests
         MarkdownTableFormatter.DisplayWidth(text).ShouldBe(expected);
     }
 
+    // Combining marks and zero-width format characters occupy no display column,
+    // so they must not widen a table cell (otherwise decomposed accents and
+    // zero-width joiners push the column padding out of alignment).
+    [Theory]
+    [InlineData("e\u0301", 1)] // letter + combining acute (nonspacing mark)
+    [InlineData("a\u0327", 1)] // letter + combining cedilla
+    [InlineData("o\u0302\u0323", 1)] // letter + two stacked combining marks
+    [InlineData("1\u20E3", 1)] // digit + combining enclosing keycap
+    [InlineData("x\u200By", 2)] // zero-width space between two narrow letters
+    [InlineData("\u200D", 0)] // lone zero-width joiner (format character)
+    public void DisplayWidth_CountsZeroWidthMarksAsZero(string text, int expected)
+    {
+        MarkdownTableFormatter.DisplayWidth(text).ShouldBe(expected);
+    }
+
     private static Control Render(string markdown)
     {
         return MarkdownRenderer.Render(MarkdownPipeline.Parse(markdown)).First().Control;

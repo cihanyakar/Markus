@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace Markus.Services;
@@ -52,9 +53,27 @@ internal static class MarkdownTableFormatter
         var width = 0;
         foreach (var rune in text.EnumerateRunes())
         {
+            if (IsZeroWidth(rune))
+            {
+                continue;
+            }
             width += IsWide(rune.Value) ? 2 : 1;
         }
         return width;
+    }
+
+    // Combining marks (Mn/Me) and format characters (Cf, such as the zero-width
+    // joiner and zero-width space) take no display column, so they must not count
+    // toward a cell's width or decomposed accents misalign the column padding.
+    private static bool IsZeroWidth(Rune rune)
+    {
+        return Rune.GetUnicodeCategory(rune) switch
+        {
+            UnicodeCategory.NonSpacingMark => true,
+            UnicodeCategory.EnclosingMark => true,
+            UnicodeCategory.Format => true,
+            _ => false,
+        };
     }
 
     private static bool TryParseTable(string[] lines, int start, out int consumed, out string formatted)
