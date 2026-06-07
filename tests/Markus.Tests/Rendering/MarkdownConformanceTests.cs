@@ -128,6 +128,7 @@ public sealed class MarkdownConformanceTests
     [InlineData("a<br/>b")]
     [InlineData("a<br />b")]
     [InlineData("a<BR>b")]
+    [InlineData("a<br class=\"x\">b")] // attributes still mean a break (GitHub)
     public void HtmlBreakTag_RendersAsLineBreak(string markdown)
     {
         var block = (TextBlock)Render(markdown);
@@ -136,14 +137,17 @@ public sealed class MarkdownConformanceTests
         TopLevelRunTexts(block).Any(t => t.Contains('<')).ShouldBeFalse();
     }
 
-    [Fact]
-    public void HtmlNonBreakTag_StaysLiteral()
+    [Theory]
+    [InlineData("a<span>b")] // unrelated raw inline HTML
+    [InlineData("a<brr>b")] // tag name is not exactly "br"
+    [InlineData("a<break>b")] // "br" is only a prefix here
+    public void HtmlNonBreakTag_StaysLiteral(string markdown)
     {
         // Other raw inline HTML is still shown verbatim, not turned into a break.
-        var block = (TextBlock)Render("a<span>b");
+        var block = (TextBlock)Render(markdown);
 
         block.Inlines!.OfType<LineBreak>().ShouldBeEmpty();
-        TopLevelRunTexts(block).Any(t => t.Contains("<span>", StringComparison.Ordinal)).ShouldBeTrue();
+        TopLevelRunTexts(block).Any(t => t.Contains('<')).ShouldBeTrue();
     }
 
     private static Control Render(string markdown)

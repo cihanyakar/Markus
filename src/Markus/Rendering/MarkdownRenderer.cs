@@ -470,17 +470,21 @@ internal static class MarkdownRenderer
 
     private static bool IsLineBreakTag(string tag)
     {
-        var t = tag.AsSpan().Trim();
-        if (t.Length < 4 || t[0] != '<' || t[^1] != '>')
+        // Matches <br>, <br/>, <br />, and <br ...attributes> (case-insensitive),
+        // the inline HTML GitHub renders as a hard break. The "br" must be the
+        // whole tag name, so <brr>, <break>, and <hr> stay literal text.
+        var span = tag.AsSpan().Trim();
+        if (span.Length < 4 || span[0] != '<' || span[^1] != '>')
         {
             return false;
         }
-        t = t[1..^1].Trim();
-        if (t.Length > 0 && t[^1] == '/')
+        var inner = span[1..^1].TrimStart();
+        if (inner.Length < 2 || !inner[..2].Equals("br", StringComparison.OrdinalIgnoreCase))
         {
-            t = t[..^1].TrimEnd();
+            return false;
         }
-        return t.Equals("br", StringComparison.OrdinalIgnoreCase);
+        // After "br" the tag ends, self-closes, or continues with attributes.
+        return inner.Length == 2 || inner[2] == '/' || char.IsWhiteSpace(inner[2]);
     }
 
     private static void AppendText(InlineCollection target, string text, InlineContext ctx)
