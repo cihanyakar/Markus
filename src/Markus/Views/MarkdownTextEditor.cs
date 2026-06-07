@@ -10,7 +10,7 @@ using AvaloniaEdit.Document;
 using AvaloniaEdit.Folding;
 using AvaloniaEdit.Search;
 using AvaloniaEdit.TextMate;
-using TextMateSharp.Grammars;
+using TextMateSharp.Registry;
 
 namespace Markus.Views;
 
@@ -55,7 +55,7 @@ internal sealed class MarkdownTextEditor : TextEditor
         TimeSpan.FromMilliseconds(50)
     );
 
-    private RegistryOptions? _registry;
+    private IRegistryOptions? _registry;
     private TextMate.Installation? _textMate;
     private bool _textMateInstallScheduled;
     private SearchPanel? _searchPanel;
@@ -329,8 +329,7 @@ internal sealed class MarkdownTextEditor : TextEditor
     private void InstallTextMate()
     {
         _textMate?.Dispose();
-        var themeName = TextMateThemeResolver.Resolve();
-        _registry = new RegistryOptions(themeName);
+        _registry = new MarkdownRegistryOptions(TextMateThemeResolver.Resolve());
         _textMate = this.InstallTextMate(_registry);
         _textMate.AppliedTheme += OnTextMateThemeApplied;
         ApplyGrammar();
@@ -356,11 +355,7 @@ internal sealed class MarkdownTextEditor : TextEditor
         {
             return;
         }
-        var scope = _registry.GetScopeByLanguageId(GrammarLanguage);
-        if (!string.IsNullOrEmpty(scope))
-        {
-            _textMate.SetGrammar(scope);
-        }
+        _textMate.SetGrammar(MarkdownRegistryOptions.MarkdownScope);
     }
 
     private void ApplyBoundText(string? value)
