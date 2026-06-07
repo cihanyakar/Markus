@@ -26,6 +26,17 @@ public sealed class MarkdownRegistryOptionsTests
             "tomorrow-night-blue-color-theme.json",
         };
 
+    public static TheoryData<string> GrammarScopes =>
+        new()
+        {
+            MarkdownRegistryOptions.MarkdownScope,
+            "source.python",
+            "source.js",
+            "source.ts",
+            "source.shell",
+            "source.cs",
+        };
+
     [Theory]
     [MemberData(nameof(ThemeFiles))]
     public void EveryShippedTheme_LoadsFromManifest(string themeFile)
@@ -33,18 +44,19 @@ public sealed class MarkdownRegistryOptionsTests
         Should.NotThrow(() => MarkdownRegistryOptions.LoadTheme(themeFile)).ShouldNotBeNull();
     }
 
-    [Fact]
-    public void Grammar_LoadsForMarkdownScope()
+    [Theory]
+    [MemberData(nameof(GrammarScopes))]
+    public void EveryShippedGrammar_LoadsFromManifest(string scope)
     {
         var registry = new MarkdownRegistryOptions("dark_plus.json");
-        registry.GetGrammar(MarkdownRegistryOptions.MarkdownScope).ShouldNotBeNull();
+        registry.GetGrammar(scope).ShouldNotBeNull();
     }
 
     [Fact]
-    public void Grammar_IsNullForOtherScopes()
+    public void Grammar_IsNullForUnsupportedScopes()
     {
         var registry = new MarkdownRegistryOptions("dark_plus.json");
-        registry.GetGrammar("source.js").ShouldBeNull();
+        registry.GetGrammar("source.ruby").ShouldBeNull();
     }
 
     [Fact]
