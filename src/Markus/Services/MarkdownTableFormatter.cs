@@ -62,6 +62,33 @@ internal static class MarkdownTableFormatter
         return width;
     }
 
+    internal static List<string> SplitCells(string line)
+    {
+        var span = line.AsSpan().Trim();
+        if (span.Length > 0 && span[0] == '|')
+        {
+            span = span[1..];
+        }
+        if (span.Length > 0 && span[^1] == '|')
+        {
+            span = span[..^1];
+        }
+
+        var cells = new List<string>();
+        var start = 0;
+        for (var i = 0; i < span.Length; i++)
+        {
+            // Split on an unescaped pipe; an escaped \| stays inside the cell.
+            if (span[i] == '|' && !IsEscaped(span, i))
+            {
+                cells.Add(span[start..i].Trim().ToString());
+                start = i + 1;
+            }
+        }
+        cells.Add(span[start..].Trim().ToString());
+        return cells;
+    }
+
     // Combining marks (Mn/Me) and format characters (Cf, such as the zero-width
     // joiner and zero-width space) take no display column, so they must not count
     // toward a cell's width or decomposed accents misalign the column padding.
@@ -215,31 +242,17 @@ internal static class MarkdownTableFormatter
         return true;
     }
 
-    private static List<string> SplitCells(string line)
+    // A pipe is escaped only when preceded by an ODD number of backslashes. An
+    // even run means those backslashes escape each other (a literal backslash),
+    // leaving the pipe as a real column separator, per GFM escaping rules.
+    private static bool IsEscaped(ReadOnlySpan<char> span, int index)
     {
-        var span = line.AsSpan().Trim();
-        if (span.Length > 0 && span[0] == '|')
+        var backslashes = 0;
+        for (var j = index - 1; j >= 0 && span[j] == '\\'; j--)
         {
-            span = span[1..];
+            backslashes++;
         }
-        if (span.Length > 0 && span[^1] == '|')
-        {
-            span = span[..^1];
-        }
-
-        var cells = new List<string>();
-        var start = 0;
-        for (var i = 0; i < span.Length; i++)
-        {
-            // Split on an unescaped pipe; an escaped \| stays inside the cell.
-            if (span[i] == '|' && (i == 0 || span[i - 1] != '\\'))
-            {
-                cells.Add(span[start..i].Trim().ToString());
-                start = i + 1;
-            }
-        }
-        cells.Add(span[start..].Trim().ToString());
-        return cells;
+        return (backslashes & 1) == 1;
     }
 
     private static List<CellAlignment> ParseAlignment(IEnumerable<string> delimiterCells)
