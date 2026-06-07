@@ -71,9 +71,11 @@ internal readonly struct SemVer : IComparable<SemVer>, IEquatable<SemVer>
             span = span[1..];
         }
 
+        string? build = null;
         var plus = span.IndexOf('+', StringComparison.Ordinal);
         if (plus >= 0)
         {
+            build = span[(plus + 1)..];
             span = span[..plus];
         }
 
@@ -85,31 +87,17 @@ internal readonly struct SemVer : IComparable<SemVer>, IEquatable<SemVer>
             span = span[..dash];
         }
 
-        var parts = span.Split('.');
-        if (parts.Length != 3)
+        if (!TryParseCore(span, out var major, out var minor, out var patch))
         {
             return false;
-        }
-
-        if (
-            !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var major)
-            || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var minor)
-            || !int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out var patch)
-        )
-        {
-            return false;
-        }
-
-        // Strict SemVer 2.0 disallows leading zeros in numeric identifiers.
-        for (var i = 0; i < 3; i++)
-        {
-            if (parts[i].Length > 1 && parts[i][0] == '0')
-            {
-                return false;
-            }
         }
 
         if (pre is not null && !IsValidPreRelease(pre))
+        {
+            return false;
+        }
+
+        if (build is not null && !IsValidBuildMetadata(build))
         {
             return false;
         }
@@ -231,14 +219,11 @@ internal readonly struct SemVer : IComparable<SemVer>, IEquatable<SemVer>
 
     private static bool IsValidPreRelease(string pre)
     {
-        if (pre.Length == 0)
-        {
-            return false;
-        }
-
         foreach (var ident in pre.Split('.'))
         {
-            if (ident.Length == 0)
+            // SemVer 2.0 item 9: identifiers are non-empty and contain only
+            // ASCII alphanumerics and hyphens.
+            if (ident.Length == 0 || !IsAlphanumericOrHyphen(ident))
             {
                 return false;
             }
@@ -253,8 +238,53 @@ internal readonly struct SemVer : IComparable<SemVer>, IEquatable<SemVer>
         return true;
     }
 
+    private static bool IsValidBuildMetadata(string build)
+    {
+        // SemVer 2.0 item 10: build identifiers share the prerelease character
+        // set but, unlike prerelease, allow numeric identifiers with leading
+        // zeros (build metadata is never compared).
+        foreach (var ident in build.Split('.'))
+        {
+            if (ident.Length == 0 || !IsAlphanumericOrHyphen(ident))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsAlphanumericOrHyphen(string s)
+    {
+        return s.All(static c => c is >= '0' and <= '9' or >= 'A' and <= 'Z' or >= 'a' and <= 'z' or '-');
+    }
+
     private static bool AllDigits(string s)
     {
         return s.All(static c => c is >= '0' and <= '9');
+    }
+
+    private static bool TryParseCore(string core, out int major, out int minor, out int patch)
+    {
+        major = 0;
+        minor = 0;
+        patch = 0;
+        var parts = core.Split('.');
+        if (parts.Length != 3)
+        {
+            return false;
+        }
+
+        if (
+            !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out major)
+            || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out minor)
+            || !int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out patch)
+        )
+        {
+            return false;
+        }
+
+        // Strict SemVer 2.0 disallows leading zeros in numeric identifiers.
+        return !parts.Any(static p => p.Length > 1 && p[0] == '0');
     }
 }
