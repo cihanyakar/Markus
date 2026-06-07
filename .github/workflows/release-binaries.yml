@@ -32,9 +32,11 @@ jobs:
           - rid: osx-x64
             os: macos-13
             bundle: app
+            aot: true
           - rid: osx-arm64
             os: macos-latest
             bundle: app
+            aot: true
           - rid: linux-x64
             os: ubuntu-latest
             bundle: tar
@@ -54,7 +56,28 @@ jobs:
       - name: Restore
         run: dotnet restore src/Markus/Markus.csproj -r ${{ matrix.rid }}
 
+      # NativeAOT publish for macOS. AOT removes the JIT warmup that dominated
+      # cold start (window-shown dropped from ~750ms to ~170ms in local
+      # measurement), and the SVG (mermaid) and CSharpMath paths were verified
+      # to render correctly under AOT. Each RID compiles natively on its own
+      # runner, so no cross-compilation is involved. The %3B keeps the NoWarn
+      # list a single MSBuild property across shells.
+      - name: Publish NativeAOT
+        if: matrix.aot
+        shell: bash
+        run: |
+          dotnet publish src/Markus/Markus.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            -p:PublishAot=true \
+            -p:InvariantGlobalization=true \
+            -p:NoWarn=IL2104%3BIL2026%3BIL3050 \
+            -o publish/${{ matrix.rid }}
+
+      # JIT self-contained single file for the platforms not yet on AOT
+      # (linux/windows need their own AOT toolchain validation first).
       - name: Publish self-contained single file
+        if: ${{ !matrix.aot }}
         shell: bash
         run: |
           dotnet publish src/Markus/Markus.csproj \
