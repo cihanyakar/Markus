@@ -432,7 +432,10 @@ internal static class MarkdownRenderer
             case LinkInline link:
                 AppendLink(target, link, ctx);
                 return;
+            // A hard line break, or an inline <br> / <br/> / <br /> which GitHub
+            // renders as a hard break even though other raw HTML stays literal.
             case LineBreakInline hardBreak when hardBreak.IsHard:
+            case HtmlInline brTag when IsLineBreakTag(brTag.Tag):
                 target.Add(new LineBreak());
                 ctx.Offset += 1;
                 return;
@@ -463,6 +466,25 @@ internal static class MarkdownRenderer
                 AppendText(target, inline.ToString() ?? string.Empty, ctx);
                 return;
         }
+    }
+
+    private static bool IsLineBreakTag(string tag)
+    {
+        // Matches <br>, <br/>, <br />, and <br ...attributes> (case-insensitive),
+        // the inline HTML GitHub renders as a hard break. The "br" must be the
+        // whole tag name, so <brr>, <break>, and <hr> stay literal text.
+        var span = tag.AsSpan().Trim();
+        if (span.Length < 4 || span[0] != '<' || span[^1] != '>')
+        {
+            return false;
+        }
+        var inner = span[1..^1].TrimStart();
+        if (inner.Length < 2 || !inner[..2].Equals("br", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        // After "br" the tag ends, self-closes, or continues with attributes.
+        return inner.Length == 2 || inner[2] == '/' || char.IsWhiteSpace(inner[2]);
     }
 
     private static void AppendText(InlineCollection target, string text, InlineContext ctx)
