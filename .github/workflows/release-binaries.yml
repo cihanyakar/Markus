@@ -51,22 +51,30 @@ jobs:
         with:
           global-json-file: global.json
 
+      # NativeAOT needs a C toolchain to link. macOS (Xcode) and Windows (MSVC)
+      # runners already have one; Linux needs clang and zlib headers.
+      - name: Install NativeAOT toolchain (Linux)
+        if: matrix.rid == 'linux-x64'
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
       - name: Restore
         run: dotnet restore src/Markus/Markus.csproj -r ${{ matrix.rid }}
 
-      - name: Publish self-contained single file
+      # NativeAOT for every platform. AOT removes the JIT warmup that dominated
+      # cold start (window-shown ~750ms on the old JIT single-file build vs
+      # ~170ms on AOT in local measurement), and the SVG (mermaid) and CSharpMath
+      # render paths were verified to work under AOT. Each RID compiles natively
+      # on its own runner, so there is no cross-compilation. The %3B keeps the
+      # NoWarn list a single MSBuild property across shells.
+      - name: Publish NativeAOT
         shell: bash
         run: |
           dotnet publish src/Markus/Markus.csproj \
             -c Release \
             -r ${{ matrix.rid }} \
-            --self-contained true \
-            --no-restore \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=false \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:EnableCompressionInSingleFile=true \
-            -p:DebugType=embedded \
+            -p:PublishAot=true \
+            -p:InvariantGlobalization=true \
+            -p:NoWarn=IL2104%3BIL2026%3BIL3050 \
             -o publish/${{ matrix.rid }}
 
       # --- macOS: build a proper .app bundle ---

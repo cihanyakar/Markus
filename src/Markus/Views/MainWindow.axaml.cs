@@ -877,6 +877,12 @@ internal sealed partial class MainWindow : Window
     private void BeginStartupTraceDump()
     {
         Services.StartupTrace.Mark("window-opened");
+        // A Render-priority callback runs after the first layout+render pass, so
+        // it approximates when the window's first frame actually hits the screen.
+        Avalonia.Threading.Dispatcher.UIThread.Post(
+            () => Services.StartupTrace.Mark("first-frame"),
+            Avalonia.Threading.DispatcherPriority.Render
+        );
         foreach (var preview in this.GetVisualDescendants().OfType<MarkdownPreviewControl>())
         {
             void OnFirstRender(object? s, EventArgs args)
