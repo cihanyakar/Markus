@@ -63,6 +63,7 @@
   <ItemGroup Label="FriendAssemblies">
     <InternalsVisibleTo Include="Markus.Tests" />
     <InternalsVisibleTo Include="Markus.UI.Tests" />
+    <InternalsVisibleTo Include="Markus.Benchmarks" />
   </ItemGroup>
 
   <Target

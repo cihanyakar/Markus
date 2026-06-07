@@ -846,6 +846,37 @@ internal sealed partial class MainWindow : Window
         {
             UpdateDetachedWindows(vm);
         }
+        if (Services.StartupTrace.IsEnabled)
+        {
+            BeginStartupTraceDump();
+        }
+    }
+
+    // In trace mode, mark the window-opened phase, capture the first preview
+    // render, then dump the trace and quit so launch latency can be measured
+    // repeatably from a script.
+    private void BeginStartupTraceDump()
+    {
+        Services.StartupTrace.Mark("window-opened");
+        foreach (var preview in this.GetVisualDescendants().OfType<MarkdownPreviewControl>())
+        {
+            void OnFirstRender(object? s, EventArgs args)
+            {
+                preview.RenderCompleted -= OnFirstRender;
+                Services.StartupTrace.Mark("preview-first-render");
+            }
+
+            preview.RenderCompleted += OnFirstRender;
+        }
+        Avalonia.Threading.DispatcherTimer.RunOnce(
+            () =>
+            {
+                Services.StartupTrace.Mark("trace-dump");
+                Services.StartupTrace.Dump();
+                Environment.Exit(0);
+            },
+            TimeSpan.FromMilliseconds(700)
+        );
     }
 
     private void RestoreSessionScroll()

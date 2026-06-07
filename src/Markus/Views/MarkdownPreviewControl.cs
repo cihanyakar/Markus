@@ -274,6 +274,14 @@ internal sealed class MarkdownPreviewControl : UserControl
         }
     }
 
+    // True only when the rendered buffer is still empty and real content has
+    // arrived: the initial document load. Every later edit (or clearing the
+    // buffer) is debounced, since only the first paint is latency sensitive.
+    internal static bool ShouldRenderImmediately(string? lastRendered, string pending)
+    {
+        return string.IsNullOrEmpty(lastRendered) && !string.IsNullOrEmpty(pending);
+    }
+
     // Brings the block tagged with the given heading id into view. Called by the
     // renderer when an in-document anchor link is clicked, scoped to this
     // preview instance so split-view panes don't all scroll together.
@@ -396,6 +404,14 @@ internal sealed class MarkdownPreviewControl : UserControl
     private void ScheduleRender(string source)
     {
         _pendingSource = source;
+        if (ShouldRenderImmediately(_lastRenderedSource, source))
+        {
+            // First real paint: skip the typing debounce so opening a document
+            // shows content immediately instead of lagging by DebounceMs.
+            _debounceTimer.Stop();
+            _ = DoRenderLoopAsync();
+            return;
+        }
         _debounceTimer.Stop();
         _debounceTimer.Start();
         if (!_forceTimer.IsEnabled)
