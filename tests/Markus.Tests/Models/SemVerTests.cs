@@ -105,6 +105,8 @@ public sealed class SemVerTests
     [InlineData("1.0.0-alpha+001")]
     [InlineData("1.0.0+20130313144700")]
     [InlineData("1.0.0-beta+exp.sha.5114f85")]
+    [InlineData("1.0.0-alpha-beta")] // hyphens are allowed inside an identifier
+    [InlineData("1.0.0-rc.1+build.123")] // prerelease plus dotted build metadata
     public void TryParse_AcceptsSpecValidVersions(string text)
     {
         SemVer.TryParse(text, out _).ShouldBeTrue(text);
@@ -117,6 +119,11 @@ public sealed class SemVerTests
     [InlineData("1.0.0-")]
     [InlineData("1.0.0-..")]
     [InlineData("+invalid")]
+    [InlineData("1.0.0-alpha_beta")] // underscore is outside [0-9A-Za-z-]
+    [InlineData("1.0.0-alpha@1")] // at-sign is outside [0-9A-Za-z-]
+    [InlineData("1.0.0+")] // empty build metadata
+    [InlineData("1.0.0+exp..sha")] // empty build-metadata identifier
+    [InlineData("1.0.0+build_meta")] // underscore in build metadata
     public void TryParse_RejectsSpecInvalidVersions(string text)
     {
         SemVer.TryParse(text, out _).ShouldBeFalse(text);
