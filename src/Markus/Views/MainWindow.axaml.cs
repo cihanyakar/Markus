@@ -72,6 +72,22 @@ internal sealed partial class MainWindow : Window
         base.OnClosed(e);
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == WindowStateProperty)
+        {
+            // The native content-view layer keeps its corner radius across a
+            // fullscreen transition, so a rounded corner would clip the
+            // edge-to-edge fullscreen content. Re-apply the chrome (square in
+            // fullscreen, squircle when windowed) once the state has settled.
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => NSVisualEffectInstaller.Patch(this, NSVisualEffectInstaller.Material.HeaderView),
+                Avalonia.Threading.DispatcherPriority.Background
+            );
+        }
+    }
+
     private void WireOutlinePanels()
     {
         if (this.FindControl<OutlinePanel>("OutlineLeft") is { } left)

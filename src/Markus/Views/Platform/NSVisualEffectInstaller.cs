@@ -62,7 +62,14 @@ internal static class NSVisualEffectInstaller
         // content view to a continuous (squircle) corner so the app matches the
         // OS. The window is transparent, so the area outside the clip is the
         // desktop and the rounded shape is what shows.
-        ApplyCornerRadius(contentView, CornerRadius);
+        //
+        // The content-view layer keeps its corner radius across a fullscreen
+        // transition, where a rounded corner would clip the edge-to-edge content.
+        // Square it off in fullscreen; the caller re-runs this when WindowState
+        // changes. (Re-finds the content view each call so it is robust if the
+        // view is ever recreated.)
+        var radius = window.WindowState == WindowState.FullScreen ? 0 : CornerRadius;
+        ApplyCornerRadius(contentView, radius);
     }
 
     private static void ApplyTahoeMaterial(IntPtr contentView, Material material)
