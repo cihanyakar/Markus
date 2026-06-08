@@ -1,7 +1,4 @@
 using Avalonia;
-using Fonts.Avalonia.CascadiaCode;
-using Fonts.Avalonia.JetBrainsMono;
-using Fonts.Avalonia.Manrope;
 
 namespace Markus;
 
@@ -22,16 +19,10 @@ internal static class Program
     // Avalonia configuration. Don't remove. Also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
     {
-        return AppBuilder
-            .Configure<App>()
-            .UsePlatformDetect()
+        return AppBuilder.Configure<App>().UsePlatformDetect()
 #if DEBUG
-            .WithDeveloperTools()
+        .WithDeveloperTools()
 #endif
-            .WithInterFont()
-            .WithManropeFont()
-            .WithJetBrainsMonoFont()
-            .WithCascadiaCodeFont()
-            .LogToTrace();
+        .LogToTrace();
     }
 }

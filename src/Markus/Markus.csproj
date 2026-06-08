@@ -14,13 +14,18 @@
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+    <!-- TextMate grammar + themes load via the assembly manifest (AOT trims the
+         AvaloniaResource manifest), so embed them and key each by bare filename. -->
+    <AvaloniaResource Remove="Assets\TextMate\**" />
+    <EmbeddedResource Include="Assets\TextMate\*.json">
+      <LogicalName>%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
-    <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
@@ -29,9 +34,6 @@
     <PackageReference Include="Avalonia.AvaloniaEdit" />
     <PackageReference Include="AvaloniaEdit.TextMate" />
     <PackageReference Include="Markdig" />
-    <PackageReference Include="Fonts.Avalonia.Manrope" />
-    <PackageReference Include="Fonts.Avalonia.JetBrainsMono" />
-    <PackageReference Include="Fonts.Avalonia.CascadiaCode" />
     <PackageReference Include="JetBrains.Annotations">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

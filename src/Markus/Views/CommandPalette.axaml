@@ -37,7 +37,7 @@
       <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
     </Style>
     <Style Selector="TextBlock.commandKey">
-      <Setter Property="FontFamily" Value="Iosevka,JetBrains Mono,Consolas,monospace"/>
+      <Setter Property="FontFamily" Value="Iosevka,JetBrains Mono,Consolas,Menlo,monospace"/>
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
