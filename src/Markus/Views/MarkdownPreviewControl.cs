@@ -346,6 +346,18 @@ internal sealed class MarkdownPreviewControl : UserControl
             ScheduleRender(change.GetNewValue<string?>() ?? string.Empty);
             return;
         }
+        if (change.Property == Visual.IsVisibleProperty && change.GetNewValue<bool>() && _renderDeferredWhileHidden)
+        {
+            // The Preview-only copy toggles its own IsVisible (bound to the view
+            // mode), not its container's. Avalonia raises EffectiveViewportChanged
+            // for a container toggle (the split panes) but not for an own-IsVisible
+            // flip, so the deferred content would never paint when switching to
+            // Preview. Paint it here the moment this copy turns visible.
+            _renderDeferredWhileHidden = false;
+            _debounceTimer.Stop();
+            _ = DoRenderLoopAsync();
+            return;
+        }
         if (change.Property == SearchTermProperty || change.Property == SearchCaseSensitiveProperty)
         {
             ScheduleRender(Source ?? string.Empty);
