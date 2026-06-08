@@ -13,6 +13,10 @@ namespace Markus.Views.Platform;
 /// </summary>
 internal static class NSVisualEffectInstaller
 {
+    // Points. Matches macOS Tahoe's native window corner (tuned against a
+    // side-by-side Finder window).
+    private const double CornerRadius = 16;
+
     public enum Material : long
     {
         Titlebar = 3,
@@ -37,50 +41,74 @@ internal static class NSVisualEffectInstaller
             return;
         }
         var handle = window.TryGetPlatformHandle();
-        if (handle is null || !string.Equals(handle.HandleDescriptor, "NSView", StringComparison.Ordinal))
+        if (handle is null || handle.Handle == IntPtr.Zero)
         {
             return;
         }
-        var contentView = handle.Handle;
+        // Avalonia 12 hands back the NSWindow; older versions gave the NSView.
+        var nsWindow = string.Equals(handle.HandleDescriptor, "NSWindow", StringComparison.Ordinal)
+            ? handle.Handle
+            : ObjC.Send(handle.Handle, ObjC.Sel("window"));
+        var contentView = nsWindow != IntPtr.Zero ? ObjC.Send(nsWindow, ObjC.Sel("contentView")) : handle.Handle;
         if (contentView == IntPtr.Zero)
         {
             return;
         }
+        ApplyTahoeMaterial(contentView, material);
 
+        // Every layer in the window reports cornerRadius 0, so the visible
+        // rounding is the window server's default shape, which on Tahoe reads
+        // smaller and harder-edged than the system squircle. Clip the window's
+        // content view to a continuous (squircle) corner so the app matches the
+        // OS. The window is transparent, so the area outside the clip is the
+        // desktop and the rounded shape is what shows.
+        ApplyCornerRadius(contentView, CornerRadius);
+    }
+
+    private static void ApplyTahoeMaterial(IntPtr contentView, Material material)
+    {
         var effectClass = ObjC.GetClass("NSVisualEffectView");
         if (effectClass == IntPtr.Zero)
         {
             return;
         }
-
         var setMaterial = ObjC.Sel("setMaterial:");
-        var setBlendingMode = ObjC.Sel("setBlendingMode:");
-        var setState = ObjC.Sel("setState:");
         var isKindOfClass = ObjC.Sel("isKindOfClass:");
-        var count = ObjC.Sel("count");
         var objectAtIndex = ObjC.Sel("objectAtIndex:");
-
-        // Walk the contentView's subviews looking for the NSVisualEffectView
-        // Avalonia inserted for the blur. The visual effect view is usually the
-        // first subview, but we iterate just in case.
         var subviews = ObjC.Send(contentView, ObjC.Sel("subviews"));
-        var subviewCount = ObjC.SendReturnLong(subviews, count);
+        var subviewCount = ObjC.SendReturnLong(subviews, ObjC.Sel("count"));
         for (long i = 0; i < subviewCount; i++)
         {
             var view = ObjC.SendIdLong(subviews, objectAtIndex, i);
-            if (view == IntPtr.Zero)
-            {
-                continue;
-            }
-            var isEffectView = ObjC.SendBoolFromClass(view, isKindOfClass, effectClass);
-            if (!isEffectView)
+            if (view == IntPtr.Zero || !ObjC.SendBoolFromClass(view, isKindOfClass, effectClass))
             {
                 continue;
             }
             ObjC.SendLong(view, setMaterial, (long)material);
-            // Make sure blending/state match what Tahoe expects.
-            ObjC.SendLong(view, setBlendingMode, 0L);
-            ObjC.SendLong(view, setState, 0L);
+            ObjC.SendLong(view, ObjC.Sel("setBlendingMode:"), 0L);
+            ObjC.SendLong(view, ObjC.Sel("setState:"), 0L);
+        }
+    }
+
+    private static void ApplyCornerRadius(IntPtr view, double radius)
+    {
+        if (view == IntPtr.Zero)
+        {
+            return;
+        }
+        ObjC.SendLong(view, ObjC.Sel("setWantsLayer:"), 1L);
+        var layer = ObjC.Send(view, ObjC.Sel("layer"));
+        if (layer == IntPtr.Zero)
+        {
+            return;
+        }
+        ObjC.SendDouble(layer, ObjC.Sel("setCornerRadius:"), radius);
+        ObjC.SendLong(layer, ObjC.Sel("setMasksToBounds:"), 1L);
+        // CACornerCurve.continuous gives the macOS squircle instead of a plain arc.
+        var continuous = ObjC.MakeString("continuous");
+        if (continuous != IntPtr.Zero)
+        {
+            ObjC.SendId(layer, ObjC.Sel("setCornerCurve:"), continuous);
         }
     }
 
@@ -121,5 +149,29 @@ internal static class NSVisualEffectInstaller
         [DllImport(Lib, EntryPoint = "objc_msgSend")]
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool SendBoolFromClass(IntPtr receiver, IntPtr selector, IntPtr cls);
+
+        [DllImport(Lib, EntryPoint = "objc_msgSend")]
+        public static extern void SendDouble(IntPtr receiver, IntPtr selector, double value);
+
+        [DllImport(Lib, EntryPoint = "objc_msgSend")]
+        public static extern IntPtr SendId(IntPtr receiver, IntPtr selector, IntPtr arg);
+
+        public static IntPtr MakeString(string value)
+        {
+            var cls = GetClass("NSString");
+            if (cls == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+            var ptr = Marshal.StringToHGlobalAnsi(value);
+            try
+            {
+                return SendId(cls, Sel("stringWithUTF8String:"), ptr);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+        }
     }
 }
