@@ -83,6 +83,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     public static readonly IReadOnlyList<SettingsCategoryItem> Categories = new SettingsCategoryItem[]
     {
         new SettingsCategoryItem(SettingsCategory.Appearance, "Appearance", IconData.Palette),
+        new SettingsCategoryItem(SettingsCategory.Editor, "Editor", IconData.Pencil),
         new SettingsCategoryItem(SettingsCategory.View, "View", IconData.ViewQuilt),
         new SettingsCategoryItem(SettingsCategory.Shortcuts, "Shortcuts", IconData.UnfoldLess),
         new SettingsCategoryItem(SettingsCategory.General, "General", IconData.Tune),
@@ -91,6 +92,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAppearanceSelected))]
+    [NotifyPropertyChangedFor(nameof(IsEditorSelected))]
     [NotifyPropertyChangedFor(nameof(IsViewSelected))]
     [NotifyPropertyChangedFor(nameof(IsShortcutsSelected))]
     [NotifyPropertyChangedFor(nameof(IsGeneralSelected))]
@@ -123,6 +125,21 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private double _fontSize;
+
+    [ObservableProperty]
+    private double _editorFontSize;
+
+    [ObservableProperty]
+    private bool _showLineNumbers;
+
+    [ObservableProperty]
+    private bool _highlightCurrentLine;
+
+    [ObservableProperty]
+    private bool _autoPairBrackets;
+
+    [ObservableProperty]
+    private int _tabWidth;
 
     [ObservableProperty]
     private string _monoFont;
@@ -158,6 +175,11 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         _outlinePlacement = settings.OutlinePlacement;
         _restoreSessionOnLaunch = settings.RestoreSessionOnLaunch;
         _fontSize = settings.FontSize;
+        _editorFontSize = settings.EditorFontSize;
+        _showLineNumbers = settings.ShowLineNumbers;
+        _highlightCurrentLine = settings.HighlightCurrentLine;
+        _autoPairBrackets = settings.AutoPairBrackets;
+        _tabWidth = settings.TabWidth;
         _monoFont = settings.MonoFont;
         _themeMode = settings.ThemeMode;
         _isSourceSoftWrap = settings.IsSourceSoftWrap;
@@ -174,6 +196,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     public string SettingsDirectory => Service.SettingsDirectory;
 
     public bool IsAppearanceSelected => SelectedCategory.Kind is SettingsCategory.Appearance;
+
+    public bool IsEditorSelected => SelectedCategory.Kind is SettingsCategory.Editor;
 
     public bool IsViewSelected => SelectedCategory.Kind is SettingsCategory.View;
 
@@ -204,6 +228,11 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         OutlinePlacement = defaults.OutlinePlacement;
         RestoreSessionOnLaunch = defaults.RestoreSessionOnLaunch;
         FontSize = defaults.FontSize;
+        EditorFontSize = defaults.EditorFontSize;
+        ShowLineNumbers = defaults.ShowLineNumbers;
+        HighlightCurrentLine = defaults.HighlightCurrentLine;
+        AutoPairBrackets = defaults.AutoPairBrackets;
+        TabWidth = defaults.TabWidth;
         MonoFont = defaults.MonoFont;
         ThemeMode = defaults.ThemeMode;
         IsSourceSoftWrap = defaults.IsSourceSoftWrap;
@@ -266,6 +295,36 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnFontSizeChanged(double value)
     {
         Settings.FontSize = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnEditorFontSizeChanged(double value)
+    {
+        Settings.EditorFontSize = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnShowLineNumbersChanged(bool value)
+    {
+        Settings.ShowLineNumbers = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnHighlightCurrentLineChanged(bool value)
+    {
+        Settings.HighlightCurrentLine = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnAutoPairBracketsChanged(bool value)
+    {
+        Settings.AutoPairBrackets = value;
+        Service.Save(Settings);
+    }
+
+    partial void OnTabWidthChanged(int value)
+    {
+        Settings.TabWidth = value;
         Service.Save(Settings);
     }
 

@@ -18,6 +18,16 @@ internal sealed class AppSettings
 
     public double FontSize { get; set; } = 16.0;
 
+    public double EditorFontSize { get; set; } = 14.0;
+
+    public bool ShowLineNumbers { get; set; }
+
+    public bool HighlightCurrentLine { get; set; } = true;
+
+    public bool AutoPairBrackets { get; set; } = true;
+
+    public int TabWidth { get; set; } = 4;
+
     public string MonoFont { get; set; } = "JetBrains Mono";
 
     public string ThemeMode { get; set; } = "System";
@@ -57,6 +67,11 @@ internal sealed class AppSettings
             ShowOutline = ShowOutline,
             OutlinePlacement = OutlinePlacement,
             FontSize = FontSize,
+            EditorFontSize = EditorFontSize,
+            ShowLineNumbers = ShowLineNumbers,
+            HighlightCurrentLine = HighlightCurrentLine,
+            AutoPairBrackets = AutoPairBrackets,
+            TabWidth = TabWidth,
             MonoFont = MonoFont,
             IsSourceSoftWrap = IsSourceSoftWrap,
             IsPreviewSoftWrap = IsPreviewSoftWrap,

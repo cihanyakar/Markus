@@ -96,6 +96,21 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string _monoFontFamily;
 
     [ObservableProperty]
+    private double _editorFontSize;
+
+    [ObservableProperty]
+    private bool _showLineNumbers;
+
+    [ObservableProperty]
+    private bool _highlightCurrentLine;
+
+    [ObservableProperty]
+    private bool _autoPairBrackets;
+
+    [ObservableProperty]
+    private int _tabWidth;
+
+    [ObservableProperty]
     private string _caretPosition = "Ln 1, Col 1";
 
     [ObservableProperty]
@@ -139,6 +154,11 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _isSourceSoftWrap = Settings.IsSourceSoftWrap;
         _isPreviewSoftWrap = Settings.IsPreviewSoftWrap;
         _monoFontFamily = MonoFontStack.Build(Settings.MonoFont);
+        _editorFontSize = Settings.EditorFontSize;
+        _showLineNumbers = Settings.ShowLineNumbers;
+        _highlightCurrentLine = Settings.HighlightCurrentLine;
+        _autoPairBrackets = Settings.AutoPairBrackets;
+        _tabWidth = Settings.TabWidth;
         _settingsService.Changed += OnSettingsChanged;
 
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
@@ -836,6 +856,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Rendering.MarkdownRenderer.BaseFontSize = s.FontSize;
         Rendering.MarkdownRenderer.MermaidScale = s.MermaidScale;
         Views.TextMateThemeResolver.Update(s.CodeTheme);
+
+        EditorFontSize = s.EditorFontSize;
+        ShowLineNumbers = s.ShowLineNumbers;
+        HighlightCurrentLine = s.HighlightCurrentLine;
+        AutoPairBrackets = s.AutoPairBrackets;
+        TabWidth = s.TabWidth;
 
         return fontChanged || themeChanged || fontSizeChanged || mermaidChanged;
     }

@@ -481,7 +481,12 @@
                                      FontFamily="{Binding MonoFontFamily}"
                                      BoundText="{Binding SourceText, Mode=TwoWay}"
                                      WordWrap="{Binding IsSourceSoftWrap}"
-                                     TypewriterMode="{Binding IsTypewriterMode}"/>
+                                     TypewriterMode="{Binding IsTypewriterMode}"
+                                     FontSize="{Binding EditorFontSize}"
+                                     ShowLineNumbers="{Binding ShowLineNumbers}"
+                                     HighlightActiveLine="{Binding HighlightCurrentLine}"
+                                     AutoPairBrackets="{Binding AutoPairBrackets}"
+                                     TabWidth="{Binding TabWidth}"/>
 
           <!-- Preview only -->
           <views:MarkdownPreviewControl Name="PreviewOnlyView"
@@ -494,7 +499,12 @@
                                        FontFamily="{Binding MonoFontFamily}"
                                        BoundText="{Binding SourceText, Mode=TwoWay}"
                                      WordWrap="{Binding IsSourceSoftWrap}"
-                                     TypewriterMode="{Binding IsTypewriterMode}"/>
+                                     TypewriterMode="{Binding IsTypewriterMode}"
+                                     FontSize="{Binding EditorFontSize}"
+                                     ShowLineNumbers="{Binding ShowLineNumbers}"
+                                     HighlightActiveLine="{Binding HighlightCurrentLine}"
+                                     AutoPairBrackets="{Binding AutoPairBrackets}"
+                                     TabWidth="{Binding TabWidth}"/>
             <GridSplitter Grid.Column="1"
                           Classes="hairline"
                           ResizeDirection="Columns"/>
@@ -509,7 +519,12 @@
                                        FontFamily="{Binding MonoFontFamily}"
                                        BoundText="{Binding SourceText, Mode=TwoWay}"
                                      WordWrap="{Binding IsSourceSoftWrap}"
-                                     TypewriterMode="{Binding IsTypewriterMode}"/>
+                                     TypewriterMode="{Binding IsTypewriterMode}"
+                                     FontSize="{Binding EditorFontSize}"
+                                     ShowLineNumbers="{Binding ShowLineNumbers}"
+                                     HighlightActiveLine="{Binding HighlightCurrentLine}"
+                                     AutoPairBrackets="{Binding AutoPairBrackets}"
+                                     TabWidth="{Binding TabWidth}"/>
             <GridSplitter Grid.Row="1"
                           Classes="hairline"
                           ResizeDirection="Rows"/>

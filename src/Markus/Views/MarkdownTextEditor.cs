@@ -38,6 +38,21 @@ internal sealed class MarkdownTextEditor : TextEditor
         bool
     >(nameof(TypewriterMode));
 
+    public static readonly StyledProperty<bool> HighlightActiveLineProperty = AvaloniaProperty.Register<
+        MarkdownTextEditor,
+        bool
+    >(nameof(HighlightActiveLine), true);
+
+    public static readonly StyledProperty<bool> AutoPairBracketsProperty = AvaloniaProperty.Register<
+        MarkdownTextEditor,
+        bool
+    >(nameof(AutoPairBrackets), true);
+
+    public static readonly StyledProperty<int> TabWidthProperty = AvaloniaProperty.Register<MarkdownTextEditor, int>(
+        nameof(TabWidth),
+        4
+    );
+
     private static readonly Dictionary<string, string> AutoPairs = new Dictionary<string, string>(
         StringComparer.Ordinal
     )
@@ -71,6 +86,26 @@ internal sealed class MarkdownTextEditor : TextEditor
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         Padding = new Thickness(18, 14);
+        Options.HighlightCurrentLine = HighlightActiveLine;
+        Options.IndentationSize = Math.Max(1, TabWidth);
+    }
+
+    public bool HighlightActiveLine
+    {
+        get => GetValue(HighlightActiveLineProperty);
+        set => SetValue(HighlightActiveLineProperty, value);
+    }
+
+    public bool AutoPairBrackets
+    {
+        get => GetValue(AutoPairBracketsProperty);
+        set => SetValue(AutoPairBracketsProperty, value);
+    }
+
+    public int TabWidth
+    {
+        get => GetValue(TabWidthProperty);
+        set => SetValue(TabWidthProperty, value);
     }
 
     public string? BoundText
@@ -227,6 +262,15 @@ internal sealed class MarkdownTextEditor : TextEditor
         if (change.Property == GrammarLanguageProperty && _textMate is not null)
         {
             ApplyGrammar();
+            return;
+        }
+        if (change.Property == HighlightActiveLineProperty)
+        {
+            Options.HighlightCurrentLine = HighlightActiveLine;
+        }
+        else if (change.Property == TabWidthProperty)
+        {
+            Options.IndentationSize = Math.Max(1, TabWidth);
         }
     }
 
@@ -425,7 +469,7 @@ internal sealed class MarkdownTextEditor : TextEditor
 
     private void OnTextEntering(object? sender, TextInputEventArgs e)
     {
-        if (string.IsNullOrEmpty(e.Text))
+        if (!AutoPairBrackets || string.IsNullOrEmpty(e.Text))
         {
             return;
         }
