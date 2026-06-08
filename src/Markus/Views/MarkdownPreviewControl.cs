@@ -44,12 +44,18 @@ internal sealed class MarkdownPreviewControl : UserControl
         bool
     >(nameof(SearchCaseSensitive));
 
+    public static readonly StyledProperty<bool> FullWidthProperty = AvaloniaProperty.Register<
+        MarkdownPreviewControl,
+        bool
+    >(nameof(FullWidth));
+
     // Idle debounce: coalesce rapid SourceText updates into one render after
     // typing pauses. Force interval: when typing is continuous and idle never
     // fires, repaint at most every <ForceMs> so the preview can't drift more
     // than that behind the editor.
     private const int DebounceMs = 120;
     private const int ForceMs = 500;
+    private const double ReadingColumnWidth = 1000;
 
     private readonly StackPanel _panelA;
     private readonly StackPanel _panelB;
@@ -100,7 +106,7 @@ internal sealed class MarkdownPreviewControl : UserControl
         // window doesn't stretch paragraphs and code blocks edge-to-edge. The
         // side padding doubles as the minimum gutter once the window is
         // narrower than the column.
-        _bufferGrid.MaxWidth = 1000;
+        _bufferGrid.MaxWidth = ReadingColumnWidth;
         _bufferGrid.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
         var wrapper = new Border { Padding = new Thickness(22, 14, 30, 18), Child = _bufferGrid };
         Scroll = new ScrollViewer
@@ -157,6 +163,12 @@ internal sealed class MarkdownPreviewControl : UserControl
     {
         get => GetValue(SearchCaseSensitiveProperty);
         set => SetValue(SearchCaseSensitiveProperty, value);
+    }
+
+    public bool FullWidth
+    {
+        get => GetValue(FullWidthProperty);
+        set => SetValue(FullWidthProperty, value);
     }
 
     public int MatchCount => _searcher.MatchCount;
@@ -344,6 +356,11 @@ internal sealed class MarkdownPreviewControl : UserControl
         if (change.Property == SourceProperty)
         {
             ScheduleRender(change.GetNewValue<string?>() ?? string.Empty);
+            return;
+        }
+        if (change.Property == FullWidthProperty)
+        {
+            _bufferGrid.MaxWidth = FullWidth ? double.PositiveInfinity : ReadingColumnWidth;
             return;
         }
         if (change.Property == Visual.IsVisibleProperty && change.GetNewValue<bool>() && _renderDeferredWhileHidden)

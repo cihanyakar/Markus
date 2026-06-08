@@ -269,6 +269,82 @@
           </Grid>
         </StackPanel>
 
+        <!-- ====== Editor ====== -->
+        <StackPanel IsVisible="{Binding IsEditorSelected}" Spacing="0">
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Font size:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+              <Slider Width="220"
+                      Minimum="10" Maximum="28"
+                      TickFrequency="1"
+                      IsSnapToTickEnabled="True"
+                      Value="{Binding EditorFontSize}"/>
+              <TextBlock VerticalAlignment="Center"
+                         Foreground="{DynamicResource SettingsLabelMuted}"
+                         Text="{Binding EditorFontSize, StringFormat='{}{0:0} pt'}"/>
+            </StackPanel>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Gutter:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Show line numbers"
+                      IsChecked="{Binding ShowLineNumbers}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Current line:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Highlight the line with the caret"
+                      IsChecked="{Binding HighlightCurrentLine}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Typing:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Auto-close brackets and quotes"
+                      IsChecked="{Binding AutoPairBrackets}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Tab width:" Classes="rowLabel"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+              <Slider Width="220"
+                      Minimum="2" Maximum="8"
+                      TickFrequency="1"
+                      IsSnapToTickEnabled="True"
+                      Value="{Binding TabWidth}"/>
+              <TextBlock VerticalAlignment="Center"
+                         Foreground="{DynamicResource SettingsLabelMuted}"
+                         Text="{Binding TabWidth, StringFormat='{}{0:0} spaces'}"/>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+
+        <!-- ====== Preview ====== -->
+        <StackPanel IsVisible="{Binding IsPreviewSelected}" Spacing="0">
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Width:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Use the full window width (no reading column)"
+                      IsChecked="{Binding PreviewFullWidth}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Math:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Render LaTeX equations"
+                      IsChecked="{Binding EnableMath}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Diagrams:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Render Mermaid diagrams"
+                      IsChecked="{Binding EnableMermaid}"/>
+          </Grid>
+        </StackPanel>
+
         <!-- ====== View ====== -->
         <StackPanel IsVisible="{Binding IsViewSelected}" Spacing="0">
           <Grid Classes="row" ColumnDefinitions="160,*">
