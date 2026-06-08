@@ -38,6 +38,12 @@ internal sealed class AppSettings
 
     public double MermaidScale { get; set; } = 1.0;
 
+    public bool PreviewFullWidth { get; set; }
+
+    public bool EnableMath { get; set; } = true;
+
+    public bool EnableMermaid { get; set; } = true;
+
     public List<string> RecentFiles { get; set; } = new List<string>();
 
     public string? LastOpenedFile { get; set; }
@@ -76,6 +82,9 @@ internal sealed class AppSettings
             IsSourceSoftWrap = IsSourceSoftWrap,
             IsPreviewSoftWrap = IsPreviewSoftWrap,
             MermaidScale = MermaidScale,
+            PreviewFullWidth = PreviewFullWidth,
+            EnableMath = EnableMath,
+            EnableMermaid = EnableMermaid,
             RecentFiles = new List<string>(RecentFiles),
             LastOpenedFile = LastOpenedFile,
             LastScrollLine = LastScrollLine,

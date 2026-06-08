@@ -491,7 +491,8 @@
           <!-- Preview only -->
           <views:MarkdownPreviewControl Name="PreviewOnlyView"
                                          IsVisible="{Binding IsPreviewOnly}"
-                                         Source="{Binding SourceText}"/>
+                                         Source="{Binding SourceText}"
+                                         FullWidth="{Binding PreviewFullWidth}"/>
 
           <!-- Split vertical -->
           <Grid ColumnDefinitions="*,4,*" IsVisible="{Binding IsSplitVerticalActive}">
@@ -510,7 +511,8 @@
                           ResizeDirection="Columns"/>
             <views:MarkdownPreviewControl Grid.Column="2"
                                            Name="SplitVPreviewView"
-                                           Source="{Binding SourceText}"/>
+                                           Source="{Binding SourceText}"
+                                         FullWidth="{Binding PreviewFullWidth}"/>
           </Grid>
 
           <!-- Split horizontal -->
@@ -530,7 +532,8 @@
                           ResizeDirection="Rows"/>
             <views:MarkdownPreviewControl Grid.Row="2"
                                            Name="SplitHPreviewView"
-                                           Source="{Binding SourceText}"/>
+                                           Source="{Binding SourceText}"
+                                         FullWidth="{Binding PreviewFullWidth}"/>
           </Grid>
 
 

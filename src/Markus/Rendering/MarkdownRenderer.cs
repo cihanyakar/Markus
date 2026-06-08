@@ -80,6 +80,10 @@ internal static class MarkdownRenderer
 
     public static double MermaidScale { get; set; } = 1.0;
 
+    public static bool EnableMath { get; set; } = true;
+
+    public static bool EnableMermaid { get; set; } = true;
+
     public static IEnumerable<RenderedBlock> Render(MarkdownDocument? document)
     {
         if (document is null)
@@ -135,7 +139,7 @@ internal static class MarkdownRenderer
         return block switch
         {
             MathBlock math => RenderMathBlock(math),
-            FencedCodeBlock f when IsMermaid(f) => RenderMermaid(f),
+            FencedCodeBlock f when IsMermaid(f) && EnableMermaid => RenderMermaid(f),
             HeadingBlock h => RenderHeading(h),
             ParagraphBlock p => RenderParagraph(p),
             FencedCodeBlock f => RenderFencedCode(f),
@@ -844,6 +848,15 @@ internal static class MarkdownRenderer
     private static Avalonia.Controls.Documents.Inline BuildInlineMath(MathInline math)
     {
         var latex = math.Content.ToString();
+        if (!EnableMath)
+        {
+            return new Run("$" + latex + "$")
+            {
+                FontFamily = MonoFamily,
+                FontSize = Fs(13),
+                Foreground = _codeForeground,
+            };
+        }
         var painter = new CSharpMath.Avalonia.MathPainter
         {
             LaTeX = latex,
@@ -878,6 +891,18 @@ internal static class MarkdownRenderer
     private static Control RenderMathBlock(MathBlock math)
     {
         var latex = math.Lines.ToString().Trim();
+        if (!EnableMath)
+        {
+            return new TextBlock
+            {
+                Text = latex,
+                FontFamily = MonoFamily,
+                FontSize = Fs(13),
+                Foreground = _codeForeground,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 6, 0, 8),
+            };
+        }
         var painter = new CSharpMath.Avalonia.MathPainter
         {
             LaTeX = latex,

@@ -321,6 +321,30 @@
           </Grid>
         </StackPanel>
 
+        <!-- ====== Preview ====== -->
+        <StackPanel IsVisible="{Binding IsPreviewSelected}" Spacing="0">
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Width:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Use the full window width (no reading column)"
+                      IsChecked="{Binding PreviewFullWidth}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Math:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Render LaTeX equations"
+                      IsChecked="{Binding EnableMath}"/>
+          </Grid>
+
+          <Grid Classes="row" ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0" Text="Diagrams:" Classes="rowLabel"/>
+            <CheckBox Grid.Column="1"
+                      Content="Render Mermaid diagrams"
+                      IsChecked="{Binding EnableMermaid}"/>
+          </Grid>
+        </StackPanel>
+
         <!-- ====== View ====== -->
         <StackPanel IsVisible="{Binding IsViewSelected}" Spacing="0">
           <Grid Classes="row" ColumnDefinitions="160,*">

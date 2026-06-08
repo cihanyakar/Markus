@@ -111,6 +111,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private int _tabWidth;
 
     [ObservableProperty]
+    private bool _previewFullWidth;
+
+    [ObservableProperty]
     private string _caretPosition = "Ln 1, Col 1";
 
     [ObservableProperty]
@@ -159,6 +162,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _highlightCurrentLine = Settings.HighlightCurrentLine;
         _autoPairBrackets = Settings.AutoPairBrackets;
         _tabWidth = Settings.TabWidth;
+        _previewFullWidth = Settings.PreviewFullWidth;
         _settingsService.Changed += OnSettingsChanged;
 
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
@@ -166,6 +170,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Rendering.MarkdownRenderer.WrapCode = Settings.IsPreviewSoftWrap;
         Rendering.MarkdownRenderer.BaseFontSize = Settings.FontSize;
         Rendering.MarkdownRenderer.MermaidScale = Settings.MermaidScale;
+        Rendering.MarkdownRenderer.EnableMath = Settings.EnableMath;
+        Rendering.MarkdownRenderer.EnableMermaid = Settings.EnableMermaid;
         Views.TextMateThemeResolver.Update(Settings.CodeTheme);
         RebuildOutline(_sourceText);
     }
@@ -841,6 +847,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         var themeChanged = !ReferenceEquals(newTheme, Rendering.MarkdownRenderer.Theme);
         var fontSizeChanged = Math.Abs(Rendering.MarkdownRenderer.BaseFontSize - s.FontSize) > 0.01;
         var mermaidChanged = Math.Abs(Rendering.MarkdownRenderer.MermaidScale - s.MermaidScale) > 0.01;
+        var renderTogglesChanged =
+            Rendering.MarkdownRenderer.EnableMath != s.EnableMath
+            || Rendering.MarkdownRenderer.EnableMermaid != s.EnableMermaid;
 
         if (fontChanged)
         {
@@ -857,13 +866,17 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Rendering.MarkdownRenderer.MermaidScale = s.MermaidScale;
         Views.TextMateThemeResolver.Update(s.CodeTheme);
 
+        Rendering.MarkdownRenderer.EnableMath = s.EnableMath;
+        Rendering.MarkdownRenderer.EnableMermaid = s.EnableMermaid;
+
         EditorFontSize = s.EditorFontSize;
         ShowLineNumbers = s.ShowLineNumbers;
         HighlightCurrentLine = s.HighlightCurrentLine;
         AutoPairBrackets = s.AutoPairBrackets;
         TabWidth = s.TabWidth;
+        PreviewFullWidth = s.PreviewFullWidth;
 
-        return fontChanged || themeChanged || fontSizeChanged || mermaidChanged;
+        return fontChanged || themeChanged || fontSizeChanged || mermaidChanged || renderTogglesChanged;
     }
 
     partial void OnSourceTextChanged(string value)
