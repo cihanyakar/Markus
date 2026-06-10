@@ -3,17 +3,23 @@
 [![CI](https://github.com/cihanyakar/Markus/actions/workflows/ci.yml/badge.svg)](https://github.com/cihanyakar/Markus/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/cihanyakar/Markus?display_name=tag&sort=semver)](https://github.com/cihanyakar/Markus/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com)
+[![.NET](https://img.shields.io/badge/.NET-11-512BD4)](https://dotnet.microsoft.com)
 
-A fast, elegant Markdown viewer built with .NET 10 and Avalonia.
+A fast, elegant Markdown editor built with .NET 11 and Avalonia, shipped as small NativeAOT binaries (~30 MB).
 
-> Status: bootstrapping. The application architecture is still being planned.
+## Features
 
-## Tech stack
+- Source, Preview, vertical/horizontal Split, and Detached view modes (Cmd+1..5)
+- TextMate syntax highlighting in the source editor with 15 color themes plus an Auto mode that follows the app theme
+- Live GFM preview with tables, footnotes, task lists, Mermaid diagrams, and LaTeX math
+- Document outline, in-document search and replace, folding, typewriter mode
+- Editor and Preview customization (fonts, line numbers, tab width, full-width preview, math/Mermaid toggles)
+- Built-in update check against GitHub releases
 
-- .NET 10 / C# (latest language version)
-- Avalonia 12 (cross-platform UI)
-- CommunityToolkit.Mvvm
+## Install
+
+Download the latest build for macOS (arm64/x64), Windows, or Linux from the
+[releases page](https://github.com/cihanyakar/Markus/releases/latest).
 
 ## Build and run
 
@@ -28,6 +34,12 @@ dotnet run --project src/Markus
 ```bash
 dotnet test
 ```
+
+## Releasing
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please).
+Conventional commits on `main` accumulate into a `chore: release main` PR; merging that PR
+tags the version and triggers the binary build workflow. Do not create tags or releases by hand.
 
 ## Contributing
 
