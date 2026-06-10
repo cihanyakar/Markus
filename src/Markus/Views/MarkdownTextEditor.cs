@@ -71,6 +71,7 @@ internal sealed class MarkdownTextEditor : TextEditor
     );
 
     private IRegistryOptions? _registry;
+    private IDisposable? _visibilityActivation;
     private TextMate.Installation? _textMate;
     private bool _textMateInstallScheduled;
     private SearchPanel? _searchPanel;
@@ -214,10 +215,10 @@ internal sealed class MarkdownTextEditor : TextEditor
         // TextMate grammar/theme loading costs tens to ~150ms on the UI thread.
         // The window holds one editor per view mode (source/split), all attached
         // at once; loading TextMate for the hidden copies blocks the window from
-        // showing for nothing. Install only when this editor is the active view;
-        // EffectiveViewportChanged fires that transition.
+        // showing for nothing. Install only when this editor becomes the active
+        // view (see VisibilityActivation for the wake-up signals).
         EnsureTextMate();
-        EffectiveViewportChanged += OnEffectiveViewportChanged;
+        _visibilityActivation = VisibilityActivation.Subscribe(this, EnsureTextMate);
         ApplyBoundText(BoundText);
         EnsureSearchPanel();
         InstallFolding();
@@ -239,7 +240,8 @@ internal sealed class MarkdownTextEditor : TextEditor
             app.PropertyChanged -= OnApplicationPropertyChanged;
         }
         TextMateThemeResolver.Changed -= OnCodeThemeChanged;
-        EffectiveViewportChanged -= OnEffectiveViewportChanged;
+        _visibilityActivation?.Dispose();
+        _visibilityActivation = null;
         TextArea.TextEntering -= OnTextEntering;
         TextArea.RemoveHandler(KeyDownEvent, OnKeyDown);
         TextArea.Caret.PositionChanged -= OnCaretPositionChanged;
@@ -337,11 +339,6 @@ internal sealed class MarkdownTextEditor : TextEditor
         {
             InstallTextMate();
         }
-    }
-
-    private void OnEffectiveViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e)
-    {
-        EnsureTextMate();
     }
 
     // Installs TextMate the first time this editor is the active view, but does

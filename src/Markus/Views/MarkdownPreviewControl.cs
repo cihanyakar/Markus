@@ -137,10 +137,8 @@ internal sealed class MarkdownPreviewControl : UserControl
             _forceTimer.Stop();
         };
         // A hidden view-mode copy defers its render; paint it when it becomes
-        // the active view (its container is shown). EffectiveViewportChanged is
-        // the public signal for that transition; the copy's own IsVisible stays
-        // true inside a hidden container, so it can't be used here.
-        EffectiveViewportChanged += OnEffectiveViewportChanged;
+        // the active view (see VisibilityActivation for the wake-up signals).
+        VisibilityActivation.Subscribe(this, OnMayHaveBecomeVisible);
     }
 
     public event EventHandler? RenderStarted;
@@ -363,18 +361,6 @@ internal sealed class MarkdownPreviewControl : UserControl
             _bufferGrid.MaxWidth = FullWidth ? double.PositiveInfinity : ReadingColumnWidth;
             return;
         }
-        if (change.Property == Visual.IsVisibleProperty && change.GetNewValue<bool>() && _renderDeferredWhileHidden)
-        {
-            // The Preview-only copy toggles its own IsVisible (bound to the view
-            // mode), not its container's. Avalonia raises EffectiveViewportChanged
-            // for a container toggle (the split panes) but not for an own-IsVisible
-            // flip, so the deferred content would never paint when switching to
-            // Preview. Paint it here the moment this copy turns visible.
-            _renderDeferredWhileHidden = false;
-            _debounceTimer.Stop();
-            _ = DoRenderLoopAsync();
-            return;
-        }
         if (change.Property == SearchTermProperty || change.Property == SearchCaseSensitiveProperty)
         {
             ScheduleRender(Source ?? string.Empty);
@@ -471,13 +457,15 @@ internal sealed class MarkdownPreviewControl : UserControl
         }
     }
 
-    private void OnEffectiveViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e)
+    private void OnMayHaveBecomeVisible()
     {
         if (IsEffectivelyVisible && _renderDeferredWhileHidden)
         {
             // This view-mode copy just became active: paint the content that
-            // changed while it was hidden.
-            ScheduleRender(Source ?? string.Empty);
+            // changed while it was hidden, skipping the typing debounce.
+            _renderDeferredWhileHidden = false;
+            _debounceTimer.Stop();
+            _ = DoRenderLoopAsync();
         }
     }
 
