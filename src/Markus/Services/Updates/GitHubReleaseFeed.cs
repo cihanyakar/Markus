@@ -1,4 +1,6 @@
+#pragma warning disable IDE0005 // .NET 11 preview.5 implicit usings cover this; the pinned preview.4 SDK still needs it
 using System.Net.Http.Json;
+#pragma warning restore IDE0005
 
 namespace Markus.Services.Updates;
 
