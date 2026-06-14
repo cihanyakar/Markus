@@ -28,7 +28,7 @@
   </ItemGroup>
   <ItemGroup Label="Analyzers">
     <PackageVersion Include="StyleCop.Analyzers" Version="1.1.118" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.98" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.101" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Roslynator.Formatting.Analyzers" Version="4.15.0" />
