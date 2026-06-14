@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/cihanyakar/Markus/compare/v0.8.0...v0.8.1) (2026-06-14)
+
+
+### Continuous Integration
+
+* **release-binaries:** drop osx-x64 from the build matrix ([a2aba7e](https://github.com/cihanyakar/Markus/commit/a2aba7e07773b93cbea16a08c6ebb99c02332729))
+
 ## [0.8.0](https://github.com/cihanyakar/Markus/compare/v0.7.4...v0.8.0) (2026-06-14)
 
 
