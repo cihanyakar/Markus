@@ -47,8 +47,16 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
       <Border Grid.Row="0" Classes="glass titlestrip">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Classes="section" Text="PREVIEW"/>
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <!-- Sienna ember matches MainWindow.statusbar's brand dot, so a
+               floating preview window still reads as Markus at a glance. -->
+          <Ellipse Width="5" Height="5"
+                   Fill="{DynamicResource Accent}"
+                   VerticalAlignment="Center"
+                   Opacity="0.9"/>
+          <TextBlock Classes="section"
+                     Text="PREVIEW"
+                     VerticalAlignment="Center"/>
           <TextBlock Foreground="{DynamicResource TextMedium}"
                      FontSize="12"
                      VerticalAlignment="Center"
@@ -61,7 +69,15 @@
                                      Source="{Binding SourceText}"/>
 
       <Border Grid.Row="2" Classes="glass statusbar">
-        <TextBlock Classes="meta" Text="{Binding StatusText}"/>
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Ellipse Width="5" Height="5"
+                   Fill="{DynamicResource Accent}"
+                   VerticalAlignment="Center"
+                   Opacity="0.85"/>
+          <TextBlock Classes="meta"
+                     VerticalAlignment="Center"
+                     Text="{Binding StatusText}"/>
+        </StackPanel>
       </Border>
     </Grid>
   </Panel>

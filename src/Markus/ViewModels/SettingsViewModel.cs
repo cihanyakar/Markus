@@ -36,12 +36,11 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         new LanguageOption("tr", "Türkçe"),
     };
 
-    public static readonly IReadOnlyList<string> AvailableMonoFonts = new[]
-    {
-        "Iosevka",
-        "JetBrains Mono",
-        "Cascadia Code",
-    };
+    // System-only options. Menlo on macOS, Consolas on Windows, Courier New
+    // as a universal fallback. Users can still type a custom face name into
+    // the text field if they have one installed; this list seeds the
+    // dropdown with families guaranteed to exist on the target platform.
+    public static readonly IReadOnlyList<string> AvailableMonoFonts = new[] { "Menlo", "Consolas", "Courier New" };
 
     public static readonly IReadOnlyList<string> AvailableThemeModes = new[] { "System", "Light", "Dark" };
 

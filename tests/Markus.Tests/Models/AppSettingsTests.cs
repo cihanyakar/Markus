@@ -19,7 +19,7 @@ public sealed class AppSettingsTests
         sut.ShowOutline.ShouldBeFalse();
         sut.OutlinePlacement.ShouldBe(OutlinePlacement.Right);
         sut.FontSize.ShouldBe(16.0);
-        sut.MonoFont.ShouldBe("JetBrains Mono");
+        sut.MonoFont.ShouldBe("Menlo");
         sut.ThemeMode.ShouldBe("System");
         sut.IsSourceSoftWrap.ShouldBeFalse();
         sut.IsPreviewSoftWrap.ShouldBeTrue();

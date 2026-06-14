@@ -413,26 +413,57 @@
         </Grid>
       </Border>
 
-      <!-- Update banner: shown only when a newer release was found. -->
+      <!-- Update banner — slim editorial strip with inline link-style
+           actions. The accent sits on a left rail (a single hairline) so
+           the announcement reads like a margin note, not a CTA bar. -->
       <Border Grid.Row="1"
               IsVisible="{Binding Update.IsUpdateAvailable, FallbackValue=False}"
-              Background="{DynamicResource AccentSoft}"
-              BorderBrush="{DynamicResource GlassBorder}"
+              Background="Transparent"
+              BorderBrush="{DynamicResource GlassDivider}"
               BorderThickness="0,0,0,1"
-              Padding="16,8">
-        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-          <TextBlock Grid.Column="0"
-                     VerticalAlignment="Center"
-                     Foreground="{DynamicResource TextHigh}"
-                     Text="{Binding Update.AvailableVersion, StringFormat='A new version of Markus ({0}) is available'}"/>
-          <Button Grid.Column="1" Margin="8,0,0,0" Content="Download"
-                  Command="{Binding Update.DownloadCommand}"/>
-          <Button Grid.Column="2" Margin="8,0,0,0" Content="Release notes"
-                  Command="{Binding Update.ViewReleaseNotesCommand}"/>
-          <Button Grid.Column="3" Margin="8,0,0,0" Content="Skip"
-                  Command="{Binding Update.SkipCommand}"/>
-          <Button Grid.Column="4" Margin="8,0,0,0" Content="Dismiss"
-                  Command="{Binding Update.DismissCommand}"/>
+              Padding="0">
+        <Grid ColumnDefinitions="4,*,Auto" Height="32">
+          <!-- Left rail: a 4px vertical sienna bar; the only saturated
+               color in this strip. -->
+          <Rectangle Grid.Column="0"
+                     Fill="{DynamicResource Accent}"
+                     HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch"
+                     Opacity="0.85"/>
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      Margin="14,0,0,0"
+                      VerticalAlignment="Center">
+            <TextBlock Classes="section"
+                       Text="UPDATE"
+                       VerticalAlignment="Center"/>
+            <TextBlock FontSize="12"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextHigh}"
+                       Text="{Binding Update.AvailableVersion, StringFormat='Markus {0} is ready'}"/>
+          </StackPanel>
+          <StackPanel Grid.Column="2"
+                      Orientation="Horizontal"
+                      Spacing="0"
+                      Margin="0,0,12,0"
+                      VerticalAlignment="Center">
+            <Button Classes="updateAction updatePrimary"
+                    Content="Install"
+                    Command="{Binding Update.DownloadCommand}"/>
+            <Rectangle Classes="hair" Margin="6,0"/>
+            <Button Classes="updateAction"
+                    Content="Notes"
+                    Command="{Binding Update.ViewReleaseNotesCommand}"/>
+            <Rectangle Classes="hair" Margin="6,0"/>
+            <Button Classes="updateAction"
+                    Content="Skip"
+                    Command="{Binding Update.SkipCommand}"/>
+            <Rectangle Classes="hair" Margin="6,0"/>
+            <Button Classes="updateAction"
+                    Content="Later"
+                    Command="{Binding Update.DismissCommand}"/>
+          </StackPanel>
         </Grid>
       </Border>
 
@@ -556,34 +587,41 @@
       </Grid>
 
       <!-- ============ Status bar (glass) ============ -->
+      <!-- Editorial monospace pills with hairline dividers. No STATUS /
+           VIEW eyebrow labels — the typography itself is the legend. -->
       <Border Grid.Row="3" Classes="glass statusbar" IsVisible="{Binding !IsFocusMode}">
         <DockPanel LastChildFill="False">
-          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10">
-            <TextBlock Classes="section" Text="STATUS"/>
-            <TextBlock Foreground="{DynamicResource TextMedium}"
-                       FontSize="11"
+          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+            <!-- A 4px sienna dot doubles as a "live" indicator and the
+                 single hit of accent color in the bottom chrome. -->
+            <Ellipse Width="5" Height="5"
+                     Fill="{DynamicResource Accent}"
+                     Margin="0,0,10,0"
+                     VerticalAlignment="Center"
+                     Opacity="0.85"/>
+            <TextBlock Classes="meta"
+                       Foreground="{DynamicResource TextMedium}"
                        VerticalAlignment="Center"
                        Text="{Binding StatusText}"/>
           </StackPanel>
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="14">
-            <TextBlock Foreground="{DynamicResource TextMedium}"
-                       FontSize="11"
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Classes="meta"
+                       Foreground="{DynamicResource TextMedium}"
                        VerticalAlignment="Center"
                        Text="{Binding CaretPosition}"/>
-            <TextBlock Foreground="{DynamicResource Accent}"
-                       FontSize="11"
-                       FontWeight="SemiBold"
+            <Rectangle Classes="hair"/>
+            <TextBlock Classes="meta"
+                       Foreground="{DynamicResource Accent}"
                        VerticalAlignment="Center"
                        Text="{Binding SelectionStats}"
                        IsVisible="{Binding HasSelection}"/>
-            <TextBlock Foreground="{DynamicResource TextLow}"
-                       FontSize="11"
+            <TextBlock Classes="meta"
                        VerticalAlignment="Center"
                        Text="{Binding DocumentStats}"
                        IsVisible="{Binding !HasSelection}"/>
-            <TextBlock Classes="section" Text="VIEW"/>
-            <TextBlock Foreground="{DynamicResource TextMedium}"
-                       FontSize="11"
+            <Rectangle Classes="hair"/>
+            <TextBlock Classes="meta"
+                       Foreground="{DynamicResource TextMedium}"
                        VerticalAlignment="Center"
                        Text="{Binding CurrentViewMode}"/>
           </StackPanel>

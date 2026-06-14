@@ -28,7 +28,7 @@ internal sealed class AppSettings
 
     public int TabWidth { get; set; } = 4;
 
-    public string MonoFont { get; set; } = "JetBrains Mono";
+    public string MonoFont { get; set; } = "Menlo";
 
     public string ThemeMode { get; set; } = "System";
 

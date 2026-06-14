@@ -69,8 +69,7 @@ internal static class MarkdownRenderer
     private static IImmutableSolidColorBrush _codeBorder = new ImmutableSolidColorBrush(Colors.Transparent);
     private static IImmutableSolidColorBrush _quoteAccent = new ImmutableSolidColorBrush(Colors.Transparent);
 
-    public static FontFamily MonoFamily { get; set; } =
-        new FontFamily("Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
+    public static FontFamily MonoFamily { get; set; } = new FontFamily("Menlo,Consolas,ui-monospace,monospace");
 
     public static MarkdownTheme Theme { get; set; } = MarkdownThemes.GitHubDark;
 

@@ -10,22 +10,26 @@
 
   <UserControl.Styles>
     <Style Selector="Button.welcomeAction">
-      <Setter Property="Background" Value="{DynamicResource GlassBg}"/>
+      <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="{DynamicResource GlassBorder}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="14"/>
-      <Setter Property="Padding" Value="20,16"/>
+      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Padding" Value="22,18"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="HorizontalContentAlignment" Value="Left"/>
-      <Setter Property="MinWidth" Value="260"/>
+      <Setter Property="MinWidth" Value="280"/>
       <Setter Property="Transitions">
         <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.16"/>
+          <BrushTransition Property="Background" Duration="0:0:0.12"/>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
         </Transitions>
       </Setter>
     </Style>
+    <Style Selector="Button.welcomeAction:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
     <Style Selector="Button.welcomeAction:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource GlassHover}"/>
+      <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
     </Style>
     <Style Selector="Button.recentItem">
       <Setter Property="Background" Value="Transparent"/>
@@ -48,22 +52,29 @@
 
   <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto">
-    <Grid Margin="56,48,56,48" RowDefinitions="Auto,Auto,Auto,Auto,*">
+    <Grid Margin="64,56,64,56" RowDefinitions="Auto,Auto,Auto,Auto,*">
 
-      <!-- Brand -->
-      <StackPanel Grid.Row="0" Spacing="6">
-        <TextBlock Text="MARKUS"
-                   FontFamily="Manrope,Inter,-apple-system,sans-serif"
-                   FontSize="11"
-                   FontWeight="Medium"
-                   LetterSpacing="1.6"
-                   Foreground="{DynamicResource TextLow}"/>
+      <!-- Brand: an editorial masthead. Sienna ember + eyebrow caption +
+           condensed display title above a hairline rule, framing the
+           wordmark like a small-press magazine cover. -->
+      <StackPanel Grid.Row="0" Spacing="14">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Ellipse Width="6" Height="6"
+                   Fill="{DynamicResource Accent}"
+                   VerticalAlignment="Center"
+                   Opacity="0.9"/>
+          <TextBlock Classes="section"
+                     Text="MARKUS · ISSUE Nº 01"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
         <TextBlock Classes="display"
-                   Text="A focused Markdown editor."/>
-        <TextBlock FontFamily="Inter,-apple-system,sans-serif"
-                   FontSize="14"
+                   Text="A focused markdown editor."/>
+        <Border Height="1"
+                Background="{DynamicResource GlassDivider}"
+                Margin="0,4,0,4"/>
+        <TextBlock FontSize="14"
                    Foreground="{DynamicResource TextMedium}"
-                   Text="Write, preview, repeat."/>
+                   Text="Write. Preview. Repeat. Everything else stays out of the way."/>
       </StackPanel>
 
       <!-- Primary actions -->
@@ -135,35 +146,33 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <!-- Cheat sheet card -->
-      <Border Grid.Row="4"
-              Margin="0,44,0,0"
-              MaxWidth="640"
-              HorizontalAlignment="Left"
-              Background="{DynamicResource GlassBg}"
-              BorderBrush="{DynamicResource GlassBorder}"
-              BorderThickness="1"
-              CornerRadius="14"
-              Padding="22,18">
-        <StackPanel Spacing="8">
+      <!-- Cheat sheet — a minimal reference column rather than a card.
+           Hairline rule on top, no card chrome, denser typography. -->
+      <StackPanel Grid.Row="4"
+                  Margin="0,48,0,0"
+                  MaxWidth="640"
+                  HorizontalAlignment="Left"
+                  Spacing="12">
+        <Border Height="1" Background="{DynamicResource GlassDivider}"/>
+        <StackPanel Spacing="10">
           <TextBlock Classes="section" Text="QUICK SYNTAX"/>
           <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto"
                 ColumnSpacing="22" RowSpacing="6">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="# heading" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="**bold**" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="0" Grid.Column="2" Text="*italic*" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="0" Grid.Column="3" Text="`code`" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="- list" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="1. ordered" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="2" Text="&gt; quote" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="1" Grid.Column="3" Text="---" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="[link](url)" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="1" Text="![img](path)" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="2" Text="| a | b |" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
-            <TextBlock Grid.Row="2" Grid.Column="3" Text="```fenced" FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="# heading" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="**bold**" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="*italic*" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="0" Grid.Column="3" Text="`code`" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="- list" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="1. ordered" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="&gt; quote" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="1" Grid.Column="3" Text="---" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="[link](url)" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="![img](path)" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="| a | b |" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
+            <TextBlock Grid.Row="2" Grid.Column="3" Text="```fenced" FontFamily="Menlo,Consolas,ui-monospace,monospace" FontSize="12" Foreground="{DynamicResource TextMedium}"/>
           </Grid>
         </StackPanel>
-      </Border>
+      </StackPanel>
 
     </Grid>
   </ScrollViewer>

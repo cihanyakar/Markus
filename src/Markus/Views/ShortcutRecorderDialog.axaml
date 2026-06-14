@@ -35,7 +35,7 @@
               MinWidth="220">
         <TextBlock Name="CapturedLabel"
                    Text="—"
-                   FontFamily="JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace"
+                   FontFamily="Menlo,Consolas,ui-monospace,monospace"
                    FontSize="15"
                    HorizontalAlignment="Center"
                    Foreground="{DynamicResource TextHigh}"/>

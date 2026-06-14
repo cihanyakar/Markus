@@ -49,10 +49,23 @@
 
   <Grid RowDefinitions="Auto,Auto,*" ClipToBounds="True">
 
-    <!-- Title -->
-    <StackPanel Grid.Row="0" Margin="16,14,16,8" Spacing="2">
-      <TextBlock Classes="section" Text="ON THIS PAGE"/>
+    <!-- Title. Sienna dot + eyebrow set above the "Outline" wordmark and
+         a hairline rule frames the header the way a magazine sets a
+         section opener. -->
+    <StackPanel Grid.Row="0" Margin="16,14,16,8" Spacing="6">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Ellipse Width="5" Height="5"
+                 Fill="{DynamicResource Accent}"
+                 VerticalAlignment="Center"
+                 Opacity="0.9"/>
+        <TextBlock Classes="section"
+                   Text="ON THIS PAGE"
+                   VerticalAlignment="Center"/>
+      </StackPanel>
       <TextBlock Classes="h1" Text="Outline"/>
+      <Border Height="1"
+              Background="{DynamicResource GlassDivider}"
+              Margin="0,4,0,0"/>
     </StackPanel>
 
     <!-- Toolbar: expand-all / collapse-all / quick search -->

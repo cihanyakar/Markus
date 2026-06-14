@@ -58,7 +58,7 @@
   <Window.Styles>
     <!-- ============ Title bar (28pt + traffic lights float at upper-left) ============ -->
     <Style Selector="TextBlock.windowTitle">
-      <Setter Property="FontFamily" Value="-apple-system,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,sans-serif"/>
       <Setter Property="FontSize" Value="13"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Foreground" Value="{DynamicResource SettingsTitle}"/>
@@ -88,7 +88,7 @@
       <Setter Property="Foreground" Value="{DynamicResource SettingsTabIcon}"/>
     </Style>
     <Style Selector="ListBox.topTabs ListBoxItem TextBlock">
-      <Setter Property="FontFamily" Value="-apple-system,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,sans-serif"/>
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="{DynamicResource SettingsLabel}"/>
       <Setter Property="Margin" Value="0,6,0,0"/>
@@ -109,7 +109,7 @@
       <Setter Property="Margin" Value="0,10"/>
     </Style>
     <Style Selector="TextBlock.rowLabel">
-      <Setter Property="FontFamily" Value="-apple-system,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,sans-serif"/>
       <Setter Property="FontSize" Value="13"/>
       <Setter Property="HorizontalAlignment" Value="Right"/>
       <Setter Property="VerticalAlignment" Value="Top"/>
@@ -117,7 +117,7 @@
       <Setter Property="Foreground" Value="{DynamicResource SettingsLabel}"/>
     </Style>
     <Style Selector="TextBlock.hint">
-      <Setter Property="FontFamily" Value="-apple-system,Inter,Segoe UI,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,sans-serif"/>
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="{DynamicResource SettingsHint}"/>
       <Setter Property="TextWrapping" Value="Wrap"/>

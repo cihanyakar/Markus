@@ -18,25 +18,16 @@ public sealed class MonoFontStackTests
         var result = MonoFontStack.Build("Fira Code");
 
         var parts = result.Split(',');
-        string[] expected =
-        [
-            "Fira Code",
-            "Iosevka",
-            "JetBrains Mono",
-            "Cascadia Code",
-            "Consolas",
-            "Menlo",
-            "monospace",
-        ];
+        string[] expected = ["Fira Code", "Menlo", "Consolas", "ui-monospace", "monospace"];
         parts.ShouldBe(expected);
     }
 
     [Fact]
     public void Build_DoesNotDedupeWhenRequestedMatchesFirstFallback()
     {
-        var result = MonoFontStack.Build("Iosevka");
+        var result = MonoFontStack.Build("Menlo");
 
-        result.ShouldBe("Iosevka,Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
+        result.ShouldBe("Menlo,Menlo,Consolas,ui-monospace,monospace");
     }
 
     [Fact]
@@ -44,7 +35,7 @@ public sealed class MonoFontStackTests
     {
         var result = MonoFontStack.Build(string.Empty);
 
-        result.ShouldBe(",Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
+        result.ShouldBe(",Menlo,Consolas,ui-monospace,monospace");
     }
 
     [Fact]
@@ -52,6 +43,6 @@ public sealed class MonoFontStackTests
     {
         var result = MonoFontStack.Build("   ");
 
-        result.ShouldBe("   ,Iosevka,JetBrains Mono,Cascadia Code,Consolas,Menlo,monospace");
+        result.ShouldBe("   ,Menlo,Consolas,ui-monospace,monospace");
     }
 }

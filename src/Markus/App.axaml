@@ -26,11 +26,13 @@
 
         <!-- ============ Light ============ -->
         <ResourceDictionary x:Key="Light">
-          <!-- Atmosphere -->
-          <SolidColorBrush x:Key="AppBackground" Color="#F6F6FA"/>
-          <Color x:Key="MeshAColor">#E8B4A8</Color>
-          <Color x:Key="MeshBColor">#B0BFEF</Color>
-          <Color x:Key="MeshCColor">#A8DDD4</Color>
+          <!-- Atmosphere — warm cream with a single sienna ember in the
+               top-right corner. The previous rainbow mesh fought the
+               content; restraint here lets the document carry the eye. -->
+          <SolidColorBrush x:Key="AppBackground" Color="#F8F4EA"/>
+          <Color x:Key="MeshAColor">#F4ECD8</Color>
+          <Color x:Key="MeshBColor">#E6DBC4</Color>
+          <Color x:Key="MeshCColor">#E5B299</Color>
 
           <!-- Glass -->
           <SolidColorBrush x:Key="GlassBg" Color="#C0FFFFFF"/>
@@ -39,10 +41,15 @@
           <SolidColorBrush x:Key="GlassHover" Color="#18000000"/>
           <SolidColorBrush x:Key="GlassPressed" Color="#28000000"/>
 
-          <!-- Accent -->
-          <SolidColorBrush x:Key="Accent" Color="{DynamicResource SystemAccentColor}"/>
-          <SolidColorBrush x:Key="AccentSoft" Color="{DynamicResource SystemAccentColor}" Opacity="0.14"/>
-          <DynamicResource x:Key="AccentColor" ResourceKey="SystemAccentColor"/>
+          <!-- Brand accent — a fixed sienna so the SHELL has a consistent
+               Markus identity regardless of the OS accent the user has
+               picked (blue, red, multicolor, …). The PREVIEW is unaffected
+               because it pulls from MarkdownTheme.Accent. The Settings
+               window keeps its own scoped Photos.app palette per its
+               existing in-file comment. -->
+          <SolidColorBrush x:Key="Accent" Color="#B23A2E"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="#B23A2E" Opacity="0.12"/>
+          <Color x:Key="AccentColor">#B23A2E</Color>
 
           <!-- Text -->
           <SolidColorBrush x:Key="TextHigh" Color="#1A1A1F"/>
@@ -78,11 +85,13 @@
 
         <!-- ============ Dark ============ -->
         <ResourceDictionary x:Key="Dark">
-          <!-- Atmosphere -->
-          <SolidColorBrush x:Key="AppBackground" Color="#0A0A12"/>
-          <Color x:Key="MeshAColor">#D94070</Color>
-          <Color x:Key="MeshBColor">#4840C8</Color>
-          <Color x:Key="MeshCColor">#0EA5BB</Color>
+          <!-- Atmosphere — warm charcoal with a single warmer sienna ember
+               in the top-right corner. Mirrors the Light dictionary's
+               restraint: one corner of brand warmth against a quiet field. -->
+          <SolidColorBrush x:Key="AppBackground" Color="#16110E"/>
+          <Color x:Key="MeshAColor">#2A211A</Color>
+          <Color x:Key="MeshBColor">#1F1814</Color>
+          <Color x:Key="MeshCColor">#5A2E20</Color>
 
           <!-- Glass -->
           <SolidColorBrush x:Key="GlassBg" Color="#18FFFFFF"/>
@@ -91,9 +100,10 @@
           <SolidColorBrush x:Key="GlassHover" Color="#22FFFFFF"/>
           <SolidColorBrush x:Key="GlassPressed" Color="#33FFFFFF"/>
 
-          <SolidColorBrush x:Key="Accent" Color="{DynamicResource SystemAccentColor}"/>
-          <SolidColorBrush x:Key="AccentSoft" Color="{DynamicResource SystemAccentColor}" Opacity="0.18"/>
-          <DynamicResource x:Key="AccentColor" ResourceKey="SystemAccentColor"/>
+          <!-- Same brand accent, warmed for legibility on dark surfaces. -->
+          <SolidColorBrush x:Key="Accent" Color="#E28268"/>
+          <SolidColorBrush x:Key="AccentSoft" Color="#E28268" Opacity="0.16"/>
+          <Color x:Key="AccentColor">#E28268</Color>
 
           <!-- Text -->
           <SolidColorBrush x:Key="TextHigh" Color="#F0F0F4"/>
@@ -134,42 +144,81 @@
     <FluentTheme/>
     <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
 
-    <!-- ============ Global typography ============ -->
+    <!-- ============ Global typography (system fonts only) ============ -->
+    <!-- A pure-system stack: SF on macOS, Segoe UI on Windows, ui-sans-serif
+         everywhere else. No bundled custom families — the OS picks the most
+         refined sans it owns, and the editorial feel comes from weight,
+         tracking, and color rather than a distinctive face. -->
     <Style Selector="Window">
-      <Setter Property="FontFamily" Value="Inter,Manrope,Segoe UI,-apple-system,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,system-ui,sans-serif"/>
       <Setter Property="FontSize" Value="13"/>
     </Style>
     <Style Selector="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextHigh}"/>
     </Style>
 
-    <!-- ============ Display headings (Manrope, light weight) ============ -->
+    <!-- ============ Display: editorial restraint ============ -->
+    <!-- A condensed stretch + light weight + negative tracking gives the
+         "Markus" wordmark a deliberate, magazine-cover register without
+         needing a display typeface. -->
     <Style Selector="TextBlock.display">
-      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,-apple-system,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,system-ui,sans-serif"/>
       <Setter Property="FontWeight" Value="Light"/>
-      <Setter Property="FontSize" Value="34"/>
-      <Setter Property="LetterSpacing" Value="-0.5"/>
+      <Setter Property="FontStretch" Value="Condensed"/>
+      <Setter Property="FontSize" Value="38"/>
+      <Setter Property="LetterSpacing" Value="-1.0"/>
     </Style>
 
     <Style Selector="TextBlock.h1">
-      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,-apple-system,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,system-ui,sans-serif"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="FontSize" Value="22"/>
       <Setter Property="LetterSpacing" Value="-0.3"/>
     </Style>
 
+    <!-- Eyebrow labels — sparse caps, generous tracking, low-contrast. -->
     <Style Selector="TextBlock.section">
-      <Setter Property="FontFamily" Value="Manrope,Inter,Segoe UI,-apple-system,sans-serif"/>
+      <Setter Property="FontFamily" Value="-apple-system,BlinkMacSystemFont,Segoe UI,ui-sans-serif,system-ui,sans-serif"/>
       <Setter Property="FontWeight" Value="Medium"/>
-      <Setter Property="FontSize" Value="11"/>
-      <Setter Property="LetterSpacing" Value="1.2"/>
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="LetterSpacing" Value="2.4"/>
       <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
     </Style>
 
+    <!-- Compact meta info (status bar pills, captions). Mono for stable
+         column widths so changing values do not shimmer the layout. -->
     <Style Selector="TextBlock.meta">
-      <Setter Property="FontFamily" Value="Inter,Segoe UI,-apple-system,sans-serif"/>
+      <Setter Property="FontFamily" Value="Menlo,Consolas,ui-monospace,monospace"/>
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="Foreground" Value="{DynamicResource TextLow}"/>
+    </Style>
+
+    <!-- A faint hairline used as visual punctuation between meta clusters. -->
+    <Style Selector="Rectangle.hair">
+      <Setter Property="Width" Value="1"/>
+      <Setter Property="Height" Value="10"/>
+      <Setter Property="Fill" Value="{DynamicResource GlassDivider}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Update-banner inline links: text-shaped buttons that read as
+         editorial captions rather than CTAs. The Install variant
+         carries the only color emphasis in this strip. -->
+    <Style Selector="Button.updateAction">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="4,2"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMedium}"/>
+    </Style>
+    <Style Selector="Button.updateAction:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Button.updatePrimary">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
     </Style>
 
   </Application.Styles>
