@@ -36,13 +36,48 @@ internal sealed class FileWatcherService : IDisposable
         lock (_gate)
         {
             StopLocked();
-            WatchedPath = filePath;
-            _watcher = new FileSystemWatcher(dir, name)
+            FileSystemWatcher? watcher = null;
+            try
             {
-                NotifyFilter =
-                    NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime | NotifyFilters.FileName,
-                EnableRaisingEvents = true,
-            };
+#pragma warning disable IDE0017 // Object initialization simplification
+                // Two-step construction (rather than an object initializer for
+                // EnableRaisingEvents) keeps the partially-constructed watcher
+                // disposable in the catch below. Kernel-level registration can
+                // fail when EnableRaisingEvents = true even if the constructor
+                // and NotifyFilter assignment both succeed; the initializer
+                // form would leak the native handle on that path.
+                watcher = new FileSystemWatcher(dir, name)
+                {
+                    NotifyFilter =
+                        NotifyFilters.LastWrite
+                        | NotifyFilters.Size
+                        | NotifyFilters.CreationTime
+                        | NotifyFilters.FileName,
+                };
+#pragma warning restore IDE0017
+                watcher.EnableRaisingEvents = true;
+            }
+            catch (Exception ex)
+                when (ex
+                        is ArgumentException
+                            or FileNotFoundException
+                            or PathTooLongException
+                            or UnauthorizedAccessException
+                            or IOException
+                )
+            {
+                // Any path-resolution or kernel-registration failure (missing
+                // parent, oversized path, revoked permission, transient
+                // inotify or ReadDirectoryChangesW error) leaves the service
+                // in its idle state instead of crashing the file-open flow.
+                // Reload-on-change is the only feature lost. Dispose any
+                // partially-constructed watcher to release the native handle.
+                watcher?.Dispose();
+                return;
+            }
+
+            WatchedPath = filePath;
+            _watcher = watcher;
             _watcher.Changed += OnFsEvent;
             _watcher.Created += OnFsEvent;
             _watcher.Renamed += OnRenamed;

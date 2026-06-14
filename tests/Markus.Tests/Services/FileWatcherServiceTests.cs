@@ -138,6 +138,50 @@ public sealed class FileWatcherServiceTests : IDisposable
         _sut.WatchedPath.ShouldBeNull();
     }
 
+    [Fact]
+    public void Watch_NonExistentDirectory_DoesNotThrow_AndClearsWatchedPath()
+    {
+        // Path whose parent directory does not exist. FileSystemWatcher's
+        // constructor throws ArgumentException for an invalid path; Watch must
+        // absorb that so a TOCTOU race (parent removed between Read and Watch)
+        // surfaces as "not watching" rather than crashing the caller.
+        var ghostPath = Path.Combine(_tempDir, "definitely-not-here", "ghost.md");
+
+        Should.NotThrow(() => _sut.Watch(ghostPath));
+
+        _sut.WatchedPath.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Watch_NonExistentDirectory_AfterValidWatch_ClearsPreviousWatch()
+    {
+        // Calling Watch on an invalid path should also tear down whatever was
+        // previously being watched, mirroring the contract of a fresh Watch call.
+        var first = CreateTempFile("first.md");
+        _sut.Watch(first);
+        _sut.WatchedPath.ShouldBe(first);
+
+        var ghostPath = Path.Combine(_tempDir, "definitely-not-here", "ghost.md");
+        Should.NotThrow(() => _sut.Watch(ghostPath));
+
+        _sut.WatchedPath.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Watch_PathTooLong_DoesNotThrow_AndClearsWatchedPath()
+    {
+        // FileSystemWatcher's constructor throws PathTooLongException on
+        // Windows for paths exceeding MAX_PATH without long-path opt-in.
+        // The same defensive contract that swallows ArgumentException for a
+        // missing parent must also tolerate this case.
+        var longSegment = new string('a', 250);
+        var longPath = Path.Combine(_tempDir, longSegment, longSegment, longSegment, "ghost.md");
+
+        Should.NotThrow(() => _sut.Watch(longPath));
+
+        _sut.WatchedPath.ShouldBeNull();
+    }
+
     private string CreateTempFile(string name)
     {
         var path = Path.Combine(_tempDir, name);
