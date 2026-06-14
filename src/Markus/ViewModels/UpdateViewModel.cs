@@ -58,15 +58,29 @@ internal sealed partial class UpdateViewModel : ViewModelBase
                 .CheckAsync(_version.Current, settings.UpdateChannel, _rid, ct)
                 .ConfigureAwait(true);
 
-            // Record the successful check before applying the result. Failed checks
-            // (caught below) do not advance LastUpdateCheckUtc, so the user retries.
-            settings.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
-            _settings.Save(settings);
+            // Re-load before the save so concurrent writers (Skip, auto-save
+            // partials, recent-files persistence) made during the await are
+            // preserved. TryLoad's `false` return means the file became
+            // unreadable during the await; fall back to the pre-await
+            // snapshot so we never overwrite user customizations with the
+            // defaults Load would have substituted on read failure.
+            var fresh = _settings.TryLoad(out var reloaded) ? reloaded : settings;
+            // If the user flipped channels during the await, the filtered
+            // result reflects the stale channel. Re-query so the recorded
+            // LastUpdateCheckUtc corresponds to the channel the user is now on.
+            if (fresh.UpdateChannel != settings.UpdateChannel)
+            {
+                result = await _checker
+                    .CheckAsync(_version.Current, fresh.UpdateChannel, _rid, ct)
+                    .ConfigureAwait(true);
+            }
+            fresh.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+            _settings.Save(fresh);
 
             if (
                 result.UpdateAvailable
                 && result.Release is not null
-                && !string.Equals(result.Release.TagName, settings.SkippedVersion, StringComparison.Ordinal)
+                && !string.Equals(result.Release.TagName, fresh.SkippedVersion, StringComparison.Ordinal)
             )
             {
                 Apply(result);
@@ -96,10 +110,21 @@ internal sealed partial class UpdateViewModel : ViewModelBase
                 .CheckAsync(_version.Current, settings.UpdateChannel, _rid, Markus.App.ShutdownToken)
                 .ConfigureAwait(true);
 
-            // Record the successful check before applying the result. Failed checks
-            // (caught below) do not advance LastUpdateCheckUtc, so the user retries.
-            settings.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
-            _settings.Save(settings);
+            // Re-load before save to preserve concurrent writes during the
+            // network round-trip. See CheckOnLaunchAsync for the same rule.
+            // Fall back to the pre-await snapshot when the file became
+            // briefly unreadable so we never wipe user settings with defaults.
+            var fresh = _settings.TryLoad(out var reloaded) ? reloaded : settings;
+            // Re-query if channel changed during the await so the recorded
+            // timestamp matches the user's now-current channel.
+            if (fresh.UpdateChannel != settings.UpdateChannel)
+            {
+                result = await _checker
+                    .CheckAsync(_version.Current, fresh.UpdateChannel, _rid, Markus.App.ShutdownToken)
+                    .ConfigureAwait(true);
+            }
+            fresh.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+            _settings.Save(fresh);
 
             ApplyManualResult(result);
         }
