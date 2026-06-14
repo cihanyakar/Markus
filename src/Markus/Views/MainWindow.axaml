@@ -311,55 +311,50 @@
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-      <!-- ============ Toolbar (glass, also serves as draggable title bar) ============ -->
-      <Border Grid.Row="0" Classes="glass toolbar"
+      <!-- ============ Toolbar (transparent, draggable title bar) ============ -->
+      <!-- No glass platter: the chrome reads as a single hairline below an
+           otherwise empty band, the way modern editors (Linear, Notion) frame
+           the title region. -->
+      <Border Grid.Row="0" Classes="toolbar"
               Name="TitleBarRegion"
               IsVisible="{Binding !IsFocusMode}"
+              BorderBrush="{DynamicResource GlassDivider}"
+              BorderThickness="0,0,0,1"
+              BoxShadow="0 0 0 0 #00000000"
               PointerPressed="OnTitleBarPointerPressed">
         <Grid ColumnDefinitions="Auto,*,Auto">
 
-          <!-- Leading: traffic-light reservation + primary actions -->
-          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <!-- Leading: traffic-light reservation + primary actions (icon-only) -->
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
             <Border Name="WindowControlsInset" Width="0"/>
-            <Button Classes="tool" Click="Open_Click">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <PathIcon Data="{x:Static views:IconData.Folder}"/>
-                <TextBlock Text="Open" VerticalAlignment="Center"/>
-              </StackPanel>
+            <Button Classes="tool" Click="Open_Click" ToolTip.Tip="Open… (⌘O)">
+              <PathIcon Data="{x:Static views:IconData.Folder}"/>
             </Button>
-            <Button Classes="tool" Command="{Binding SaveCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <PathIcon Data="{x:Static views:IconData.ContentSave}"/>
-                <TextBlock Text="Save" VerticalAlignment="Center"/>
-              </StackPanel>
+            <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="Save (⌘S)">
+              <PathIcon Data="{x:Static views:IconData.ContentSave}"/>
             </Button>
-            <Button Classes="tool" Command="{Binding ReloadCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <PathIcon Data="{x:Static views:IconData.Refresh}"/>
-                <TextBlock Text="Reload" VerticalAlignment="Center"/>
-              </StackPanel>
+            <Button Classes="tool" Command="{Binding ReloadCommand}" ToolTip.Tip="Reload (⌘R)">
+              <PathIcon Data="{x:Static views:IconData.Refresh}"/>
             </Button>
           </StackPanel>
 
-          <!-- Trailing: outline / view / settings -->
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <!-- Trailing: outline / view / settings (icon-only) -->
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
             <ToggleButton Classes="tool" IsChecked="{Binding IsScrollLocked}"
-                          ToolTip.Tip="Sync scroll source ↔ preview (Scroll Lock / ⌘⇧L)">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <PathIcon Data="{x:Static views:IconData.Lock}"/>
-                <TextBlock Text="Sync" VerticalAlignment="Center"/>
-              </StackPanel>
+                          ToolTip.Tip="Sync scroll source ↔ preview (⌘⇧L)">
+              <PathIcon Data="{x:Static views:IconData.Lock}"/>
             </ToggleButton>
-            <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
-                <TextBlock Text="Outline" VerticalAlignment="Center"/>
-              </StackPanel>
+            <ToggleButton Classes="tool" IsChecked="{Binding IsOutlineVisible}"
+                          ToolTip.Tip="Toggle Outline (⌘⌥B)">
+              <PathIcon Data="{x:Static views:IconData.Sidebar}"/>
             </ToggleButton>
 
-            <!-- View mode: (Source | Preview) + (Split V | Split H) segments -->
+            <!-- Unified view-mode segmented control. Five segments in a single
+                 pill track: Source · Preview · SplitV · SplitH · Detached.
+                 Hairline rectangles cluster the two word segments away from
+                 the three icon segments without breaking the track. -->
             <Border Classes="segmented" Margin="6,0,0,0">
-              <StackPanel Orientation="Horizontal" Spacing="2">
+              <StackPanel Orientation="Horizontal" Spacing="0">
                 <RadioButton Classes="segment" GroupName="viewmode"
                              Content="Source"
                              ToolTip.Tip="Source only (⌘1)"
@@ -372,10 +367,10 @@
                              IsChecked="{Binding IsPreviewOnly, Mode=OneWay}"
                              Command="{Binding SetViewModeCommand}"
                              CommandParameter="{x:Static models:ViewMode.Preview}"/>
-              </StackPanel>
-            </Border>
-            <Border Classes="segmented" Margin="4,0,0,0">
-              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Rectangle Width="1" Height="13"
+                           Fill="{DynamicResource GlassDivider}"
+                           VerticalAlignment="Center"
+                           Margin="3,0"/>
                 <RadioButton Classes="segment" GroupName="viewmode"
                              ToolTip.Tip="Split vertical (⌘3)"
                              IsChecked="{Binding IsSplitVerticalActive, Mode=OneWay}"
@@ -390,23 +385,23 @@
                              CommandParameter="{x:Static models:ViewMode.SplitHorizontal}">
                   <PathIcon Data="{x:Static views:IconData.SplitHorizontal}"/>
                 </RadioButton>
+                <Rectangle Width="1" Height="13"
+                           Fill="{DynamicResource GlassDivider}"
+                           VerticalAlignment="Center"
+                           Margin="3,0"/>
+                <RadioButton Classes="segment" GroupName="viewmode"
+                             ToolTip.Tip="Detached preview (⌘5)"
+                             IsChecked="{Binding IsDetachedActive, Mode=OneWay}"
+                             Command="{Binding SetViewModeCommand}"
+                             CommandParameter="{x:Static models:ViewMode.Detached}">
+                  <PathIcon Data="{x:Static views:IconData.OpenInNew}"/>
+                </RadioButton>
               </StackPanel>
-            </Border>
-            <Border Classes="segmented" Margin="4,0,0,0">
-              <RadioButton Classes="segment" GroupName="viewmode"
-                           ToolTip.Tip="Detached preview (⌘5)"
-                           IsChecked="{Binding IsDetachedActive, Mode=OneWay}"
-                           Command="{Binding SetViewModeCommand}"
-                           CommandParameter="{x:Static models:ViewMode.Detached}">
-                <PathIcon Data="{x:Static views:IconData.OpenInNew}"/>
-              </RadioButton>
             </Border>
 
-            <Button Classes="tool" Margin="6,0,0,0" Click="Settings_Click">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <PathIcon Data="{x:Static views:IconData.Settings}"/>
-                <TextBlock Text="Settings" VerticalAlignment="Center"/>
-              </StackPanel>
+            <Button Classes="tool" Margin="6,0,0,0" Click="Settings_Click"
+                    ToolTip.Tip="Settings (⌘,)">
+              <PathIcon Data="{x:Static views:IconData.Settings}"/>
             </Button>
           </StackPanel>
 
@@ -604,12 +599,15 @@
                        VerticalAlignment="Center"
                        Text="{Binding StatusText}"/>
           </StackPanel>
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <TextBlock Classes="meta"
                        Foreground="{DynamicResource TextMedium}"
                        VerticalAlignment="Center"
                        Text="{Binding CaretPosition}"/>
-            <Rectangle Classes="hair"/>
+            <TextBlock Classes="meta"
+                       VerticalAlignment="Center"
+                       Opacity="0.5"
+                       Text="·"/>
             <TextBlock Classes="meta"
                        Foreground="{DynamicResource Accent}"
                        VerticalAlignment="Center"
@@ -619,7 +617,10 @@
                        VerticalAlignment="Center"
                        Text="{Binding DocumentStats}"
                        IsVisible="{Binding !HasSelection}"/>
-            <Rectangle Classes="hair"/>
+            <TextBlock Classes="meta"
+                       VerticalAlignment="Center"
+                       Opacity="0.5"
+                       Text="·"/>
             <TextBlock Classes="meta"
                        Foreground="{DynamicResource TextMedium}"
                        VerticalAlignment="Center"

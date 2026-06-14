@@ -49,10 +49,12 @@
 
   <Grid RowDefinitions="Auto,Auto,*" ClipToBounds="True">
 
-    <!-- Title. Sienna dot + eyebrow set above the "Outline" wordmark and
-         a hairline rule frames the header the way a magazine sets a
-         section opener. -->
-    <StackPanel Grid.Row="0" Margin="16,14,16,8" Spacing="6">
+    <!-- Title (single row). Sienna dot, eyebrow, and the "Outline" wordmark
+         sit on a single baseline and a hairline rule sits just below. The
+         previous magazine-opener stack (eyebrow on top of a 22 px display
+         title) ate too much vertical real estate for what is, functionally,
+         a sidebar header. -->
+    <StackPanel Grid.Row="0" Margin="14,12,14,8" Spacing="6">
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
         <Ellipse Width="5" Height="5"
                  Fill="{DynamicResource Accent}"
@@ -61,11 +63,16 @@
         <TextBlock Classes="section"
                    Text="ON THIS PAGE"
                    VerticalAlignment="Center"/>
+        <TextBlock Text="Outline"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextHigh}"
+                   VerticalAlignment="Center"
+                   Margin="4,0,0,0"/>
       </StackPanel>
-      <TextBlock Classes="h1" Text="Outline"/>
       <Border Height="1"
               Background="{DynamicResource GlassDivider}"
-              Margin="0,4,0,0"/>
+              Margin="0,2,0,0"/>
     </StackPanel>
 
     <!-- Toolbar: expand-all / collapse-all / quick search -->
