@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.8.0](https://github.com/cihanyakar/Markus/compare/v0.7.4...v0.8.0) (2026-06-14)
+
+
+### Features
+
+* **settings:** atomic crash-safe writes with TryLoad and debounced hot-path saves ([6fdaa57](https://github.com/cihanyakar/Markus/commit/6fdaa57810057752e6f919528c5de1239003f530))
+
+
+### Bug Fixes
+
+* **file-watcher:** widen catch and dispose partially-constructed watcher ([a106a81](https://github.com/cihanyakar/Markus/commit/a106a81e0e952ba39d6dc8ddf5615aca69888598))
+* **update:** prefer installer extensions over portable archives ([5fbc442](https://github.com/cihanyakar/Markus/commit/5fbc442c843b7fcd00d20fe4dd2ed187a1a690d0))
+* **update:** preserve concurrent writes and channel changes during async check ([e685bd9](https://github.com/cihanyakar/Markus/commit/e685bd9aed390d618cb9b07d10f0db4e3c4ccd30))
+* **update:** treat future-dated last check as stale ([b852752](https://github.com/cihanyakar/Markus/commit/b852752cf44f5b47f355d0d14a3cba0d2859719e))
+* **views:** visual-tree lifecycle hygiene for preview and mermaid ([962cdf9](https://github.com/cihanyakar/Markus/commit/962cdf98a9b737b1aa1ce3dbfc0fa1995cff0a6e))
+
+
+### Documentation
+
+* refresh README and add CLAUDE.md with release and tooling notes ([a8153eb](https://github.com/cihanyakar/Markus/commit/a8153eb7ce10d9d7472f3b111fdea8722b1cb518))
+
+
+### Continuous Integration
+
+* sync release-please manifest with the manually published v0.7.4 ([b8ae7de](https://github.com/cihanyakar/Markus/commit/b8ae7de91aacf2ca0be50cdc7c1457e260e3d1bf))
+
 ## [0.5.0](https://github.com/cihanyakar/Markus/compare/v0.4.0...v0.5.0) (2026-06-04)
 
 
