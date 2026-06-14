@@ -7,7 +7,26 @@ using Markus.Services;
 
 namespace Markus.Rendering;
 
-internal sealed class MermaidControl : ContentControl, IDisposable
+// Cancel-only teardown is intentional for _cts: an in-flight StartRenderAsync
+// still reads ct.IsCancellationRequested off this source, and Microsoft docs
+// say accessing any member of a disposed CTS is undefined. We null the field
+// and let the GC reclaim the source once the render task releases its
+// captured token. The class is therefore NOT IDisposable (CA1001 suppressed)
+// because there is no caller-driven dispose path and an unreachable Dispose
+// method would mislead future maintainers. Both suppressions are scoped to
+// the _cts field's lifecycle; any future IDisposable field added here must
+// reckon with these rules explicitly.
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "Cancel-only teardown; see class doc."
+)]
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Reliability",
+    "S2930:IDisposables should be disposed",
+    Justification = "Cancel-only teardown; see class doc."
+)]
+internal sealed class MermaidControl : ContentControl
 {
     private readonly string _source;
     private CancellationTokenSource? _cts;
@@ -21,19 +40,10 @@ internal sealed class MermaidControl : ContentControl, IDisposable
         Content = BuildLoadingState();
     }
 
-    public void Dispose()
-    {
-        _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = null;
-        DeleteTempFile();
-    }
-
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         _cts?.Cancel();
-        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _ = StartRenderAsync(MarkdownRenderer.MermaidScale, _cts.Token);
     }
@@ -41,7 +51,6 @@ internal sealed class MermaidControl : ContentControl, IDisposable
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _cts?.Cancel();
-        _cts?.Dispose();
         _cts = null;
         DeleteTempFile();
         base.OnDetachedFromVisualTree(e);

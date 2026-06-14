@@ -72,6 +72,11 @@ internal sealed class MarkdownPreviewControl : UserControl
     // view-mode copy). The deferred render runs when the panel becomes visible.
     private bool _renderDeferredWhileHidden;
 
+    // Returned by VisibilityActivation.Subscribe; disposing it unregisters
+    // the class-handler that would otherwise keep this control reachable
+    // for the lifetime of the app (see MarkdownTextEditor for the same pattern).
+    private IDisposable? _visibilityActivation;
+
     // Monotonically increasing counter bumped by InvalidateRender so that a
     // forced re-render (theme/font change, same text) is detected even when
     // _pendingSource == _lastRenderedSource.
@@ -135,10 +140,9 @@ internal sealed class MarkdownPreviewControl : UserControl
         {
             _debounceTimer.Stop();
             _forceTimer.Stop();
+            _visibilityActivation?.Dispose();
+            _visibilityActivation = null;
         };
-        // A hidden view-mode copy defers its render; paint it when it becomes
-        // the active view (see VisibilityActivation for the wake-up signals).
-        VisibilityActivation.Subscribe(this, OnMayHaveBecomeVisible);
     }
 
     public event EventHandler? RenderStarted;
@@ -346,6 +350,16 @@ internal sealed class MarkdownPreviewControl : UserControl
                 return;
             }
         }
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        // Subscribe on every attach so a re-attached preview restores its
+        // wake-up signal. Mirrors MarkdownTextEditor.OnAttachedToVisualTree.
+        // A constructor-only subscription died after the first detach.
+        _visibilityActivation?.Dispose();
+        _visibilityActivation = VisibilityActivation.Subscribe(this, OnMayHaveBecomeVisible);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
