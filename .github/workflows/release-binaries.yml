@@ -29,9 +29,6 @@ jobs:
           - rid: win-x64
             os: windows-latest
             bundle: zip
-          - rid: osx-x64
-            os: macos-13
-            bundle: app
           - rid: osx-arm64
             os: macos-latest
             bundle: app
