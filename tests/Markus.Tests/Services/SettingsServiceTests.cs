@@ -38,7 +38,7 @@ public sealed class SettingsServiceTests : IDisposable
         result.ShowOutline.ShouldBeFalse();
         result.OutlinePlacement.ShouldBe(OutlinePlacement.Right);
         result.FontSize.ShouldBe(16.0);
-        result.MonoFont.ShouldBe("JetBrains Mono");
+        result.MonoFont.ShouldBe("Menlo");
         result.ThemeMode.ShouldBe("System");
         result.IsSourceSoftWrap.ShouldBeFalse();
         result.IsPreviewSoftWrap.ShouldBeTrue();
@@ -252,6 +252,106 @@ public sealed class SettingsServiceTests : IDisposable
 
         loaded.Theme.ShouldBe("SpaceTest");
         loaded.FontSize.ShouldBe(14.0);
+    }
+
+    [Fact]
+    public void TryLoad_MissingFile_ReturnsFalseAndDefaults()
+    {
+        var sut = CreateService(Path.Combine(_tempDir, "tryload-missing"));
+
+        var succeeded = sut.TryLoad(out var loaded);
+
+        succeeded.ShouldBeFalse();
+        loaded.Theme.ShouldBe("GitHubDark"); // defaults still populated
+    }
+
+    [Fact]
+    public void TryLoad_CorruptedJson_ReturnsFalseAndDefaults()
+    {
+        var dir = Path.Combine(_tempDir, "tryload-corrupt");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "settings.json"), "{{not valid json}}");
+        var sut = CreateService(dir);
+
+        var succeeded = sut.TryLoad(out var loaded);
+
+        succeeded.ShouldBeFalse();
+        loaded.Theme.ShouldBe("GitHubDark");
+    }
+
+    [Fact]
+    public void TryLoad_ValidFile_ReturnsTrueAndLoaded()
+    {
+        var dir = Path.Combine(_tempDir, "tryload-valid");
+        var sut = CreateService(dir);
+        sut.Save(new AppSettings { Theme = "TryLoadTheme", FontSize = 18.0 });
+
+        var succeeded = sut.TryLoad(out var loaded);
+
+        succeeded.ShouldBeTrue();
+        loaded.Theme.ShouldBe("TryLoadTheme");
+        loaded.FontSize.ShouldBe(18.0);
+    }
+
+    [Fact]
+    public async Task SaveDebounced_CoalescesRapidCallsIntoOneWrite()
+    {
+        // Slider-bound properties (FontSize, EditorFontSize, MermaidScale)
+        // fire many ValueChanged events per drag; routing each through Save
+        // produces one fsync per tick. SaveDebounced collapses a burst into
+        // a single trailing write — the file's content reflects the LAST
+        // call, and the number of physical writes is bounded.
+        var dir = Path.Combine(_tempDir, "debounce");
+        var sut = CreateService(dir);
+
+        for (var i = 0; i < 25; i++)
+        {
+            sut.SaveDebounced(new AppSettings { FontSize = 10 + i }, TimeSpan.FromMilliseconds(50));
+        }
+        // Before the debounce delay elapses no write should have happened.
+        File.Exists(Path.Combine(dir, "settings.json")).ShouldBeFalse();
+
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+
+        // After the delay, exactly one write reflects the last call.
+        sut.Load().FontSize.ShouldBe(10 + 24);
+    }
+
+    [Fact]
+    public void FlushPendingSave_WritesImmediately_AndCancelsTimer()
+    {
+        // Shutdown / PersistSession paths cannot wait for the debounce to
+        // elapse; they must be able to force a flush so the latest slider
+        // value lands on disk before the app exits.
+        var dir = Path.Combine(_tempDir, "flush");
+        var sut = CreateService(dir);
+
+        sut.SaveDebounced(new AppSettings { FontSize = 99 }, TimeSpan.FromSeconds(60));
+        sut.FlushPendingSave();
+
+        sut.Load().FontSize.ShouldBe(99);
+    }
+
+    [Fact]
+    public void Save_SwallowsIoExceptionFromAtomicWriter()
+    {
+        // Save sits on a hot path (slider drags, partial-property setters,
+        // PersistSession at close) where callers cannot reasonably catch
+        // every IO failure mode AtomicFileWriter now surfaces (Windows
+        // sharing violation, transient kernel-level failure). The service
+        // owns the persistence contract; Save must be best-effort so a
+        // transient failure does not crash the UI thread.
+        var dir = Path.Combine(_tempDir, "save-swallows");
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "settings.json");
+        // Pre-occupy the destination with a directory so AtomicFileWriter's
+        // File.Move fails. This stand-in for the runtime failure modes
+        // (sharing violation, permission denied) is the same shape: an
+        // IOException out of File.Move.
+        Directory.CreateDirectory(path);
+        var sut = CreateService(dir);
+
+        Should.NotThrow(() => sut.Save(new AppSettings { Theme = "Swallow" }));
     }
 
     private static SettingsService CreateService(string directory)

@@ -314,13 +314,14 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnFontSizeChanged(double value)
     {
         Settings.FontSize = value;
-        Service.Save(Settings);
+        // Slider-bound; collapse a drag burst into one trailing fsync.
+        Service.SaveDebounced(Settings);
     }
 
     partial void OnEditorFontSizeChanged(double value)
     {
         Settings.EditorFontSize = value;
-        Service.Save(Settings);
+        Service.SaveDebounced(Settings);
     }
 
     partial void OnShowLineNumbersChanged(bool value)
@@ -374,7 +375,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     partial void OnMermaidScaleChanged(double value)
     {
         Settings.MermaidScale = value;
-        Service.Save(Settings);
+        Service.SaveDebounced(Settings);
     }
 
     partial void OnPreviewFullWidthChanged(bool value)

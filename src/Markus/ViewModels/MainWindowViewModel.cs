@@ -288,6 +288,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void PersistSession(int firstVisibleLine)
     {
+        // Flush any debounced slider save before stamping the session state
+        // so we do not lose a slider value mid-drag at exit (the trailing
+        // debounce timer would never fire after the app exits).
+        _settingsService.FlushPendingSave();
         Settings.LastOpenedFile = CurrentFilePath;
         Settings.LastScrollLine = firstVisibleLine;
         _settingsService.Save(Settings);

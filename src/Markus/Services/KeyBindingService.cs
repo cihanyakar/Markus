@@ -132,9 +132,8 @@ internal sealed class KeyBindingService
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_path) ?? string.Empty);
             var json = JsonSerializer.Serialize(_map, KeyBindingMapJsonContext.Default.KeyBindingMap);
-            File.WriteAllText(_path, json);
+            AtomicFileWriter.WriteAllText(_path, json);
         }
         catch (IOException)
         {
