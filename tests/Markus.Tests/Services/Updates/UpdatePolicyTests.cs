@@ -42,4 +42,15 @@ public sealed class UpdatePolicyTests
     {
         UpdatePolicy.ShouldAutoCheck(true, false, Now.AddHours(-21), Now, Day).ShouldBeTrue();
     }
+
+    [Fact]
+    public void FutureLastCheck_TreatedAsStaleAndChecks()
+    {
+        // A previous run with a wrong system clock can record a far-future
+        // LastUpdateCheckUtc. Once the clock is corrected, `now - future`
+        // becomes negative and the interval gate would never reopen until
+        // real time overtook the bogus timestamp. Treat any future value as
+        // stale so the next launch resyncs.
+        UpdatePolicy.ShouldAutoCheck(true, false, Now.AddYears(4), Now, Day).ShouldBeTrue();
+    }
 }
