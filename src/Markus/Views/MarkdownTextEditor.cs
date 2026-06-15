@@ -646,11 +646,19 @@ internal sealed class MarkdownTextEditor : TextEditor
         {
             return true;
         }
-        using (Document.RunUpdate())
+        Document.UndoStack.StartUndoGroup();
+        try
         {
-            var result = Markus.Services.TableCellNavigator.InsertEmptyRow(source, region);
-            Document.Text = result.NewSource;
-            CaretOffset = result.NewCaretOffset;
+            using (Document.RunUpdate())
+            {
+                var result = Markus.Services.TableCellNavigator.InsertEmptyRow(source, region);
+                Document.Text = result.NewSource;
+                CaretOffset = result.NewCaretOffset;
+            }
+        }
+        finally
+        {
+            Document.UndoStack.EndUndoGroup();
         }
         return true;
     }
