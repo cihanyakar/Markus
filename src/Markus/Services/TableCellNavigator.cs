@@ -66,6 +66,72 @@ internal static class TableCellNavigator
         return true;
     }
 
+    public static CellRange? NextCell(TableRegion region, int currentOffset, bool forward)
+    {
+        var (rowIndex, cellIndex) = LocateCell(region, currentOffset);
+        if (rowIndex < 0)
+        {
+            return null;
+        }
+        return forward ? StepForward(region, rowIndex, cellIndex) : StepBackward(region, rowIndex, cellIndex);
+    }
+
+    private static (int Row, int Cell) LocateCell(TableRegion region, int offset)
+    {
+        for (var r = 0; r < region.Rows.Count; r++)
+        {
+            var row = region.Rows[r];
+            for (var c = 0; c < row.Count; c++)
+            {
+                var cell = row[c];
+                if (offset >= cell.Offset && offset <= cell.Offset + cell.Length)
+                {
+                    return (r, c);
+                }
+            }
+        }
+        return (-1, -1);
+    }
+
+    private static CellRange? StepForward(TableRegion region, int row, int cell)
+    {
+        if (cell + 1 < region.Rows[row].Count)
+        {
+            return region.Rows[row][cell + 1];
+        }
+        var nextRow = row + 1;
+        // Row index 1 in Rows corresponds to the delimiter line; skip it.
+        if (nextRow == 1 && region.Rows.Count > 2)
+        {
+            nextRow = 2;
+        }
+        if (nextRow >= region.Rows.Count)
+        {
+            return null;
+        }
+        return region.Rows[nextRow].Count > 0 ? region.Rows[nextRow][0] : null;
+    }
+
+    private static CellRange? StepBackward(TableRegion region, int row, int cell)
+    {
+        if (cell > 0)
+        {
+            return region.Rows[row][cell - 1];
+        }
+        var prevRow = row - 1;
+        // Skip the delimiter row when stepping backward.
+        if (prevRow == 1)
+        {
+            prevRow = 0;
+        }
+        if (prevRow < 0)
+        {
+            return null;
+        }
+        var prev = region.Rows[prevRow];
+        return prev.Count > 0 ? prev[^1] : null;
+    }
+
     private static (List<LineRange> Lines, int CaretLineIndex) SplitLinesAndLocate(string source, int caretOffset)
     {
         var lines = new List<LineRange>();

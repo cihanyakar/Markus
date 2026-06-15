@@ -75,4 +75,45 @@ public sealed class TableCellNavigatorTests
 
         TableCellNavigator.TryFindTableAt(source, cursor, out _).ShouldBeFalse();
     }
+
+    [Fact]
+    public void NextCell_Forward_Within_Row_Returns_Next_Cell()
+    {
+        var source = "| a | b | c |\n|---|---|---|\n| 1 | 2 | 3 |\n";
+        TableCellNavigator.TryFindTableAt(source, 2, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+        // Caret inside cell 0 of header row ("| a |"), offset 2.
+        var next = TableCellNavigator.NextCell(region, currentOffset: 2, forward: true);
+
+        next.ShouldNotBeNull();
+        next!.Value.Offset.ShouldBe(region.Rows[0][1].Offset);
+    }
+
+    [Fact]
+    public void NextCell_Forward_From_Last_Cell_Skips_Delimiter_Row()
+    {
+        var source = "| a | b |\n|---|---|\n| 1 | 2 |\n";
+        TableCellNavigator.TryFindTableAt(source, 2, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+        var lastHeaderCell = region.Rows[0][1].Offset;
+
+        var next = TableCellNavigator.NextCell(region, currentOffset: lastHeaderCell, forward: true);
+
+        // Skip the delimiter row entirely; land in the first cell of the data row.
+        next.ShouldNotBeNull();
+        next!.Value.Offset.ShouldBe(region.Rows[2][0].Offset);
+    }
+
+    [Fact]
+    public void NextCell_Forward_From_Last_Cell_Of_Last_Row_Returns_Null()
+    {
+        var source = "| a | b |\n|---|---|\n| 1 | 2 |\n";
+        TableCellNavigator.TryFindTableAt(source, 2, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+        var lastCell = region.Rows[2][1].Offset;
+
+        var next = TableCellNavigator.NextCell(region, currentOffset: lastCell, forward: true);
+
+        next.ShouldBeNull();
+    }
 }
