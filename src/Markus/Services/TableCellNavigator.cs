@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace Markus.Services;
@@ -9,16 +10,15 @@ namespace Markus.Services;
 /// </summary>
 internal static class TableCellNavigator
 {
-    public static bool TryFindTableAt(string source, int caretOffset, out TableRegion region)
+    public static bool TryFindTableAt(string source, int caretOffset, [NotNullWhen(true)] out TableRegion? region)
     {
-        region = default!;
+        region = null;
         if (string.IsNullOrEmpty(source) || caretOffset < 0 || caretOffset > source.Length)
         {
             return false;
         }
 
-        var lines = SplitLines(source);
-        var caretLine = LineIndexAt(source, caretOffset);
+        var (lines, caretLine) = SplitLinesAndLocate(source, caretOffset);
 
         // Walk backward to find a candidate header row (first table row above caret).
         var headerLine = -1;
@@ -66,36 +66,32 @@ internal static class TableCellNavigator
         return true;
     }
 
-    private static int LineIndexAt(string source, int offset)
+    private static (List<LineRange> Lines, int CaretLineIndex) SplitLinesAndLocate(string source, int caretOffset)
     {
-        var line = 0;
-        for (var i = 0; i < offset && i < source.Length; i++)
-        {
-            if (source[i] == '\n')
-            {
-                line++;
-            }
-        }
-        return line;
-    }
-
-    private static List<LineRange> SplitLines(string source)
-    {
-        var result = new List<LineRange>();
+        var lines = new List<LineRange>();
         var start = 0;
+        var caretLine = 0;
         for (var i = 0; i < source.Length; i++)
         {
+            if (i == caretOffset)
+            {
+                caretLine = lines.Count;
+            }
             if (source[i] == '\n')
             {
-                result.Add(new LineRange(start, source[start..i]));
+                lines.Add(new LineRange(start, source[start..i]));
                 start = i + 1;
             }
         }
+        if (caretOffset >= source.Length)
+        {
+            caretLine = lines.Count;
+        }
         if (start <= source.Length)
         {
-            result.Add(new LineRange(start, source[start..]));
+            lines.Add(new LineRange(start, source[start..]));
         }
-        return result;
+        return (lines, caretLine);
     }
 
     private static bool LooksLikeTableRow(string line)
@@ -105,7 +101,19 @@ internal static class TableCellNavigator
         {
             return false;
         }
-        return trimmed.Where(c => c == '|').Take(2).Count() >= 2;
+        var pipes = 0;
+        for (var i = 0; i < trimmed.Length; i++)
+        {
+            if (trimmed[i] == '|')
+            {
+                pipes++;
+                if (pipes >= 2)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static bool IsDelimiterRow(string line)
@@ -177,7 +185,10 @@ internal static class TableCellNavigator
     }
 }
 
-/// <summary>One row's worth of cells, plus index metadata.</summary>
+/// <summary>
+/// A located GFM pipe table: line bounds, header/delimiter indices, and
+/// cell ranges per row (including the delimiter row at index 1 of <see cref="Rows"/>).
+/// </summary>
 internal sealed record TableRegion(
     int startLine,
     int endLine,

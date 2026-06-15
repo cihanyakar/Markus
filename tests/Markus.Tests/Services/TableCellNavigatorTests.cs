@@ -14,6 +14,7 @@ public sealed class TableCellNavigatorTests
         var found = TableCellNavigator.TryFindTableAt(source, cursor, out var region);
 
         found.ShouldBeTrue();
+        region.ShouldNotBeNull();
         region.HeaderLine.ShouldBe(0);
         region.DelimiterLine.ShouldBe(1);
         region.StartLine.ShouldBe(0);
