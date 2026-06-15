@@ -87,9 +87,12 @@ internal static class TableCellNavigator
         var insertion = "\n" + emptyRow;
         var newSource = source.Insert(insertionOffset, insertion);
 
-        // Caret lands at the first content column of the new row.
-        //   "|   |"  -> position after "| " == insertionOffset + 1 (for \n) + 2 (for "| ").
-        var newCaret = insertionOffset + 1 + 2;
+        // Caret lands right after the opening pipe of the new row's first cell.
+        // The new row is "|   |   |...". `insertionOffset` is the trailing newline
+        // of the previous last row; +1 skips the inserted "\n", +1 skips the new
+        // "|". The cell content starts at that offset; whitespace padding is
+        // reflowed when the caret later leaves the table.
+        var newCaret = insertionOffset + 1 + 1;
         return new InsertRowResult(newSource, newCaret);
     }
 

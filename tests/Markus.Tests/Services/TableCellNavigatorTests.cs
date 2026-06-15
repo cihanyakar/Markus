@@ -171,8 +171,13 @@ public sealed class TableCellNavigatorTests
         // The new row sits right after the previous last data row.
         var lines = result.NewSource.Split('\n');
         lines[3].ShouldBe("|   |   |");
-        // Caret should land at the first content position of the new row.
-        result.NewCaretOffset.ShouldBeGreaterThan(source.Length);
+        // Caret lands right after the new row's opening pipe, on the first
+        // space of the first cell. source ends with '\n' at index Length-1, so
+        // insertionOffset == Length-1. After insert ("\n|...") the caret offset
+        // insertionOffset + 1 + 1 == Length + 1.
+        result.NewCaretOffset.ShouldBe(source.Length + 1);
+        result.NewSource[result.NewCaretOffset].ShouldBe(' ');
+        result.NewSource[result.NewCaretOffset - 1].ShouldBe('|');
     }
 
     [Fact]
