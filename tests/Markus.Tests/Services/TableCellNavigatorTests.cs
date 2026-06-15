@@ -157,4 +157,48 @@ public sealed class TableCellNavigatorTests
 
         prev.ShouldBeNull();
     }
+
+    [Fact]
+    public void InsertEmptyRow_Appends_Row_With_Matching_Column_Count()
+    {
+        var source = "| a | b |\n|---|---|\n| 1 | 2 |\n";
+        TableCellNavigator.TryFindTableAt(source, 0, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+
+        var result = TableCellNavigator.InsertEmptyRow(source, region);
+
+        result.NewSource.ShouldContain("|   |   |");
+        // The new row sits right after the previous last data row.
+        var lines = result.NewSource.Split('\n');
+        lines[3].ShouldBe("|   |   |");
+        // Caret should land at the first content position of the new row.
+        result.NewCaretOffset.ShouldBeGreaterThan(source.Length);
+    }
+
+    [Fact]
+    public void InsertEmptyRow_Three_Column_Table_Produces_Three_Empty_Cells()
+    {
+        var source = "| a | b | c |\n|---|---|---|\n| 1 | 2 | 3 |\n";
+        TableCellNavigator.TryFindTableAt(source, 0, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+
+        var result = TableCellNavigator.InsertEmptyRow(source, region);
+
+        result.NewSource.ShouldContain("|   |   |   |");
+    }
+
+    [Fact]
+    public void InsertEmptyRow_Preserves_Source_Outside_The_Table()
+    {
+        var source = "# Title\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nAfter.\n";
+        TableCellNavigator
+            .TryFindTableAt(source, source.IndexOf("| 1", StringComparison.Ordinal), out var region)
+            .ShouldBeTrue();
+        region.ShouldNotBeNull();
+
+        var result = TableCellNavigator.InsertEmptyRow(source, region);
+
+        result.NewSource.ShouldStartWith("# Title\n\n");
+        result.NewSource.ShouldContain("\nAfter.\n");
+    }
 }

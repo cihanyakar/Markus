@@ -76,6 +76,23 @@ internal static class TableCellNavigator
         return forward ? StepForward(region, rowIndex, cellIndex) : StepBackward(region, rowIndex, cellIndex);
     }
 
+    public static InsertRowResult InsertEmptyRow(string source, TableRegion region)
+    {
+        var columnCount = region.Rows[0].Count;
+        var emptyRow = BuildEmptyRow(columnCount);
+
+        var lastDataRow = region.Rows[^1];
+        // Find the end-of-line offset of the table's last row.
+        var insertionOffset = FindLineEndOffset(source, lastDataRow[^1]);
+        var insertion = "\n" + emptyRow;
+        var newSource = source.Insert(insertionOffset, insertion);
+
+        // Caret lands at the first content column of the new row.
+        //   "|   |"  -> position after "| " == insertionOffset + 1 (for \n) + 2 (for "| ").
+        var newCaret = insertionOffset + 1 + 2;
+        return new InsertRowResult(newSource, newCaret);
+    }
+
     private static (int Row, int Cell) LocateCell(TableRegion region, int offset)
     {
         for (var r = 0; r < region.Rows.Count; r++)
@@ -132,6 +149,27 @@ internal static class TableCellNavigator
         }
         var prev = region.Rows[prevRow];
         return prev.Count > 0 ? prev[^1] : null;
+    }
+
+    private static string BuildEmptyRow(int columnCount)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append('|');
+        for (var c = 0; c < columnCount; c++)
+        {
+            sb.Append("   |");
+        }
+        return sb.ToString();
+    }
+
+    private static int FindLineEndOffset(string source, CellRange anyCellInLine)
+    {
+        var i = anyCellInLine.Offset;
+        while (i < source.Length && source[i] != '\n')
+        {
+            i++;
+        }
+        return i;
     }
 
     private static (List<LineRange> Lines, int CaretLineIndex) SplitLinesAndLocate(string source, int caretOffset)
@@ -283,4 +321,13 @@ internal readonly record struct CellRange(int offset, int length)
     public int Offset => offset;
 
     public int Length => length;
+}
+
+/// <summary>Result of inserting an empty row into a pipe table.</summary>
+[StructLayout(LayoutKind.Auto)]
+internal readonly record struct InsertRowResult(string newSource, int newCaretOffset)
+{
+    public string NewSource => newSource;
+
+    public int NewCaretOffset => newCaretOffset;
 }
