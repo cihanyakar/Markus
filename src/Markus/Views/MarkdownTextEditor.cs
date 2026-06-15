@@ -79,6 +79,7 @@ internal sealed class MarkdownTextEditor : TextEditor
     private MarkdownFoldingStrategy? _foldingStrategy;
     private bool _syncing;
     private bool _suppressTypewriter;
+    private int _lastCaretLineForTableReflow = -1;
 
     public MarkdownTextEditor()
     {
@@ -655,6 +656,7 @@ internal sealed class MarkdownTextEditor : TextEditor
 
     private void OnCaretPositionChanged(object? sender, EventArgs e)
     {
+        TryReflowOnCaretLeave();
         if (!TypewriterMode || _suppressTypewriter)
         {
             return;
@@ -684,5 +686,41 @@ internal sealed class MarkdownTextEditor : TextEditor
         {
             _suppressTypewriter = false;
         }
+    }
+
+    private void TryReflowOnCaretLeave()
+    {
+        var caretLine = TextArea.Caret.Line;
+        var previousLine = _lastCaretLineForTableReflow;
+        _lastCaretLineForTableReflow = caretLine;
+        if (previousLine < 0 || previousLine == caretLine)
+        {
+            return;
+        }
+
+        var source = Document.Text;
+        var previousOffset = Document.GetOffset(previousLine, 1);
+        if (!Markus.Services.TableCellNavigator.IsCaretInTable(source, previousOffset))
+        {
+            return;
+        }
+        if (Markus.Services.TableCellNavigator.IsCaretInTable(source, CaretOffset))
+        {
+            // Still inside a table (might be the same one or a sibling); no reflow yet.
+            return;
+        }
+
+        var formatted = Markus.Services.MarkdownTableFormatter.Format(source);
+        if (string.Equals(formatted, source, StringComparison.Ordinal))
+        {
+            return;
+        }
+        var caretOffsetBefore = CaretOffset;
+        using (Document.RunUpdate())
+        {
+            Document.Text = formatted;
+        }
+        // Clamp caret to remain valid after reformat (lengths may shift).
+        CaretOffset = Math.Clamp(caretOffsetBefore, 0, Document.TextLength);
     }
 }
