@@ -500,6 +500,11 @@ internal sealed class MarkdownTextEditor : TextEditor
         {
             return;
         }
+        if (e.Key == Key.Tab && TryTableNavigation(forward: !e.KeyModifiers.HasFlag(KeyModifiers.Shift)))
+        {
+            e.Handled = true;
+            return;
+        }
         if (e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift) && TryContinueList())
         {
             e.Handled = true;
@@ -590,6 +595,61 @@ internal sealed class MarkdownTextEditor : TextEditor
         var insertion = "\n" + indent + marker + " ";
         Document.Insert(CaretOffset, insertion);
         CaretOffset += insertion.Length;
+        return true;
+    }
+
+    // Returns true if the caret is inside a table and navigation was performed
+    // (caret was moved or a new row was inserted). Otherwise returns false and
+    // lets AvaloniaEdit handle Tab as its default indent.
+    private bool TryTableNavigation(bool forward)
+    {
+        var source = Document.Text;
+        if (!Markus.Services.TableCellNavigator.TryFindTableAt(source, CaretOffset, out var region))
+        {
+            return false;
+        }
+
+        var next = Markus.Services.TableCellNavigator.NextCell(region, CaretOffset, forward);
+        if (next is { } cell)
+        {
+            CaretOffset = cell.Offset;
+            // Select the cell's content so a keystroke replaces it; if the cell is
+            // empty (Length == 0 or just whitespace), no selection is made.
+            var content = Document.GetText(cell.Offset, cell.Length);
+            var trimStart = 0;
+            while (trimStart < content.Length && content[trimStart] == ' ')
+            {
+                trimStart++;
+            }
+            var trimEnd = content.Length;
+            while (trimEnd > trimStart && content[trimEnd - 1] == ' ')
+            {
+                trimEnd--;
+            }
+            if (trimEnd > trimStart)
+            {
+                CaretOffset = cell.Offset + trimStart;
+                Select(cell.Offset + trimStart, trimEnd - trimStart);
+            }
+            else
+            {
+                // Place caret after the cell's leading space for an empty cell.
+                CaretOffset = cell.Offset + trimStart;
+            }
+            return true;
+        }
+
+        // Forward step from the last cell creates a new row.
+        if (!forward)
+        {
+            return true;
+        }
+        using (Document.RunUpdate())
+        {
+            var result = Markus.Services.TableCellNavigator.InsertEmptyRow(source, region);
+            Document.Text = result.NewSource;
+            CaretOffset = result.NewCaretOffset;
+        }
         return true;
     }
 
