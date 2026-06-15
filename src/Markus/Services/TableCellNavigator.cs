@@ -96,6 +96,11 @@ internal static class TableCellNavigator
         return new InsertRowResult(newSource, newCaret);
     }
 
+    public static bool IsCaretInTable(string source, int caretOffset)
+    {
+        return TryFindTableAt(source, caretOffset, out _);
+    }
+
     private static (int Row, int Cell) LocateCell(TableRegion region, int offset)
     {
         for (var r = 0; r < region.Rows.Count; r++)

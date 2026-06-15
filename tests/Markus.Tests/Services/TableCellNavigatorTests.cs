@@ -206,4 +206,15 @@ public sealed class TableCellNavigatorTests
         result.NewSource.ShouldStartWith("# Title\n\n");
         result.NewSource.ShouldContain("\nAfter.\n");
     }
+
+    [Fact]
+    public void IsCaretInTable_Returns_True_For_Table_Region_False_For_Paragraph()
+    {
+        var source = "| a | b |\n|---|---|\n| 1 | 2 |\n\nParagraph here.\n";
+        var inTable = source.IndexOf("| 1", StringComparison.Ordinal) + 2;
+        var inParagraph = source.IndexOf("Paragraph", StringComparison.Ordinal) + 3;
+
+        TableCellNavigator.IsCaretInTable(source, inTable).ShouldBeTrue();
+        TableCellNavigator.IsCaretInTable(source, inParagraph).ShouldBeFalse();
+    }
 }
