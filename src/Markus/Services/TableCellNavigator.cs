@@ -100,8 +100,10 @@ internal static class TableCellNavigator
             return region.Rows[row][cell + 1];
         }
         var nextRow = row + 1;
-        // Row index 1 in Rows corresponds to the delimiter line; skip it.
-        if (nextRow == 1 && region.Rows.Count > 2)
+        // Row index 1 in Rows corresponds to the delimiter line; skip it. For a
+        // header+delimiter-only table (Rows.Count == 2) this advances past the
+        // table, and the bounds check below returns null.
+        if (nextRow == 1)
         {
             nextRow = 2;
         }
