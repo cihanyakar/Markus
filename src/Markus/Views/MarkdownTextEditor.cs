@@ -80,6 +80,7 @@ internal sealed class MarkdownTextEditor : TextEditor
     private bool _syncing;
     private bool _suppressTypewriter;
     private int _lastCaretLineForTableReflow = -1;
+    private bool _suppressTableReflow;
 
     public MarkdownTextEditor()
     {
@@ -690,10 +691,25 @@ internal sealed class MarkdownTextEditor : TextEditor
 
     private void TryReflowOnCaretLeave()
     {
+        // Re-entry guard. Setting Document.Text below triggers TextChanged and a
+        // follow-up CaretPositionChanged that re-enters this method; the second
+        // run would short-circuit on the IsCaretInTable check anyway, but the
+        // explicit guard keeps the contract local to this method.
+        if (_suppressTableReflow)
+        {
+            return;
+        }
         var caretLine = TextArea.Caret.Line;
         var previousLine = _lastCaretLineForTableReflow;
         _lastCaretLineForTableReflow = caretLine;
         if (previousLine < 0 || previousLine == caretLine)
+        {
+            return;
+        }
+        // External edits (paste over multi-line selection, undo) can shrink the
+        // document so the cached previousLine no longer exists; Document.GetOffset
+        // would throw on a stale line index.
+        if (previousLine > Document.LineCount)
         {
             return;
         }
@@ -716,9 +732,17 @@ internal sealed class MarkdownTextEditor : TextEditor
             return;
         }
         var caretOffsetBefore = CaretOffset;
-        using (Document.RunUpdate())
+        _suppressTableReflow = true;
+        try
         {
-            Document.Text = formatted;
+            using (Document.RunUpdate())
+            {
+                Document.Text = formatted;
+            }
+        }
+        finally
+        {
+            _suppressTableReflow = false;
         }
         // Clamp caret to remain valid after reformat (lengths may shift).
         CaretOffset = Math.Clamp(caretOffsetBefore, 0, Document.TextLength);
