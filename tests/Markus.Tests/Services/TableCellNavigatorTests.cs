@@ -116,4 +116,45 @@ public sealed class TableCellNavigatorTests
 
         next.ShouldBeNull();
     }
+
+    [Fact]
+    public void NextCell_Backward_Within_Row_Returns_Previous_Cell()
+    {
+        var source = "| a | b | c |\n|---|---|---|\n| 1 | 2 | 3 |\n";
+        TableCellNavigator.TryFindTableAt(source, 0, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+        var middle = region.Rows[2][1].Offset; // Cell "2" in data row.
+
+        var prev = TableCellNavigator.NextCell(region, middle, forward: false);
+
+        prev.ShouldNotBeNull();
+        prev!.Value.Offset.ShouldBe(region.Rows[2][0].Offset);
+    }
+
+    [Fact]
+    public void NextCell_Backward_From_First_Cell_Goes_To_Last_Cell_Of_Header_Skipping_Delimiter()
+    {
+        var source = "| a | b |\n|---|---|\n| 1 | 2 |\n";
+        TableCellNavigator.TryFindTableAt(source, 0, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+        var firstDataCell = region.Rows[2][0].Offset;
+
+        var prev = TableCellNavigator.NextCell(region, firstDataCell, forward: false);
+
+        prev.ShouldNotBeNull();
+        prev!.Value.Offset.ShouldBe(region.Rows[0][1].Offset);
+    }
+
+    [Fact]
+    public void NextCell_Backward_From_First_Cell_Of_Header_Returns_Null()
+    {
+        var source = "| a | b |\n|---|---|\n| 1 | 2 |\n";
+        TableCellNavigator.TryFindTableAt(source, 0, out var region).ShouldBeTrue();
+        region.ShouldNotBeNull();
+        var firstHeaderCell = region.Rows[0][0].Offset;
+
+        var prev = TableCellNavigator.NextCell(region, firstHeaderCell, forward: false);
+
+        prev.ShouldBeNull();
+    }
 }
