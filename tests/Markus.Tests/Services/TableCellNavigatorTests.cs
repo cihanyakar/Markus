@@ -49,4 +49,30 @@ public sealed class TableCellNavigatorTests
 
         TableCellNavigator.TryFindTableAt(source, cursor, out _).ShouldBeFalse();
     }
+
+    [Fact]
+    public void TryFindTableAt_Two_Tables_Selects_The_One_Containing_Cursor()
+    {
+        var source =
+            "| a | b |\n|---|---|\n| 1 | 2 |\n" + "\n" + "between\n" + "\n" + "| x | y |\n|---|---|\n| 9 | 8 |\n";
+        // "| x | y |" begins at offset 39; cursor on the data row of the 2nd table.
+        var cursor = source.IndexOf("| 9", StringComparison.Ordinal) + 2;
+
+        var found = TableCellNavigator.TryFindTableAt(source, cursor, out var region);
+
+        found.ShouldBeTrue();
+        region.ShouldNotBeNull();
+        region.HeaderLine.ShouldBe(6);
+        region.Rows[0][0].Length.ShouldBe(3); // " x ", trimmed elsewhere
+    }
+
+    [Fact]
+    public void TryFindTableAt_Cursor_In_Paragraph_Between_Two_Tables_Returns_False()
+    {
+        var source =
+            "| a | b |\n|---|---|\n| 1 | 2 |\n" + "\n" + "between\n" + "\n" + "| x | y |\n|---|---|\n| 9 | 8 |\n";
+        var cursor = source.IndexOf("between", StringComparison.Ordinal) + 2;
+
+        TableCellNavigator.TryFindTableAt(source, cursor, out _).ShouldBeFalse();
+    }
 }
