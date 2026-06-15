@@ -22,4 +22,31 @@ public sealed class TableCellNavigatorTests
         region.Rows.Count.ShouldBe(3);
         region.Rows[0].Count.ShouldBe(2);
     }
+
+    [Fact]
+    public void TryFindTableAt_Cursor_In_Paragraph_Returns_False()
+    {
+        var source = "Just a plain paragraph with no table at all.\n";
+        var cursor = 10;
+
+        var found = TableCellNavigator.TryFindTableAt(source, cursor, out _);
+
+        found.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void TryFindTableAt_Empty_Source_Returns_False()
+    {
+        TableCellNavigator.TryFindTableAt(string.Empty, 0, out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void TryFindTableAt_Cursor_On_Heading_Above_Table_Returns_False()
+    {
+        var source = "# Title\n\n| a | b |\n|---|---|\n| 1 | 2 |\n";
+        // Cursor is on the heading line, before the blank line and table.
+        var cursor = 3;
+
+        TableCellNavigator.TryFindTableAt(source, cursor, out _).ShouldBeFalse();
+    }
 }
