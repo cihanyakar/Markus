@@ -34,6 +34,7 @@ Markus has `TreatWarningsAsErrors=true` plus StyleCop, Meziantou, Sonar, and Ros
 5. **Range indexer over `Substring(start, length)`.** IDE0057, prefer `text[start..end]`.
 6. **Avoid `Count(predicate) >= N` when short-circuit matters.** Use `.Where(p).Take(N).Count() >= N`. S3267.
 7. **csharpier formatting** is enforced by pre-commit; multi-line constructor calls land with `)` on its own line.
+8. **`Try*` pattern with `[NotNullWhen(true)] out T?` + Shouldly tests.** `TableCellNavigator.TryFindTableAt` (after Task 1 code review) takes `[NotNullWhen(true)] out TableRegion? region`. Production callers (`if (TryFindTableAt(...)) { use region }`) get non-null inference for free. **Tests are different.** `Should*` extension methods do not carry `[DoesNotReturnIf(false)]`, so `found.ShouldBeTrue();` alone does not prove non-null at the next line. **Every test in Tasks 2-11 that reads members off `region` after `TryFindTableAt(...)` must add `region.ShouldNotBeNull();` between the `ShouldBeTrue()` call and the first member access.** The code blocks in this plan were written before this convention was discovered; apply it silently when implementing.
 
 When a task's code block does not follow these (most don't, for readability), the implementer applies them silently. Behaviour does not change; only the surface form does.
 
