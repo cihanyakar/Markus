@@ -63,6 +63,10 @@ jobs:
       # render paths were verified to work under AOT. Each RID compiles natively
       # on its own runner, so there is no cross-compilation. The %3B keeps the
       # NoWarn list a single MSBuild property across shells.
+      # A command-line -p:NoWarn is a global property that fully replaces the
+      # <NoWarn> in Directory.Build.props (it does not append), so AD0001 and
+      # CS1591 must be repeated here or the StyleCop record-struct crash (AD0001)
+      # resurfaces as a hard error and fails the AOT publish on CI's newer SDK.
       - name: Publish NativeAOT
         shell: bash
         run: |
@@ -71,7 +75,7 @@ jobs:
             -r ${{ matrix.rid }} \
             -p:PublishAot=true \
             -p:InvariantGlobalization=true \
-            -p:NoWarn=IL2104%3BIL2026%3BIL3050 \
+            -p:NoWarn=IL2104%3BIL2026%3BIL3050%3BAD0001%3BCS1591 \
             -o publish/${{ matrix.rid }}
 
       # --- macOS: build a proper .app bundle ---
