@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.9.0](https://github.com/cihanyakar/Markus/compare/v0.8.1...v0.9.0) (2026-06-17)
+
+
+### Features
+
+* **editor:** dispatch Tab/Shift-Tab inside tables to TableCellNavigator ([527cac4](https://github.com/cihanyakar/Markus/commit/527cac486cb321d5af930a299aff6d5d966e239f))
+* **editor:** reflow GFM table when caret leaves it ([f3ef3f1](https://github.com/cihanyakar/Markus/commit/f3ef3f139950d3d18225000a370195ea4ba75ca1))
+* **table:** add InsertEmptyRow for auto-row creation ([88a07a8](https://github.com/cihanyakar/Markus/commit/88a07a82b914c6dc320e4aad3ca801d94cf68fec))
+* **table:** add IsCaretInTable helper for reflow trigger ([3b3c423](https://github.com/cihanyakar/Markus/commit/3b3c42331a867ca21b03e1465503edb3065b669b))
+* **table:** add NextCell forward navigation (skips delimiter row) ([10a088c](https://github.com/cihanyakar/Markus/commit/10a088cab030e40733125e03d7b4d2050476e3f1))
+* **table:** add TableCellNavigator scaffold with TryFindTableAt happy path ([8b21f6a](https://github.com/cihanyakar/Markus/commit/8b21f6a2dc6c0952e1774b711686074a0d5bf74e))
+
+
+### Bug Fixes
+
+* **editor:** group auto-row insertion as single undo step ([d1a5ea4](https://github.com/cihanyakar/Markus/commit/d1a5ea4382f7221f3c367c070a7323ca2b8c0641))
+* **editor:** guard table reflow against re-entry and stale line index ([9a5e885](https://github.com/cihanyakar/Markus/commit/9a5e8855affe38d9cf7e012873a232734091947a))
+* **renderer:** prevent multi-GB RAM blowup from emoji weight mix ([ef518db](https://github.com/cihanyakar/Markus/commit/ef518db9fa302282b774a39938a1a04f059b71ff))
+* **table:** land InsertEmptyRow caret at first content position ([d0bd0d8](https://github.com/cihanyakar/Markus/commit/d0bd0d89410b023747e9971cd079ef95143741c3))
+* **table:** StepForward returns null at end of header-only table ([216a9be](https://github.com/cihanyakar/Markus/commit/216a9bea6f96a229895a3c037dedfb15aae284ef))
+
+
+### Refactoring
+
+* **table:** apply code review fixes to TableCellNavigator ([a519d15](https://github.com/cihanyakar/Markus/commit/a519d15f8b4ca06e238c4b7b95d2cd3b284e1acd))
+
+
+### Documentation
+
+* **plan:** add convention 8 for [NotNullWhen(true)] out + Shouldly tests ([ecdc65f](https://github.com/cihanyakar/Markus/commit/ecdc65f7e0f3b63998c72a1083de99457a473ec5))
+* **plan:** add deep-research-driven Quick Wins spec and QW1 plan ([97a599c](https://github.com/cihanyakar/Markus/commit/97a599cd5ef903fe47701c70ab8718954448ae58))
+
+
+### Build
+
+* **deps:** bump csharpier from 1.2.6 to 1.3.0 ([5da0db0](https://github.com/cihanyakar/Markus/commit/5da0db0b0ec1194f302fd1789762d4457cf18018))
+
+
+### Tests
+
+* **table:** cover NextCell backward navigation ([6846156](https://github.com/cihanyakar/Markus/commit/6846156e6a7571a0109f82f75e131e80bc888b0e))
+* **table:** cover TryFindTableAt no-table and edge cases ([1f8b69f](https://github.com/cihanyakar/Markus/commit/1f8b69f448c914c18b254ae7c533e0b6f3cfda6f))
+* **table:** TryFindTableAt picks correct table in multi-table doc ([a9fc3b4](https://github.com/cihanyakar/Markus/commit/a9fc3b4de2a85a4bdafb163be9fbbca2050c1ad7))
+
 ## [0.8.1](https://github.com/cihanyakar/Markus/compare/v0.8.0...v0.8.1) (2026-06-14)
 
 
