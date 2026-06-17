@@ -19,6 +19,15 @@ internal sealed class MarkdownFoldingStrategy
         for (var i = 1; i <= document.LineCount; i++)
         {
             var line = document.GetLineByNumber(i);
+            // Only heading (`#`) and fence (``` / ~~~) lines can change folds.
+            // Peek the first non-whitespace char from the document and skip every
+            // other line without allocating a per-line string. This runs on every
+            // keystroke, so skipping the GetText copy for prose lines is the win.
+            var firstChar = FirstNonWhitespaceChar(document, line);
+            if (firstChar is not '#' and not '`' and not '~')
+            {
+                continue;
+            }
             var text = document.GetText(line);
             // A `#` inside a fenced code block is code, not a heading. Toggle on
             // the fence markers so those lines never start a fold.
@@ -58,7 +67,24 @@ internal sealed class MarkdownFoldingStrategy
             var lastLine = document.GetLineByNumber(document.LineCount);
             AppendFold(foldings, frame.TitleEndOffset, lastLine.EndOffset);
         }
-        return foldings.OrderBy(f => f.StartOffset);
+        // Sort in place (no LINQ iterator/array). Fold start offsets are distinct
+        // (each begins after a different heading), so stability is irrelevant.
+        foldings.Sort(static (a, b) => a.StartOffset.CompareTo(b.StartOffset));
+        return foldings;
+    }
+
+    private static char FirstNonWhitespaceChar(TextDocument document, DocumentLine line)
+    {
+        var end = line.EndOffset;
+        for (var offset = line.Offset; offset < end; offset++)
+        {
+            var c = document.GetCharAt(offset);
+            if (!char.IsWhiteSpace(c))
+            {
+                return c;
+            }
+        }
+        return '\0';
     }
 
     private static void AppendFold(List<NewFolding> list, int start, int end)

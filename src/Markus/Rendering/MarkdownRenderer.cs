@@ -627,6 +627,15 @@ internal static class MarkdownRenderer
             // whose base is ASCII (keycaps like 1 + combining enclosing keycap)
             // form the emoji glyph instead of falling back to a tofu box.
             run.FontFamily = EmojiFamily;
+            // Color-emoji fonts ship a single (Normal, Normal) variant. If the
+            // emoji typeface is requested at more than one weight or style in the
+            // same layout pass (an emoji in a body paragraph plus one in a bold
+            // heading), Avalonia's font fallback takes a pathological path that
+            // transiently allocates gigabytes. Emoji glyphs have no weight or
+            // slant anyway, so pin every emoji run to Normal/Normal so the
+            // typeface is only ever resolved at one variant.
+            run.FontWeight = FontWeight.Normal;
+            run.FontStyle = FontStyle.Normal;
         }
         target.Add(run);
         sb.Clear();

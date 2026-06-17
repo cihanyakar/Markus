@@ -722,6 +722,16 @@ internal sealed class MarkdownTextEditor : TextEditor
             return;
         }
 
+        // Cheap guard before the expensive full-document snapshot. A reflow can
+        // only be needed if the line the caret just left was itself a table row;
+        // checking that with a few GetCharAt reads avoids copying the whole
+        // document (Document.Text) and splitting it twice on every caret line
+        // change in documents with no table near the caret.
+        if (!PreviousLineLooksLikeTableRow(previousLine))
+        {
+            return;
+        }
+
         var source = Document.Text;
         var previousOffset = Document.GetOffset(previousLine, 1);
         if (!Markus.Services.TableCellNavigator.IsCaretInTable(source, previousOffset))
@@ -734,6 +744,11 @@ internal sealed class MarkdownTextEditor : TextEditor
             return;
         }
 
+        ApplyTableReflow(source);
+    }
+
+    private void ApplyTableReflow(string source)
+    {
         var formatted = Markus.Services.MarkdownTableFormatter.Format(source);
         if (string.Equals(formatted, source, StringComparison.Ordinal))
         {
@@ -754,5 +769,34 @@ internal sealed class MarkdownTextEditor : TextEditor
         }
         // Clamp caret to remain valid after reformat (lengths may shift).
         CaretOffset = Math.Clamp(caretOffsetBefore, 0, Document.TextLength);
+    }
+
+    // Mirrors TableCellNavigator's table-row test (first non-whitespace char is
+    // '|' and the line holds at least two pipes) but reads characters straight
+    // from the document so the common "not a table" case allocates nothing. If
+    // the previous line is not a table row, TableCellNavigator.IsCaretInTable at
+    // that offset would return false anyway, so the full check is skipped.
+    private bool PreviousLineLooksLikeTableRow(int lineNumber)
+    {
+        var line = Document.GetLineByNumber(lineNumber);
+        var end = line.EndOffset;
+        var i = line.Offset;
+        while (i < end && char.IsWhiteSpace(Document.GetCharAt(i)))
+        {
+            i++;
+        }
+        if (i >= end || Document.GetCharAt(i) != '|')
+        {
+            return false;
+        }
+        var pipes = 0;
+        for (; i < end; i++)
+        {
+            if (Document.GetCharAt(i) == '|' && ++pipes >= 2)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
