@@ -155,7 +155,7 @@ public sealed class MarkdownTableFormatterTests
 
         // The escaped pipe should stay inside its cell, and the table
         // should remain two columns wide.
-        var dataLines = formatted.Split('\n').Where(l => l.Contains("test")).ToList();
+        var dataLines = formatted.Split('\n').Where(l => l.Contains("test", StringComparison.Ordinal)).ToList();
         dataLines.Count.ShouldBe(1);
         // Count unescaped pipe delimiters on the data row. A proper 2-column
         // row has exactly 3 real (unescaped) pipes: leading, middle, trailing.
