@@ -15,7 +15,7 @@
     <PackageVersion Include="Fonts.Avalonia.Iosevka" Version="0.14.0" />
     <PackageVersion Include="Fonts.Avalonia.JetBrainsMono" Version="0.14.0" />
     <PackageVersion Include="Fonts.Avalonia.CascadiaCode" Version="0.14.0" />
-    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.2" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="Markdig" Version="1.3.0" />
     <PackageVersion Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.13" />
