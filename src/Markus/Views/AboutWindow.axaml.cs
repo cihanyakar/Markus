@@ -45,7 +45,10 @@ internal sealed partial class AboutWindow : Window
 
     private void ApplyVersionLabel()
     {
-        var version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "dev";
+        // Read the informational version, not Assembly.GetName().Version: MinVer
+        // pins AssemblyVersion to {Major}.0.0.0, so every 0.x build reported
+        // "0.0.0" here. AssemblyVersionProvider parses the real SemVer.
+        var version = new Markus.Services.Updates.AssemblyVersionProvider().Current.ToString();
         if (this.FindControl<TextBlock>("VersionLabel") is { } label)
         {
             label.Text = $"Version {version}";
