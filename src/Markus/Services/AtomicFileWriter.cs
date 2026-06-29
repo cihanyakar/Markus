@@ -106,7 +106,8 @@ internal static class AtomicFileWriter
 
     private static void MoveWithRetry(string source, string destination)
     {
-        const int maxAttempts = 5;
+        const int maxAttempts = 8;
+        const int maxDelayMs = 250;
         var delayMs = 25;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
@@ -115,10 +116,20 @@ internal static class AtomicFileWriter
                 File.Move(source, destination, overwrite: true);
                 return;
             }
+            // A sharing violation surfaces as IOException.
             catch (IOException) when (attempt < maxAttempts)
             {
                 System.Threading.Thread.Sleep(delayMs);
-                delayMs *= 2;
+                delayMs = Math.Min(delayMs * 2, maxDelayMs);
+            }
+            // Windows maps a concurrent REPLACE_EXISTING rename race onto
+            // ERROR_ACCESS_DENIED (UnauthorizedAccessException), which does NOT
+            // derive from IOException. It is transient under contention, so
+            // retry it too; the last attempt rethrows a persistent failure.
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                System.Threading.Thread.Sleep(delayMs);
+                delayMs = Math.Min(delayMs * 2, maxDelayMs);
             }
         }
     }
