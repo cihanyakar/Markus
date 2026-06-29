@@ -126,6 +126,12 @@ internal sealed class KeyBindingService
         {
             return new KeyBindingMap();
         }
+        catch (UnauthorizedAccessException)
+        {
+            // A permission problem reading shortcuts.json must not crash
+            // launch. Fall back to the default key map for this session.
+            return new KeyBindingMap();
+        }
     }
 
     private void Save()

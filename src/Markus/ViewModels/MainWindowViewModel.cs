@@ -257,7 +257,11 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, App.ShutdownToken);
         var written = SourceText;
-        await File.WriteAllTextAsync(path, written, linked.Token);
+        // Atomic write (temp + fsync + rename) so a crash, power loss, or a
+        // full disk mid-save cannot truncate or corrupt the user's existing
+        // file. AtomicFileWriter is synchronous; run it off the UI thread to
+        // keep the async contract and avoid blocking on the fsync.
+        await Task.Run(() => AtomicFileWriter.WriteAllText(path, written), linked.Token);
         _lastSyncedText = written;
         CurrentFilePath = path;
         IsScratchBuffer = false;
@@ -821,6 +825,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
+        // The debounced save timer raises Changed on a thread-pool thread.
+        // This handler mutates UI-bound state, re-applies the theme, and
+        // rebuilds the preview, so hop to the UI thread when we are not
+        // already on it. The Application.Current guard mirrors ThemeApplicator
+        // so headless tests (no Avalonia app) keep running synchronously.
+        if (Avalonia.Application.Current is not null && !Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => OnSettingsChanged(sender, e));
+            return;
+        }
         Settings = e.Settings;
         ThemeApplicator.Apply(e.Settings.ThemeMode);
         SyncOutlineVisible(e.Settings);
@@ -1015,6 +1029,20 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         // FileSystemWatcher fires on a thread-pool thread; hop to UI before
         // touching observable state.
-        Dispatcher.UIThread.Post(() => _ = HandleExternalChangeAsync(e.Path, e.Change));
+        Dispatcher.UIThread.Post(() => _ = HandleExternalChangeSafeAsync(e.Path, e.Change));
+    }
+
+    // Guards the fire-and-forget reload so a failure in the prompt or disk read
+    // surfaces as status text instead of an unobserved task exception.
+    private async Task HandleExternalChangeSafeAsync(string path, WatcherChangeTypes change)
+    {
+        try
+        {
+            await HandleExternalChangeAsync(path, change);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Could not handle external change • {ex.Message}";
+        }
     }
 }

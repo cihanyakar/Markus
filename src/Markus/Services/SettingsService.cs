@@ -84,6 +84,13 @@ internal sealed class SettingsService
             settings = new AppSettings();
             return false;
         }
+        catch (UnauthorizedAccessException)
+        {
+            // A permission problem on settings.json must not crash launch (Save
+            // already swallows the same); fall back to defaults for the session.
+            settings = new AppSettings();
+            return false;
+        }
     }
 
     public void Save(AppSettings settings)
