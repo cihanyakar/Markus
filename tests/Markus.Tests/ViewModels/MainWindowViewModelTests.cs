@@ -280,6 +280,50 @@ public sealed class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task NewScratch_FromPreviewOnly_SwitchesToSource()
+    {
+        // A fresh scratch buffer is empty; a preview-only pane would render
+        // blank with nowhere to type, so NewScratch drops to the editor.
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.Preview };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.Source);
+    }
+
+    [Fact]
+    public async Task NewScratch_FromSplitVertical_KeepsViewMode()
+    {
+        // Split views already show the source, so NewScratch leaves them be.
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.SplitVertical };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.SplitVertical);
+    }
+
+    [Fact]
+    public async Task NewScratch_FromSplitHorizontal_KeepsViewMode()
+    {
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.SplitHorizontal };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.SplitHorizontal);
+    }
+
+    [Fact]
+    public async Task NewScratch_FromDetached_KeepsViewMode()
+    {
+        // Detached keeps the source in the main window, so it stays too.
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.Detached };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.Detached);
+    }
+
+    [Fact]
     public async Task SaveToFileAsync_WritesSourceTextToProvidedPath()
     {
         var path = Path.Combine(Path.GetTempPath(), $"markus-save-{Guid.NewGuid():N}.md");

@@ -699,6 +699,13 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         DocumentTitle = "Untitled";
         LastModifiedText = string.Empty;
         StatusText = "Scratch buffer · unsaved";
+        // A fresh scratch buffer is empty, so a preview-only view would land the
+        // user on a blank pane with nowhere to type. Drop to the source editor.
+        // Split and detached views already show the source, so leave them alone.
+        if (CurrentViewMode is ViewMode.Preview)
+        {
+            SetViewMode(ViewMode.Source);
+        }
     }
 
     [RelayCommand]
