@@ -639,7 +639,103 @@ public sealed class MainWindowViewModelTests
         }
     }
 
+    [Fact]
+    public async Task LoadFileGuarded_NotDirty_LoadsFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-guard-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "loaded body", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            var ok = await sut.LoadFileGuardedAsync(path);
+
+            ok.ShouldBeTrue();
+            sut.SourceText.ShouldBe("loaded body");
+            sut.CurrentFilePath.ShouldBe(path);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenRecent_MissingDirectory_PrunesEntry()
+    {
+        // A moved/deleted parent directory throws DirectoryNotFoundException, not
+        // FileNotFoundException; both must prune the dead entry, not just error.
+        var missing = Path.Combine(Path.GetTempPath(), $"markus-gone-{Guid.NewGuid():N}", "note.md");
+        var sut = new MainWindowViewModel(CreateTempSettings());
+        sut.Settings.RecentFiles.Add(missing);
+
+        await sut.OpenRecentCommand.ExecuteAsync(missing);
+
+        sut.Settings.RecentFiles.ShouldNotContain(missing);
+        sut.StatusText.ShouldContain("file not found");
+    }
+
+    [Fact]
+    public void FormatTables_EmptyBuffer_ReportsNoTables()
+    {
+        var sut = new MainWindowViewModel { SourceText = string.Empty };
+
+        sut.FormatTablesCommand.Execute(null);
+
+        sut.StatusText.ShouldBe("No tables to format");
+    }
+
+    [Fact]
+    public void FormatTables_NoTableContent_ReportsAlreadyFormatted()
+    {
+        var sut = new MainWindowViewModel { SourceText = "# Heading\n\nJust prose, no tables." };
+
+        sut.FormatTablesCommand.Execute(null);
+
+        sut.StatusText.ShouldBe("Tables already formatted");
+    }
+
+    [Fact]
+    public void FormatTables_UnalignedTable_Reformats()
+    {
+        var sut = new MainWindowViewModel { SourceText = "|a|bbbb|\n|-|-|\n|111|2|\n" };
+
+        sut.FormatTablesCommand.Execute(null);
+
+        sut.StatusText.ShouldBe("Tables reformatted");
+    }
+
     // --- External change on disk ---
+
+    [Fact]
+    public async Task ExternalDelete_WhileClean_MarksDirtyToProtectBuffer()
+    {
+        // A clean buffer whose file is deleted externally becomes the only copy;
+        // mark it dirty so the close guard warns and Save can recreate the file.
+        var path = Path.Combine(Path.GetTempPath(), $"markus-del-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "content", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.IsDirty.ShouldBeFalse();
+            File.Delete(path);
+
+            await sut.HandleExternalChangeAsync(path, WatcherChangeTypes.Deleted);
+
+            sut.IsDirty.ShouldBeTrue();
+            sut.LastModifiedText.ShouldBeEmpty();
+            sut.CurrentFilePath.ShouldBe(path);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
 
     [Fact]
     public async Task ExternalChange_DiskMatchesLastSync_DoesNotReloadOrPrompt()

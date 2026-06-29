@@ -5,6 +5,7 @@
         xmlns:vm="using:Markus.ViewModels"
         xmlns:views="using:Markus.Views"
         xmlns:models="using:Markus.Models"
+        xmlns:conv="using:Avalonia.Data.Converters"
         xmlns:ae="using:AvaloniaEdit"
         mc:Ignorable="d"
         d:DesignWidth="1100" d:DesignHeight="720"
@@ -44,13 +45,13 @@
       <NativeMenuItem Header="Edit">
         <NativeMenuItem.Menu>
           <NativeMenu>
-            <NativeMenuItem Header="Undo" Gesture="Cmd+Z"/>
-            <NativeMenuItem Header="Redo" Gesture="Cmd+Shift+Z"/>
+            <NativeMenuItem Header="Undo" Gesture="Cmd+Z" Click="Undo_Click"/>
+            <NativeMenuItem Header="Redo" Gesture="Cmd+Shift+Z" Click="Redo_Click"/>
             <NativeMenuItemSeparator/>
-            <NativeMenuItem Header="Cut" Gesture="Cmd+X"/>
-            <NativeMenuItem Header="Copy" Gesture="Cmd+C"/>
-            <NativeMenuItem Header="Paste" Gesture="Cmd+V"/>
-            <NativeMenuItem Header="Select All" Gesture="Cmd+A"/>
+            <NativeMenuItem Header="Cut" Gesture="Cmd+X" Click="Cut_Click"/>
+            <NativeMenuItem Header="Copy" Gesture="Cmd+C" Click="Copy_Click"/>
+            <NativeMenuItem Header="Paste" Gesture="Cmd+V" Click="Paste_Click"/>
+            <NativeMenuItem Header="Select All" Gesture="Cmd+A" Click="SelectAll_Click"/>
             <NativeMenuItemSeparator/>
             <NativeMenuItem Header="Find" Gesture="Cmd+F"
                             Command="{Binding FindCommand}"/>
@@ -437,14 +438,24 @@
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource TextHigh}"
                        Text="{Binding Update.AvailableVersion, StringFormat='Markus {0} is ready'}"/>
+            <!-- Live progress / error text while a download is in flight, so the
+                 Install action isn't a silent operation. -->
+            <TextBlock FontSize="12"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextLow}"
+                       IsVisible="{Binding Update.IsBusy}"
+                       Text="{Binding Update.StatusMessage}"/>
           </StackPanel>
           <StackPanel Grid.Column="2"
                       Orientation="Horizontal"
                       Spacing="0"
                       Margin="0,0,12,0"
                       VerticalAlignment="Center">
+            <!-- Disable Install while a check or download is running so it can't
+                 be fired twice and progress is reflected. -->
             <Button Classes="updateAction updatePrimary"
                     Content="Install"
+                    IsEnabled="{Binding !Update.IsBusy}"
                     Command="{Binding Update.DownloadCommand}"/>
             <Rectangle Classes="hair" Margin="6,0"/>
             <Button Classes="updateAction"
@@ -460,6 +471,37 @@
                     Command="{Binding Update.DismissCommand}"/>
           </StackPanel>
         </Grid>
+      </Border>
+
+      <!-- Update check result strip. Shown only when there is no update banner
+           to host the message (up to date, error, or mid-check), so a manual
+           "Check for Updates" is never a silent no-op. Shares row 1 with the
+           banner above; the two are mutually exclusive on IsUpdateAvailable. -->
+      <Border Grid.Row="1"
+              Background="Transparent"
+              BorderBrush="{DynamicResource GlassDivider}"
+              BorderThickness="0,0,0,1"
+              Padding="0">
+        <Border.IsVisible>
+          <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+            <Binding Path="!Update.IsUpdateAvailable"/>
+            <Binding Path="Update.StatusMessage"
+                     Converter="{x:Static conv:StringConverters.IsNotNullOrEmpty}"/>
+          </MultiBinding>
+        </Border.IsVisible>
+        <StackPanel Orientation="Horizontal"
+                    Spacing="8"
+                    Height="32"
+                    Margin="18,0,0,0"
+                    VerticalAlignment="Center">
+          <TextBlock Classes="section"
+                     Text="UPDATE"
+                     VerticalAlignment="Center"/>
+          <TextBlock FontSize="12"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource TextLow}"
+                     Text="{Binding Update.StatusMessage}"/>
+        </StackPanel>
       </Border>
 
       <!-- ============ Content ============ -->

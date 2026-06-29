@@ -313,6 +313,18 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         cts?.Dispose();
     }
 
+    // Guarded buffer-replacing load: prompts to save unsaved work first, then
+    // loads the file. Returns false if the user cancelled.
+    internal async Task<bool> LoadFileGuardedAsync(string path)
+    {
+        if (!await EnsureSafeToDiscardAsync())
+        {
+            return false;
+        }
+        await LoadFileAsync(path);
+        return true;
+    }
+
     // Reconciles the buffer with an on-disk change reported by the watcher.
     // Internal so it can be driven directly in tests without the real
     // FileSystemWatcher's timing.
@@ -320,6 +332,13 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (change == WatcherChangeTypes.Deleted)
         {
+            // The on-disk file vanished, so the buffer is now the only copy and
+            // is unsaved relative to disk. Flag it dirty so the close guard
+            // warns on quit, and clear the stale modified stamp. Keep
+            // CurrentFilePath so a later Save recreates the file at its original
+            // location.
+            IsDirty = true;
+            LastModifiedText = string.Empty;
             StatusText = $"{DocumentTitle} • file deleted on disk";
             return;
         }
@@ -511,8 +530,11 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             // Shutdown interrupted the load.
         }
-        catch (FileNotFoundException)
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
+            // A moved or deleted parent directory throws DirectoryNotFoundException
+            // (an IOException, not FileNotFoundException), so treat both as a
+            // missing file and prune the dead entry.
             StatusText = $"{Path.GetFileName(path)} • file not found";
             // Match the case-insensitive dedup used when adding, so a stale
             // entry stored with different casing is still pruned.
@@ -573,9 +595,15 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await SaveToFileAsync(path);
         }
+        catch (OperationCanceledException) when (App.ShutdownToken.IsCancellationRequested)
+        {
+            // Genuine shutdown interrupted the save; nothing more we can do.
+        }
         catch (OperationCanceledException)
         {
-            // Shutdown interrupted the save.
+            // Cancelled for some other reason (not a real process shutdown), so
+            // the edits are still unsaved. Surface it instead of silently no-oping.
+            StatusText = "Save cancelled";
         }
         catch (Exception ex)
         {
@@ -714,6 +742,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         var current = SourceText;
         if (string.IsNullOrEmpty(current))
         {
+            StatusText = "No tables to format";
             return;
         }
         var formatted = MarkdownTableFormatter.Format(current);
@@ -721,7 +750,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             SourceText = formatted;
             StatusText = "Tables reformatted";
+            return;
         }
+        // Format made no change: either there are no tables, or every table is
+        // already aligned. Either way the command did run, so say so instead of
+        // looking dead.
+        StatusText = "Tables already formatted";
     }
 
     [RelayCommand]

@@ -487,6 +487,30 @@ internal sealed partial class MainWindow : Window
         return null;
     }
 
+    private void FocusVisibleEditorDeferred(Markus.Models.ViewMode mode)
+    {
+        // Preview-only has no editor to focus; every other mode shows one.
+        if (mode == Markus.Models.ViewMode.Preview)
+        {
+            return;
+        }
+        // Background priority runs after the IsVisible flip and the following
+        // layout pass, so the editor we pick is the one actually on screen.
+        Avalonia.Threading.Dispatcher.UIThread.Post(
+            () =>
+            {
+                // Don't yank focus out of the search overlay if it's open; the
+                // user is mid-search and expects the query field to keep focus.
+                if (this.FindControl<SearchOverlay>("PreviewSearch") is { IsVisible: true })
+                {
+                    return;
+                }
+                VisibleEditorFor(mode)?.TextArea.Focus();
+            },
+            Avalonia.Threading.DispatcherPriority.Background
+        );
+    }
+
     private static ScrollViewer? FindEditorScrollViewer(MarkdownTextEditor editor)
     {
         // AvaloniaEdit hosts its scrollable area as a descendant ScrollViewer
@@ -880,6 +904,13 @@ internal sealed partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm)
         {
             UpdateDetachedWindows(vm);
+            // Focus the editor on launch when a document or scratch is active so
+            // the user can type immediately (skip the welcome screen, which has
+            // no editor and its own primary action).
+            if (!vm.IsWelcomeVisible)
+            {
+                FocusVisibleEditorDeferred(vm.CurrentViewMode);
+            }
         }
         if (Services.StartupTrace.IsEnabled)
         {
@@ -1029,7 +1060,9 @@ internal sealed partial class MainWindow : Window
                 }
                 return;
             }
-            await vm.LoadFileAsync(path);
+            // Route through the guarded load so a drop onto a dirty document
+            // prompts to save first instead of silently discarding edits.
+            await vm.LoadFileGuardedAsync(path);
         }
         catch (OperationCanceledException)
         {
@@ -1195,6 +1228,20 @@ internal sealed partial class MainWindow : Window
         {
             UpdateDetachedWindows(vm);
             ApplyEditorWordWrap(vm.IsSourceSoftWrap);
+            // Land the caret in the now-visible editor so the user can type
+            // straight away after switching to a source-visible mode.
+            FocusVisibleEditorDeferred(vm.CurrentViewMode);
+            return;
+        }
+        if (
+            string.Equals(e.PropertyName, nameof(MainWindowViewModel.IsWelcomeVisible), StringComparison.Ordinal)
+            && DataContext is MainWindowViewModel vmWelcome
+        )
+        {
+            // A document or scratch buffer just became active (or the window
+            // returned to the welcome screen). In Detached mode this is the
+            // moment to float the preview that the welcome guard held back.
+            UpdateDetachedWindows(vmWelcome);
             return;
         }
         if (
@@ -1235,9 +1282,19 @@ internal sealed partial class MainWindow : Window
         {
             return;
         }
+        // Don't float a blank preview over the welcome screen. Once a document
+        // or scratch buffer becomes active the mode handler reopens it.
+        if (vm.IsWelcomeVisible)
+        {
+            return;
+        }
         _previewWindow = new DetachedPreviewWindow { DataContext = vm };
         _previewWindow.Closed += OnDetachedPreviewClosed;
         _previewWindow.Show(this);
+        // Wire the floating preview into the scroll/render sync engine; without
+        // this the detached preview never drives editor sync (mirrors the
+        // teardown in OnDetachedPreviewClosed).
+        AttachPreviewScrollSubscribers();
     }
 
     private void OnDetachedPreviewClosed(object? sender, EventArgs e)
@@ -1255,14 +1312,16 @@ internal sealed partial class MainWindow : Window
         // mode (otherwise CurrentViewMode stays Detached, the toolbar still
         // shows it active, and re-selecting it can't reopen the window because
         // the value never changes). A programmatic close from a mode switch
-        // already set the new mode, so skip it.
+        // already set the new mode, so skip it. Fall back to Source, which the
+        // main window was already showing in Detached, so the editor the user
+        // was working in stays visible instead of being hidden behind Preview.
         if (_closingPreviewProgrammatically)
         {
             return;
         }
         if (DataContext is MainWindowViewModel vm && vm.CurrentViewMode == Markus.Models.ViewMode.Detached)
         {
-            vm.CurrentViewMode = Markus.Models.ViewMode.Preview;
+            vm.CurrentViewMode = Markus.Models.ViewMode.Source;
         }
     }
 
@@ -1293,6 +1352,58 @@ internal sealed partial class MainWindow : Window
         {
             SetStatus($"Open failed: {ex.Message}");
         }
+    }
+
+    // The Edit menu items only carry display gestures; NativeMenuItem command
+    // bindings are unreliable on macOS (see RefreshRecentMenu), so route each
+    // through a Click handler that drives the editing methods on the editor the
+    // user is actually working in.
+    private MarkdownTextEditor? EditTargetEditor()
+    {
+        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Visual;
+        if (FindAncestor<MarkdownTextEditor>(focused) is { } focusedEditor)
+        {
+            return focusedEditor;
+        }
+        // Nothing editor-focused (e.g. the menu took focus): fall back to the
+        // editor visible in the current view mode.
+        return VisibleSourceEditor();
+    }
+
+    private void Undo_Click(object? sender, EventArgs e)
+    {
+        if (EditTargetEditor() is { CanUndo: true } editor)
+        {
+            editor.Undo();
+        }
+    }
+
+    private void Redo_Click(object? sender, EventArgs e)
+    {
+        if (EditTargetEditor() is { CanRedo: true } editor)
+        {
+            editor.Redo();
+        }
+    }
+
+    private void Cut_Click(object? sender, EventArgs e)
+    {
+        EditTargetEditor()?.Cut();
+    }
+
+    private void Copy_Click(object? sender, EventArgs e)
+    {
+        EditTargetEditor()?.Copy();
+    }
+
+    private void Paste_Click(object? sender, EventArgs e)
+    {
+        EditTargetEditor()?.Paste();
+    }
+
+    private void SelectAll_Click(object? sender, EventArgs e)
+    {
+        EditTargetEditor()?.SelectAll();
     }
 
     private void RefreshRecentMenu()
@@ -1460,7 +1571,30 @@ internal sealed partial class MainWindow : Window
 
     private void OnOutlineNodeSelected(object? sender, OutlineNodeSelectedEventArgs e)
     {
+        // Keep aligning a visible preview where there is one.
         ScrollVisiblePreview(e.Node.SourceLine);
+        // Also move the visible editor's caret and scroll to the heading so the
+        // outline works in Source-only and Detached (which have no preview pane),
+        // and so the caret follows the selection in every mode.
+        MoveVisibleEditorToLine(e.Node.SourceLine);
+    }
+
+    private void MoveVisibleEditorToLine(int sourceLine)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        var editor = VisibleEditorFor(vm.CurrentViewMode);
+        if (editor?.Document is not { } doc || doc.LineCount == 0)
+        {
+            return;
+        }
+        // SourceLine is Markdig's 0-based heading line; AvaloniaEdit documents
+        // are 1-based, so shift by one (matching the sync-scroll engine).
+        var lineNumber = Math.Clamp(sourceLine + 1, 1, doc.LineCount);
+        editor.ScrollToLine(lineNumber);
+        editor.CaretOffset = doc.GetLineByNumber(lineNumber).Offset;
     }
 
     private void ScrollVisiblePreview(int sourceLine)
@@ -1514,7 +1648,9 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        await vm.LoadFileAsync(path);
+        // File > Open replaces the current document in this window, so guard
+        // unsaved edits before loading the picked file.
+        await vm.LoadFileGuardedAsync(path);
     }
 
     private async Task OpenSettingsAsync()
