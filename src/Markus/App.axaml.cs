@@ -55,6 +55,7 @@ internal sealed partial class App : Application
             FileOpenRouter.OpenInitial(vm, desktop.Args);
             FileOpenRouter.MaybeRestoreSession(vm, settings, isSpawnedChild);
             Views.Platform.MacosAppleEventHandler.Register(path => FileOpenRouter.OpenSingle(vm, path));
+            Views.Platform.MacosAppleEventHandler.InstallTerminationGuard();
             FileOpenRouter.BeginAwaitInitialDocument(vm);
             if (
                 Services.Updates.UpdatePolicy.ShouldAutoCheck(

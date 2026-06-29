@@ -16,6 +16,7 @@ internal static unsafe class MacosAppleEventHandler
 {
     private static Action<string>? _callback;
     private static bool _installed;
+    private static bool _terminationGuardInstalled;
 
     public static void Register(Action<string> onFileOpen)
     {
@@ -29,6 +30,56 @@ internal static unsafe class MacosAppleEventHandler
             return;
         }
         _installed = InstallDelegateMethods();
+    }
+
+    /// <summary>
+    /// Stops a NativeAOT shutdown crash on macOS. AppKit's Quit path
+    /// (Cmd+Q, Dock &gt; Quit, logout) ends in <c>exit()</c>, whose C++ atexit
+    /// chain destroys a global <c>ComPtr&lt;IAvnDispatcher&gt;</c> in
+    /// libAvaloniaNative by calling its managed <c>Release</c> after the
+    /// runtime has already torn down, which fail-fasts (abort). Avalonia has
+    /// already closed every window and persisted the session by the time
+    /// <c>applicationWillTerminate:</c> fires, so we end the process here with
+    /// <c>_exit</c>, skipping the atexit teardown that crashes. Closing the
+    /// window normally takes Avalonia's own shutdown path and never reaches
+    /// this, so it is unaffected.
+    /// </summary>
+    public static void InstallTerminationGuard()
+    {
+        if (!OperatingSystem.IsMacOS() || _terminationGuardInstalled)
+        {
+            return;
+        }
+        var nsApp = ObjC.SendId(ObjC.GetClass("NSApplication"), ObjC.Sel("sharedApplication"));
+        if (nsApp == IntPtr.Zero)
+        {
+            return;
+        }
+        var del = ObjC.SendId(nsApp, ObjC.Sel("delegate"));
+        if (del == IntPtr.Zero)
+        {
+            return;
+        }
+        var cls = ObjC.SendId(del, ObjC.Sel("class"));
+        if (cls == IntPtr.Zero)
+        {
+            return;
+        }
+#pragma warning disable SA1011
+        var imp = (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, void>)&WillTerminateTrampoline;
+#pragma warning restore SA1011
+        InstallOrSwap(cls, ObjC.Sel("applicationWillTerminate:"), imp, "v@:@");
+        _terminationGuardInstalled = true;
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static void WillTerminateTrampoline(IntPtr self, IntPtr cmd, IntPtr notification)
+    {
+        // End the process before AppKit's exit() runs the crashing atexit
+        // teardown (see InstallTerminationGuard). _exit skips atexit and
+        // C++ static destructors, so the global ComPtr<IAvnDispatcher> is
+        // never released into a torn-down runtime.
+        ObjC.Exit(0);
     }
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -187,5 +238,8 @@ internal static unsafe class MacosAppleEventHandler
 
         [DllImport(Lib, EntryPoint = "method_setImplementation")]
         public static extern IntPtr SetImplementation(IntPtr method, IntPtr imp);
+
+        [DllImport("/usr/lib/libSystem.dylib", EntryPoint = "_exit")]
+        public static extern void Exit(int status);
     }
 }
