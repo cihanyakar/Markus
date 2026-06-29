@@ -18,9 +18,26 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@v5
+        id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: ${{ github.ref_name }}
+
+  # release-please publishes the GitHub release with the GITHUB_TOKEN, and a
+  # release created that way does not emit a `release` event that can trigger
+  # release-binaries.yml (GitHub's workflow-recursion guard). Chain the build
+  # here in the same run so binaries are attached automatically.
+  build-binaries:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}

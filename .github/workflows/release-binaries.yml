@@ -3,6 +3,24 @@ name: Release binaries
 on:
   release:
     types: [published]
+  # Called from release-please.yml in the same run when release-please
+  # creates a release. A release published by the GITHUB_TOKEN does not
+  # emit a `release` event that can trigger this workflow (GitHub's
+  # recursion guard), so the publisher chains the build here instead.
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag to build binaries for (e.g. v0.9.3)
+        required: true
+        type: string
+  # Manual rebuild for a given tag (e.g. when a release was created by a
+  # bot and its binaries never built).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build binaries for (e.g. v0.9.3)
+        required: true
+        type: string
 
 env:
   DOTNET_NOLOGO: true
@@ -14,7 +32,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-binaries-${{ github.event.release.tag_name }}
+  group: release-binaries-${{ inputs.tag || github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
@@ -22,6 +40,10 @@ jobs:
     name: Publish ${{ matrix.rid }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    # Single source of truth for the tag across triggers: the release event
+    # supplies it via the payload, workflow_call/dispatch via the input.
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
     strategy:
       fail-fast: false
       matrix:
@@ -40,7 +62,7 @@ jobs:
       - name: Checkout (tag, full history for MinVer)
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ env.TAG }}
           fetch-depth: 0
 
       - name: Setup .NET
@@ -82,8 +104,6 @@ jobs:
       - name: Build .app bundle (macOS)
         if: matrix.bundle == 'app'
         shell: bash
-        env:
-          TAG: ${{ github.event.release.tag_name }}
         run: |
           VERSION="${TAG#v}"
           YEAR=$(date -u +%Y)
@@ -133,7 +153,7 @@ jobs:
         if: matrix.bundle == 'app'
         shell: bash
         env:
-          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.dmg
+          ARCHIVE_NAME: Markus-${{ env.TAG }}-${{ matrix.rid }}.dmg
         run: |
           # Stage the bundle alongside an /Applications symlink so the DMG
           # opens with a "drag here" install layout familiar from any
@@ -161,7 +181,7 @@ jobs:
         if: matrix.bundle == 'tar'
         shell: bash
         env:
-          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.tar.gz
+          ARCHIVE_NAME: Markus-${{ env.TAG }}-${{ matrix.rid }}.tar.gz
         run: |
           tar -czf "$ARCHIVE_NAME" -C "publish/${{ matrix.rid }}" .
           echo "ARTIFACT=$ARCHIVE_NAME" >> "$GITHUB_ENV"
@@ -171,7 +191,7 @@ jobs:
         if: matrix.bundle == 'zip'
         shell: pwsh
         env:
-          ARCHIVE_NAME: Markus-${{ github.event.release.tag_name }}-${{ matrix.rid }}.zip
+          ARCHIVE_NAME: Markus-${{ env.TAG }}-${{ matrix.rid }}.zip
         run: |
           Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath "$env:ARCHIVE_NAME"
           "ARTIFACT=$env:ARCHIVE_NAME" >> $env:GITHUB_ENV
@@ -201,7 +221,7 @@ jobs:
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ env.TAG }}
           files: |
             ${{ env.ARTIFACT }}
             ${{ env.ARTIFACT }}.sha256
