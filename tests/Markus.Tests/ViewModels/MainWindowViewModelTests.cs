@@ -433,6 +433,38 @@ public sealed class MainWindowViewModelTests
         sut.IsDirty.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task SaveAsCommand_AlwaysPromptsAndRetargetsToNewPath()
+    {
+        // Save As prompts even when the document already has a path, then
+        // repoints CurrentFilePath at the chosen destination (fork/retarget).
+        var newPath = Path.Combine(Path.GetTempPath(), $"markus-saveas-{Guid.NewGuid():N}.md");
+        var interaction = new FakeDocumentInteraction { SavePathToReturn = newPath };
+        var sut = new MainWindowViewModel(CreateTempSettings())
+        {
+            CurrentFilePath = "/existing/original.md",
+            SourceText = "forked content",
+            Interaction = interaction,
+        };
+
+        try
+        {
+            await sut.SaveAsCommand.ExecuteAsync(null);
+
+            interaction.PickSaveCalls.ShouldBe(1);
+            File.Exists(newPath).ShouldBeTrue();
+            (await File.ReadAllTextAsync(newPath, TestContext.Current.CancellationToken)).ShouldBe("forked content");
+            sut.CurrentFilePath.ShouldBe(newPath);
+        }
+        finally
+        {
+            if (File.Exists(newPath))
+            {
+                File.Delete(newPath);
+            }
+        }
+    }
+
     // --- IsDirty ---
 
     [Fact]

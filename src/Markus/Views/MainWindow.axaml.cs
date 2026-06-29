@@ -161,6 +161,7 @@ internal sealed partial class MainWindow : Window
         {
             "file.open" => vm.OpenFileCommand,
             "file.save" => vm.SaveCommand,
+            "file.save-as" => vm.SaveAsCommand,
             "file.reload" => vm.ReloadCommand,
             "file.new" => vm.NewScratchCommand,
             "edit.find" => vm.FindCommand,
@@ -1404,6 +1405,68 @@ internal sealed partial class MainWindow : Window
     private void SelectAll_Click(object? sender, EventArgs e)
     {
         EditTargetEditor()?.SelectAll();
+    }
+
+    private void Close_Click(object? sender, EventArgs e)
+    {
+        // Routes through OnWindowClosing, which runs the unsaved-changes guard.
+        Close();
+    }
+
+    private void Reveal_Click(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        var path = vm.CurrentFilePath;
+        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+        {
+            vm.StatusText = "Save the document first to reveal it";
+            return;
+        }
+        RevealInFileManager(path);
+    }
+
+    private static void RevealInFileManager(string path)
+    {
+        try
+        {
+            if (OperatingSystem.IsMacOS())
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo("open") { UseShellExecute = false };
+                psi.ArgumentList.Add("-R");
+                psi.ArgumentList.Add(path);
+                System.Diagnostics.Process.Start(psi);
+            }
+            else if (OperatingSystem.IsWindows())
+            {
+                // explorer wants the switch and path as one /select,<path> token.
+                System.Diagnostics.Process.Start(
+                    new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+                    {
+                        UseShellExecute = true,
+                    }
+                );
+            }
+            else
+            {
+                // No standard "reveal and select" on Linux; open the folder.
+                var dir = System.IO.Path.GetDirectoryName(path) ?? path;
+                var psi = new System.Diagnostics.ProcessStartInfo("xdg-open") { UseShellExecute = false };
+                psi.ArgumentList.Add(dir);
+                System.Diagnostics.Process.Start(psi);
+            }
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // No file manager available or the launch was blocked; nothing the
+            // user can act on here, so stay quiet rather than crash.
+        }
+        catch (System.IO.FileNotFoundException)
+        {
+            // Same posture as above.
+        }
     }
 
     private void RefreshRecentMenu()

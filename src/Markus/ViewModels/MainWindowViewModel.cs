@@ -79,6 +79,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private string? _currentFilePath;
 
@@ -122,6 +123,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private bool _isScratchBuffer;
 
@@ -132,6 +134,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     private bool _isAwaitingInitialDocument;
 
     [ObservableProperty]
@@ -607,6 +610,38 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             // Cancelled for some other reason (not a real process shutdown), so
             // the edits are still unsaved. Surface it instead of silently no-oping.
+            StatusText = "Save cancelled";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Save failed. {ex.Message}";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task SaveAsAsync()
+    {
+        // Always pick a fresh destination so the user can fork or retarget an
+        // already-saved document; SaveToFileAsync then repoints CurrentFilePath.
+        if (Interaction is null)
+        {
+            return;
+        }
+        var path = await Interaction.PickSavePathAsync(SuggestedSaveName());
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+        try
+        {
+            await SaveToFileAsync(path);
+        }
+        catch (OperationCanceledException) when (App.ShutdownToken.IsCancellationRequested)
+        {
+            // Genuine shutdown interrupted the save.
+        }
+        catch (OperationCanceledException)
+        {
             StatusText = "Save cancelled";
         }
         catch (Exception ex)

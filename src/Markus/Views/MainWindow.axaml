@@ -26,18 +26,25 @@
       <NativeMenuItem Header="File">
         <NativeMenuItem.Menu>
           <NativeMenu>
+            <NativeMenuItem Header="New" Gesture="Cmd+N"
+                            Command="{Binding NewScratchCommand}"/>
             <NativeMenuItem Header="Open…" Gesture="Cmd+O"
                             Command="{Binding OpenFileCommand}"/>
-            <NativeMenuItem Header="Save" Gesture="Cmd+S"
-                            Command="{Binding SaveCommand}"/>
             <NativeMenuItem Header="Open Recent">
               <NativeMenuItem.Menu>
                 <NativeMenu/>
               </NativeMenuItem.Menu>
             </NativeMenuItem>
             <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Save" Gesture="Cmd+S"
+                            Command="{Binding SaveCommand}"/>
+            <NativeMenuItem Header="Save As…" Gesture="Cmd+Shift+S"
+                            Command="{Binding SaveAsCommand}"/>
             <NativeMenuItem Header="Reload" Gesture="Cmd+R"
                             Command="{Binding ReloadCommand}"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Reveal in File Manager" Click="Reveal_Click"/>
+            <NativeMenuItem Header="Close" Gesture="Cmd+W" Click="Close_Click"/>
           </NativeMenu>
         </NativeMenuItem.Menu>
       </NativeMenuItem>
