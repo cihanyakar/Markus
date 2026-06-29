@@ -1310,13 +1310,13 @@ internal sealed partial class MainWindow : Window
         }
         foreach (var path in vm.Settings.RecentFiles)
         {
-            var item = new NativeMenuItem
-            {
-                Header = System.IO.Path.GetFileName(path),
-                ToolTip = path,
-                Command = vm.OpenRecentCommand,
-                CommandParameter = path,
-            };
+            // Command binding on a NativeMenuItem added to the menu at runtime
+            // never fires on macOS (AvaloniaUI/Avalonia#15858); only items
+            // present in XAML at export time get a working command. A Click
+            // handler does fire, so route through the command ourselves.
+            var capturedPath = path;
+            var item = new NativeMenuItem { Header = System.IO.Path.GetFileName(path), ToolTip = path };
+            item.Click += (_, _) => vm.OpenRecentCommand.Execute(capturedPath);
             menu.Items.Add(item);
         }
     }
