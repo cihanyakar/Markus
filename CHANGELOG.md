@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.2](https://github.com/cihanyakar/Markus/compare/v0.9.1...v0.9.2) (2026-06-29)
+
+
+### Bug Fixes
+
+* **macos:** guard against NativeAOT shutdown crash on quit ([6c80904](https://github.com/cihanyakar/Markus/commit/6c80904eef3d2079ea4b977eef546272fdf58097))
+* **menu:** open recent files via Click handler on macOS ([42f7b81](https://github.com/cihanyakar/Markus/commit/42f7b818d00e1b813c2babfe4ee0cf911cb20cba))
+
 ## [0.9.1](https://github.com/cihanyakar/Markus/compare/v0.9.0...v0.9.1) (2026-06-17)
 
 
