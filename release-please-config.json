@@ -18,7 +18,6 @@
   ],
   "packages": {
     ".": {
-      "package-name": "Markus",
       "release-type": "simple",
       "changelog-path": "CHANGELOG.md",
       "initial-version": "0.1.0",
