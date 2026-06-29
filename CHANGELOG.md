@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/cihanyakar/Markus/compare/v0.9.2...v0.9.3) (2026-06-29)
+
+
+### Bug Fixes
+
+* **io:** retry atomic rename on Windows access-denied race ([3eb2236](https://github.com/cihanyakar/Markus/commit/3eb22369311eebf8ba9a4cfeb85041eb264d7a47))
+
 ## [0.9.2](https://github.com/cihanyakar/Markus/compare/v0.9.1...v0.9.2) (2026-06-29)
 
 
