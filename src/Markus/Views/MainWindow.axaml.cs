@@ -905,6 +905,11 @@ internal sealed partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm)
         {
             UpdateDetachedWindows(vm);
+            // Initialize the native document bridge from the launch state (a
+            // restored session or a file argument may already be open).
+            Platform.MacWindowIntegration.SetRepresentedFile(this, vm.CurrentFilePath);
+            Platform.MacWindowIntegration.SetDocumentEdited(this, vm.IsDirty);
+            Platform.MacWindowIntegration.NoteRecentDocument(vm.CurrentFilePath);
             // Focus the editor on launch when a document or scratch is active so
             // the user can type immediately (skip the welcome screen, which has
             // no editor and its own primary action).
@@ -1251,6 +1256,27 @@ internal sealed partial class MainWindow : Window
         )
         {
             ApplyEditorWordWrap(vmWrap.IsSourceSoftWrap);
+            return;
+        }
+        if (
+            string.Equals(e.PropertyName, nameof(MainWindowViewModel.CurrentFilePath), StringComparison.Ordinal)
+            && DataContext is MainWindowViewModel vmPath
+        )
+        {
+            // Bridge the open document to the native window: proxy icon in the
+            // title bar and the OS-level recent-documents list (macOS no-op
+            // off-platform).
+            Platform.MacWindowIntegration.SetRepresentedFile(this, vmPath.CurrentFilePath);
+            Platform.MacWindowIntegration.NoteRecentDocument(vmPath.CurrentFilePath);
+            return;
+        }
+        if (
+            string.Equals(e.PropertyName, nameof(MainWindowViewModel.IsDirty), StringComparison.Ordinal)
+            && DataContext is MainWindowViewModel vmDirty
+        )
+        {
+            // Show the unsaved dot inside the macOS close button.
+            Platform.MacWindowIntegration.SetDocumentEdited(this, vmDirty.IsDirty);
             return;
         }
         if (string.Equals(e.PropertyName, nameof(MainWindowViewModel.DocumentTitle), StringComparison.Ordinal))
