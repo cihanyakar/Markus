@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.4](https://github.com/cihanyakar/Markus/compare/v0.9.3...v0.9.4) (2026-06-29)
+
+
+### Continuous Integration
+
+* **release-please:** drop package-name to fix release tagging ([27f8b94](https://github.com/cihanyakar/Markus/commit/27f8b94906104b4e3a323807cf08f8cb5fac930e))
+* **release:** build binaries for bot-created releases ([abfe591](https://github.com/cihanyakar/Markus/commit/abfe59161ea683f0a0b5514dfb4482de8d3cfb08))
+
 ## [0.9.3](https://github.com/cihanyakar/Markus/compare/v0.9.2...v0.9.3) (2026-06-29)
 
 
