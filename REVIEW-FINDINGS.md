@@ -35,20 +35,23 @@ AppKit caches a delegate's `respondsToSelector:` for notification methods when
 the delegate is set, so a method added afterward may not receive the
 `NSApplicationWillTerminateNotification`.
 
-Hardening proposal (additive, keeps the existing override as fallback):
-register the delegate (or a small helper object) as an explicit
-`NSNotificationCenter` observer for `NSApplicationWillTerminateNotification`
-with a selector that `_exit`s. An explicit `addObserver:selector:name:object:`
-is not subject to the delegate-method caching, so it fires reliably.
+APPLIED (needs verification): the guard now also registers the delegate as an
+explicit `NSNotificationCenter` observer for
+`NSApplicationWillTerminateNotification` with a `markusWillTerminate:` selector
+that `_exit`s. An explicit `addObserver:selector:name:object:` is not subject to
+the delegate-method `respondsToSelector:` caching, so the `_exit` should fire
+reliably on quit; the existing `applicationWillTerminate:` override stays as a
+fallback. Startup was smoke-tested (no regression), but the Cmd+Q /
+AppleEvent-quit path cannot be reproduced headlessly (osascript cannot target
+the non-bundle dev binary), so this needs interactive Cmd+Q verification on the
+device. If a crash still occurs after this, the next levers are reverting the
+`ShutdownCts.Cancel()`-on-`ShutdownRequested` removal as a precaution, or
+`_exit`-ing from `applicationShouldTerminate:` after Avalonia's cleanup.
 
-NOT fixed autonomously: the Cmd+Q / AppleEvent-quit path cannot be reproduced
-headlessly (osascript cannot target the non-bundle dev binary), so any change
-here needs interactive Cmd+Q verification on the device. Note: this crash is
-on quit, after the app has saved and persisted the session, so it does not
-lose data. It is not a regression from the UX branch (the crashed binary
-predates the macOS-integration commit and the guard is untouched), though the
-`ShutdownCts.Cancel()`-on-`ShutdownRequested` removal could be reverted as a
-precaution if suspected.
+Context: this crash is on quit, after the app has saved and persisted the
+session, so it does not lose data, and it is not a regression from the UX
+branch (the crashed binary predates the macOS-integration commit and the guard
+itself was untouched).
 
 ### P1 — Windows / Linux are barely usable
 
