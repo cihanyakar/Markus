@@ -538,7 +538,35 @@ internal sealed class MarkdownTextEditor : TextEditor
             e.Handled = true;
             return true;
         }
+        if (keys.GetGesture(Markus.Services.ShortcutActions.Link)?.Matches(e) == true)
+        {
+            InsertLink();
+            e.Handled = true;
+            return true;
+        }
         return false;
+    }
+
+    private void InsertLink()
+    {
+        var sel = TextArea.Selection;
+        if (sel.IsEmpty)
+        {
+            // [|]() so the caret lands in the link-text brackets first.
+            Document.Insert(CaretOffset, "[]()");
+            CaretOffset -= 3;
+            return;
+        }
+        var seg = sel.SurroundingSegment;
+        if (seg is null)
+        {
+            return;
+        }
+        var inner = Document.GetText(seg.Offset, seg.Length);
+        var replacement = $"[{inner}]()";
+        Document.Replace(seg.Offset, seg.Length, replacement);
+        // Caret between the parens so the user types the URL straight away.
+        CaretOffset = seg.Offset + replacement.Length - 1;
     }
 
     private void WrapSelection(string marker)

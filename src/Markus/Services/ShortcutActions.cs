@@ -155,6 +155,13 @@ internal static class ShortcutActions
         new KeyGesture(Key.L, KeyModifiers.Meta)
     );
 
+    public static readonly ShortcutAction Link = new(
+        "markdown.link",
+        "Insert Link",
+        CategoryMarkdown,
+        new KeyGesture(Key.K, KeyModifiers.Meta)
+    );
+
     public static readonly ShortcutAction CommandPalette = new(
         "tools.command-palette",
         "Command Palette",
@@ -184,6 +191,7 @@ internal static class ShortcutActions
         Bold,
         Italic,
         SelectLine,
+        Link,
         CommandPalette,
     };
 }
