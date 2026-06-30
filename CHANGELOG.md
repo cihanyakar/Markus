@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.10.0](https://github.com/cihanyakar/Markus/compare/v0.9.4...v0.10.0) (2026-06-30)
+
+
+### Features
+
+* **macos:** native document window integration ([fa808c0](https://github.com/cihanyakar/Markus/commit/fa808c03206c2ec6fe34eeb9a1ba9dd4ecee502c))
+* **markdown:** insert-link command (Cmd+K) and review-findings log ([af3f77f](https://github.com/cihanyakar/Markus/commit/af3f77f20a80c1c7353ff8704b43412a86f58b7d))
+* **menu:** complete File menu (New, Save As, Close, Reveal) ([7988b6e](https://github.com/cihanyakar/Markus/commit/7988b6ecab699bee11ba374f863069c1d89fb04b))
+* **scratch:** drop to source editor when new scratch starts in preview ([ff50fae](https://github.com/cihanyakar/Markus/commit/ff50fae58a8acb50c539f7d0bb3194d1b1a81357))
+
+
+### Bug Fixes
+
+* **macos:** harden quit guard with an explicit WillTerminate observer ([88459db](https://github.com/cihanyakar/Markus/commit/88459db58e40cc359d8e64d0935550d3c1a8b076))
+* **robustness:** atomic document save and safer settings/watcher paths ([56f3a5c](https://github.com/cihanyakar/Markus/commit/56f3a5ce888c872a8ebfe732513fc24d3087ac59))
+* **search:** drop the nonexistent replace shortcut from the tooltip ([ffc1ffa](https://github.com/cihanyakar/Markus/commit/ffc1ffad1683e48985a25c719670b8affdc9a826))
+* **settings:** clamp numeric settings on load to valid ranges ([57b5444](https://github.com/cihanyakar/Markus/commit/57b54444dec34218a020767377a8b79d9ca1c257))
+* **ux:** resolve behavioral dead-ends and data-loss paths ([baabfc7](https://github.com/cihanyakar/Markus/commit/baabfc7c66568da09f6594745d1f6bbc9344b4c3))
+
+
+### Performance
+
+* **mermaid:** cache rendered SVG by diagram source ([922699c](https://github.com/cihanyakar/Markus/commit/922699ccd3827898a413f2dcec48f76aaaccd70f))
+
+
+### Documentation
+
+* **findings:** log error-handling review pass (solid; two minor watches) ([0e5fae7](https://github.com/cihanyakar/Markus/commit/0e5fae799a908e6c8d0ef8d7a7c9ceeb0c617767))
+* **findings:** log macOS quit crash (P0) and hardening proposal ([22f6ebc](https://github.com/cihanyakar/Markus/commit/22f6ebc44b8442fa1aad72a73f0a5b2382aff195))
+* **findings:** mark macOS quit-guard hardening as applied, pending verify ([bd6e98b](https://github.com/cihanyakar/Markus/commit/bd6e98b4df20bd4c0b555544dd45142edeb2661d))
+
 ## [0.9.4](https://github.com/cihanyakar/Markus/compare/v0.9.3...v0.9.4) (2026-06-29)
 
 
