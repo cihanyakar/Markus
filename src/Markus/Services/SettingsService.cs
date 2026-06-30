@@ -71,6 +71,9 @@ internal sealed class SettingsService
                 settings = new AppSettings();
                 return false;
             }
+            // Clamp out-of-range numeric values from a corrupted or hand-edited
+            // file so they cannot break the UI (invisible text, zero tab, etc.).
+            loaded.Normalize();
             settings = loaded;
             return true;
         }

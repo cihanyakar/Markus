@@ -9,7 +9,8 @@ and records the larger or riskier findings here for later.
 - Behavioral UX dead-ends and data-loss paths (fixed in batch).
 - OS-capability + best-practice + code-robustness sweep (partly fixed).
 - Markdown authoring ergonomics.
-- Performance & responsiveness (this pass).
+- Performance & responsiveness.
+- Settings validation & resilience (this pass).
 
 ---
 
@@ -81,6 +82,23 @@ and records the larger or riskier findings here for later.
 - Math (CSharpMath) rendering was not audited for caching this pass; if a doc
   has many identical inline formulas, check whether they re-render on each
   preview rebuild and apply the same source-keyed cache if so.
+
+### Settings validation & resilience (this pass)
+
+- DONE: **Numeric settings are clamped on load** (`AppSettings.Normalize`, called
+  from `SettingsService.TryLoad`). A corrupted or hand-edited settings.json with
+  FontSize 0, TabWidth 0, or a negative/NaN MermaidScale no longer produces
+  invisible text, a zero tab, or a broken layout. (fixed this pass)
+- String settings are already safe: `MarkdownThemes.Resolve` falls back to
+  GitHubDark for an unknown theme key (no change needed).
+- WATCH: **enum settings are not validated.** A corrupted JSON with an
+  out-of-range int for `DefaultViewMode` / `UpdateChannel` / `OutlinePlacement`
+  / `RendererKind` deserializes into an undefined enum value; the consuming
+  switches mostly fall through to a default, but a defensive `Enum.IsDefined`
+  check in `Normalize()` (reset to the field default when invalid) would harden
+  this. Effort S.
+- No **settings schema versioning / migration**: a renamed or removed field
+  silently orphans the old value. Low priority while the schema is additive.
 
 ### P4 — Robustness / fidelity (needs care)
 

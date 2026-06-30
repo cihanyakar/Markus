@@ -185,4 +185,63 @@ public sealed class AppSettingsTests
         json.ShouldContain("\"lastScrollLine\":", Case.Sensitive);
         json.ShouldNotContain("\"LastScrollLine\":", Case.Sensitive);
     }
+
+    [Fact]
+    public void Normalize_ClampsOutOfRangeNumericFields()
+    {
+        var sut = new AppSettings
+        {
+            FontSize = 0,
+            EditorFontSize = 999,
+            TabWidth = 0,
+            MermaidScale = -5,
+            LastScrollLine = -10,
+        };
+
+        sut.Normalize();
+
+        sut.FontSize.ShouldBe(10);
+        sut.EditorFontSize.ShouldBe(28);
+        sut.TabWidth.ShouldBe(2);
+        sut.MermaidScale.ShouldBe(0.5);
+        sut.LastScrollLine.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Normalize_NaNOrInfinity_FallsBackToDefault()
+    {
+        var sut = new AppSettings
+        {
+            FontSize = double.NaN,
+            EditorFontSize = double.PositiveInfinity,
+            MermaidScale = double.NegativeInfinity,
+        };
+
+        sut.Normalize();
+
+        sut.FontSize.ShouldBe(16);
+        sut.EditorFontSize.ShouldBe(14);
+        sut.MermaidScale.ShouldBe(1.0);
+    }
+
+    [Fact]
+    public void Normalize_LeavesValidValuesUntouched()
+    {
+        var sut = new AppSettings
+        {
+            FontSize = 18,
+            EditorFontSize = 15,
+            TabWidth = 4,
+            MermaidScale = 1.5,
+            LastScrollLine = 42,
+        };
+
+        sut.Normalize();
+
+        sut.FontSize.ShouldBe(18);
+        sut.EditorFontSize.ShouldBe(15);
+        sut.TabWidth.ShouldBe(4);
+        sut.MermaidScale.ShouldBe(1.5);
+        sut.LastScrollLine.ShouldBe(42);
+    }
 }
