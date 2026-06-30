@@ -16,6 +16,40 @@ and records the larger or riskier findings here for later.
 
 ## Open findings (not yet fixed)
 
+### P0 — macOS NativeAOT shutdown crash on quit (needs device testing)
+
+A crash on quit was observed (SIGABRT) with this stack: `_handleAEQuit` ->
+`-[NSApplication terminate:]` -> `exit` -> `__cxa_finalize_ranges` ->
+`ComPtr<IAvnDispatcher>::~ComPtr()` -> managed VSD resolve -> CLR FailFast ->
+abort. This is exactly the class of crash the existing guard
+(`MacosAppleEventHandler.InstallTerminationGuard`, commit 6c80904) targets:
+the AvaloniaNative dispatcher's C++ static destructor runs during atexit and
+calls into an already-torn-down CLR. The guard overrides the app delegate's
+`applicationWillTerminate:` to call `_exit(0)` (skipping atexit), and it is
+still wired and correct in code, but it did not intercept this instance.
+
+Contributing factors in the captured report: a very long uptime and memory
+pressure ("VM Fault hit memory shortage"). Likely root cause of the miss: the
+guard adds `applicationWillTerminate:` to the delegate class at startup, but
+AppKit caches a delegate's `respondsToSelector:` for notification methods when
+the delegate is set, so a method added afterward may not receive the
+`NSApplicationWillTerminateNotification`.
+
+Hardening proposal (additive, keeps the existing override as fallback):
+register the delegate (or a small helper object) as an explicit
+`NSNotificationCenter` observer for `NSApplicationWillTerminateNotification`
+with a selector that `_exit`s. An explicit `addObserver:selector:name:object:`
+is not subject to the delegate-method caching, so it fires reliably.
+
+NOT fixed autonomously: the Cmd+Q / AppleEvent-quit path cannot be reproduced
+headlessly (osascript cannot target the non-bundle dev binary), so any change
+here needs interactive Cmd+Q verification on the device. Note: this crash is
+on quit, after the app has saved and persisted the session, so it does not
+lose data. It is not a regression from the UX branch (the crashed binary
+predates the macOS-integration commit and the guard is untouched), though the
+`ShutdownCts.Cancel()`-on-`ShutdownRequested` removal could be reverted as a
+precaution if suspected.
+
 ### P1 — Windows / Linux are barely usable
 
 - **All shortcuts use `Cmd`/Meta**, which is the Win/Super key on Windows and
