@@ -79,6 +79,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private string? _currentFilePath;
 
@@ -122,6 +123,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     private bool _isScratchBuffer;
 
@@ -132,6 +134,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWelcomeVisible))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     private bool _isAwaitingInitialDocument;
 
     [ObservableProperty]
@@ -257,7 +260,11 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, App.ShutdownToken);
         var written = SourceText;
-        await File.WriteAllTextAsync(path, written, linked.Token);
+        // Atomic write (temp + fsync + rename) so a crash, power loss, or a
+        // full disk mid-save cannot truncate or corrupt the user's existing
+        // file. AtomicFileWriter is synchronous; run it off the UI thread to
+        // keep the async contract and avoid blocking on the fsync.
+        await Task.Run(() => AtomicFileWriter.WriteAllText(path, written), linked.Token);
         _lastSyncedText = written;
         CurrentFilePath = path;
         IsScratchBuffer = false;
@@ -313,6 +320,18 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         cts?.Dispose();
     }
 
+    // Guarded buffer-replacing load: prompts to save unsaved work first, then
+    // loads the file. Returns false if the user cancelled.
+    internal async Task<bool> LoadFileGuardedAsync(string path)
+    {
+        if (!await EnsureSafeToDiscardAsync())
+        {
+            return false;
+        }
+        await LoadFileAsync(path);
+        return true;
+    }
+
     // Reconciles the buffer with an on-disk change reported by the watcher.
     // Internal so it can be driven directly in tests without the real
     // FileSystemWatcher's timing.
@@ -320,6 +339,13 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (change == WatcherChangeTypes.Deleted)
         {
+            // The on-disk file vanished, so the buffer is now the only copy and
+            // is unsaved relative to disk. Flag it dirty so the close guard
+            // warns on quit, and clear the stale modified stamp. Keep
+            // CurrentFilePath so a later Save recreates the file at its original
+            // location.
+            IsDirty = true;
+            LastModifiedText = string.Empty;
             StatusText = $"{DocumentTitle} • file deleted on disk";
             return;
         }
@@ -511,8 +537,11 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             // Shutdown interrupted the load.
         }
-        catch (FileNotFoundException)
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
+            // A moved or deleted parent directory throws DirectoryNotFoundException
+            // (an IOException, not FileNotFoundException), so treat both as a
+            // missing file and prune the dead entry.
             StatusText = $"{Path.GetFileName(path)} • file not found";
             // Match the case-insensitive dedup used when adding, so a stale
             // entry stored with different casing is still pruned.
@@ -573,9 +602,47 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await SaveToFileAsync(path);
         }
+        catch (OperationCanceledException) when (App.ShutdownToken.IsCancellationRequested)
+        {
+            // Genuine shutdown interrupted the save; nothing more we can do.
+        }
         catch (OperationCanceledException)
         {
-            // Shutdown interrupted the save.
+            // Cancelled for some other reason (not a real process shutdown), so
+            // the edits are still unsaved. Surface it instead of silently no-oping.
+            StatusText = "Save cancelled";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Save failed. {ex.Message}";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task SaveAsAsync()
+    {
+        // Always pick a fresh destination so the user can fork or retarget an
+        // already-saved document; SaveToFileAsync then repoints CurrentFilePath.
+        if (Interaction is null)
+        {
+            return;
+        }
+        var path = await Interaction.PickSavePathAsync(SuggestedSaveName());
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+        try
+        {
+            await SaveToFileAsync(path);
+        }
+        catch (OperationCanceledException) when (App.ShutdownToken.IsCancellationRequested)
+        {
+            // Genuine shutdown interrupted the save.
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Save cancelled";
         }
         catch (Exception ex)
         {
@@ -699,6 +766,13 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         DocumentTitle = "Untitled";
         LastModifiedText = string.Empty;
         StatusText = "Scratch buffer · unsaved";
+        // A fresh scratch buffer is empty, so a preview-only view would land the
+        // user on a blank pane with nowhere to type. Drop to the source editor.
+        // Split and detached views already show the source, so leave them alone.
+        if (CurrentViewMode is ViewMode.Preview)
+        {
+            SetViewMode(ViewMode.Source);
+        }
     }
 
     [RelayCommand]
@@ -707,6 +781,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         var current = SourceText;
         if (string.IsNullOrEmpty(current))
         {
+            StatusText = "No tables to format";
             return;
         }
         var formatted = MarkdownTableFormatter.Format(current);
@@ -714,7 +789,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             SourceText = formatted;
             StatusText = "Tables reformatted";
+            return;
         }
+        // Format made no change: either there are no tables, or every table is
+        // already aligned. Either way the command did run, so say so instead of
+        // looking dead.
+        StatusText = "Tables already formatted";
     }
 
     [RelayCommand]
@@ -780,6 +860,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
+        // The debounced save timer raises Changed on a thread-pool thread.
+        // This handler mutates UI-bound state, re-applies the theme, and
+        // rebuilds the preview, so hop to the UI thread when we are not
+        // already on it. The Application.Current guard mirrors ThemeApplicator
+        // so headless tests (no Avalonia app) keep running synchronously.
+        if (Avalonia.Application.Current is not null && !Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => OnSettingsChanged(sender, e));
+            return;
+        }
         Settings = e.Settings;
         ThemeApplicator.Apply(e.Settings.ThemeMode);
         SyncOutlineVisible(e.Settings);
@@ -974,6 +1064,20 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         // FileSystemWatcher fires on a thread-pool thread; hop to UI before
         // touching observable state.
-        Dispatcher.UIThread.Post(() => _ = HandleExternalChangeAsync(e.Path, e.Change));
+        Dispatcher.UIThread.Post(() => _ = HandleExternalChangeSafeAsync(e.Path, e.Change));
+    }
+
+    // Guards the fire-and-forget reload so a failure in the prompt or disk read
+    // surfaces as status text instead of an unobserved task exception.
+    private async Task HandleExternalChangeSafeAsync(string path, WatcherChangeTypes change)
+    {
+        try
+        {
+            await HandleExternalChangeAsync(path, change);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Could not handle external change • {ex.Message}";
+        }
     }
 }

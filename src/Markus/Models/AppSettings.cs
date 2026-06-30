@@ -60,6 +60,31 @@ internal sealed class AppSettings
 
     public string? SkippedVersion { get; set; }
 
+    // Clamps numeric fields to the ranges the Settings UI exposes so a corrupted
+    // or hand-edited settings.json (FontSize 0, TabWidth 0, a negative or NaN
+    // scale) cannot produce invisible text, a zero tab, or a broken layout.
+    // Called after load.
+    public void Normalize()
+    {
+        static double Clamp(double value, double min, double max, double fallback)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                return fallback;
+            }
+            return Math.Clamp(value, min, max);
+        }
+
+        FontSize = Clamp(FontSize, 10, 28, 16);
+        EditorFontSize = Clamp(EditorFontSize, 10, 28, 14);
+        MermaidScale = Clamp(MermaidScale, 0.5, 3.0, 1.0);
+        TabWidth = Math.Clamp(TabWidth, 2, 8);
+        if (LastScrollLine < 0)
+        {
+            LastScrollLine = 0;
+        }
+    }
+
     public AppSettings Clone()
     {
         return new AppSettings

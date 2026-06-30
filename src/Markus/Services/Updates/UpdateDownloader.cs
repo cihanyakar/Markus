@@ -77,8 +77,9 @@ internal sealed class UpdateDownloader : IUpdateDownloader
         }
         catch (HttpRequestException)
         {
-            // No sidecar published. Proceed without verification rather than
-            // blocking the user; the asset still came from the release.
+            // No sidecar published: return null so the caller refuses to launch
+            // the unverified artifact and falls back to the release page. Do not
+            // weaken this into launching without a checksum.
             return null;
         }
     }

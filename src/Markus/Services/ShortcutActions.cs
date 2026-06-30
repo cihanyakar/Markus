@@ -29,6 +29,13 @@ internal static class ShortcutActions
         new KeyGesture(Key.S, KeyModifiers.Meta)
     );
 
+    public static readonly ShortcutAction SaveAs = new(
+        "file.save-as",
+        "Save As",
+        CategoryFile,
+        new KeyGesture(Key.S, KeyModifiers.Meta | KeyModifiers.Shift)
+    );
+
     public static readonly ShortcutAction Reload = new(
         "file.reload",
         "Reload",
@@ -148,6 +155,13 @@ internal static class ShortcutActions
         new KeyGesture(Key.L, KeyModifiers.Meta)
     );
 
+    public static readonly ShortcutAction Link = new(
+        "markdown.link",
+        "Insert Link",
+        CategoryMarkdown,
+        new KeyGesture(Key.K, KeyModifiers.Meta)
+    );
+
     public static readonly ShortcutAction CommandPalette = new(
         "tools.command-palette",
         "Command Palette",
@@ -159,6 +173,7 @@ internal static class ShortcutActions
     {
         OpenFile,
         Save,
+        SaveAs,
         Reload,
         NewScratch,
         Find,
@@ -176,6 +191,7 @@ internal static class ShortcutActions
         Bold,
         Italic,
         SelectLine,
+        Link,
         CommandPalette,
     };
 }

@@ -280,6 +280,50 @@ public sealed class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task NewScratch_FromPreviewOnly_SwitchesToSource()
+    {
+        // A fresh scratch buffer is empty; a preview-only pane would render
+        // blank with nowhere to type, so NewScratch drops to the editor.
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.Preview };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.Source);
+    }
+
+    [Fact]
+    public async Task NewScratch_FromSplitVertical_KeepsViewMode()
+    {
+        // Split views already show the source, so NewScratch leaves them be.
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.SplitVertical };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.SplitVertical);
+    }
+
+    [Fact]
+    public async Task NewScratch_FromSplitHorizontal_KeepsViewMode()
+    {
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.SplitHorizontal };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.SplitHorizontal);
+    }
+
+    [Fact]
+    public async Task NewScratch_FromDetached_KeepsViewMode()
+    {
+        // Detached keeps the source in the main window, so it stays too.
+        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.Detached };
+
+        await sut.NewScratchCommand.ExecuteAsync(null);
+
+        sut.CurrentViewMode.ShouldBe(ViewMode.Detached);
+    }
+
+    [Fact]
     public async Task SaveToFileAsync_WritesSourceTextToProvidedPath()
     {
         var path = Path.Combine(Path.GetTempPath(), $"markus-save-{Guid.NewGuid():N}.md");
@@ -387,6 +431,38 @@ public sealed class MainWindowViewModelTests
         interaction.PickSaveCalls.ShouldBe(1);
         sut.CurrentFilePath.ShouldBeNull();
         sut.IsDirty.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task SaveAsCommand_AlwaysPromptsAndRetargetsToNewPath()
+    {
+        // Save As prompts even when the document already has a path, then
+        // repoints CurrentFilePath at the chosen destination (fork/retarget).
+        var newPath = Path.Combine(Path.GetTempPath(), $"markus-saveas-{Guid.NewGuid():N}.md");
+        var interaction = new FakeDocumentInteraction { SavePathToReturn = newPath };
+        var sut = new MainWindowViewModel(CreateTempSettings())
+        {
+            CurrentFilePath = "/existing/original.md",
+            SourceText = "forked content",
+            Interaction = interaction,
+        };
+
+        try
+        {
+            await sut.SaveAsCommand.ExecuteAsync(null);
+
+            interaction.PickSaveCalls.ShouldBe(1);
+            File.Exists(newPath).ShouldBeTrue();
+            (await File.ReadAllTextAsync(newPath, TestContext.Current.CancellationToken)).ShouldBe("forked content");
+            sut.CurrentFilePath.ShouldBe(newPath);
+        }
+        finally
+        {
+            if (File.Exists(newPath))
+            {
+                File.Delete(newPath);
+            }
+        }
     }
 
     // --- IsDirty ---
@@ -595,7 +671,103 @@ public sealed class MainWindowViewModelTests
         }
     }
 
+    [Fact]
+    public async Task LoadFileGuarded_NotDirty_LoadsFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"markus-guard-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "loaded body", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            var ok = await sut.LoadFileGuardedAsync(path);
+
+            ok.ShouldBeTrue();
+            sut.SourceText.ShouldBe("loaded body");
+            sut.CurrentFilePath.ShouldBe(path);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task OpenRecent_MissingDirectory_PrunesEntry()
+    {
+        // A moved/deleted parent directory throws DirectoryNotFoundException, not
+        // FileNotFoundException; both must prune the dead entry, not just error.
+        var missing = Path.Combine(Path.GetTempPath(), $"markus-gone-{Guid.NewGuid():N}", "note.md");
+        var sut = new MainWindowViewModel(CreateTempSettings());
+        sut.Settings.RecentFiles.Add(missing);
+
+        await sut.OpenRecentCommand.ExecuteAsync(missing);
+
+        sut.Settings.RecentFiles.ShouldNotContain(missing);
+        sut.StatusText.ShouldContain("file not found");
+    }
+
+    [Fact]
+    public void FormatTables_EmptyBuffer_ReportsNoTables()
+    {
+        var sut = new MainWindowViewModel { SourceText = string.Empty };
+
+        sut.FormatTablesCommand.Execute(null);
+
+        sut.StatusText.ShouldBe("No tables to format");
+    }
+
+    [Fact]
+    public void FormatTables_NoTableContent_ReportsAlreadyFormatted()
+    {
+        var sut = new MainWindowViewModel { SourceText = "# Heading\n\nJust prose, no tables." };
+
+        sut.FormatTablesCommand.Execute(null);
+
+        sut.StatusText.ShouldBe("Tables already formatted");
+    }
+
+    [Fact]
+    public void FormatTables_UnalignedTable_Reformats()
+    {
+        var sut = new MainWindowViewModel { SourceText = "|a|bbbb|\n|-|-|\n|111|2|\n" };
+
+        sut.FormatTablesCommand.Execute(null);
+
+        sut.StatusText.ShouldBe("Tables reformatted");
+    }
+
     // --- External change on disk ---
+
+    [Fact]
+    public async Task ExternalDelete_WhileClean_MarksDirtyToProtectBuffer()
+    {
+        // A clean buffer whose file is deleted externally becomes the only copy;
+        // mark it dirty so the close guard warns and Save can recreate the file.
+        var path = Path.Combine(Path.GetTempPath(), $"markus-del-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(path, "content", TestContext.Current.CancellationToken);
+        var sut = new MainWindowViewModel(CreateTempSettings());
+
+        try
+        {
+            await sut.LoadFileAsync(path, TestContext.Current.CancellationToken);
+            sut.IsDirty.ShouldBeFalse();
+            File.Delete(path);
+
+            await sut.HandleExternalChangeAsync(path, WatcherChangeTypes.Deleted);
+
+            sut.IsDirty.ShouldBeTrue();
+            sut.LastModifiedText.ShouldBeEmpty();
+            sut.CurrentFilePath.ShouldBe(path);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
 
     [Fact]
     public async Task ExternalChange_DiskMatchesLastSync_DoesNotReloadOrPrompt()

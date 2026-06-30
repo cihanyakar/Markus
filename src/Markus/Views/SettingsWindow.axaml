@@ -452,13 +452,16 @@
 
           <Grid Classes="row" ColumnDefinitions="160,*">
             <TextBlock Grid.Column="0" Text="Language:" Classes="rowLabel"/>
-            <ComboBox Grid.Column="1"
-                      MinWidth="220"
-                      HorizontalAlignment="Left"
-                      ItemsSource="{x:Static vm:SettingsViewModel.AvailableLanguages}"
-                      SelectedValueBinding="{Binding Code}"
-                      SelectedValue="{Binding Language}"
-                      DisplayMemberBinding="{Binding Display}"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <ComboBox MinWidth="220"
+                        HorizontalAlignment="Left"
+                        ItemsSource="{x:Static vm:SettingsViewModel.AvailableLanguages}"
+                        SelectedValueBinding="{Binding Code}"
+                        SelectedValue="{Binding Language}"
+                        DisplayMemberBinding="{Binding Display}"/>
+              <TextBlock Classes="hint"
+                         Text="Takes effect after restart."/>
+            </StackPanel>
           </Grid>
 
           <Grid Classes="row" ColumnDefinitions="160,*">

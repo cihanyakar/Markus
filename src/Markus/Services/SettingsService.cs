@@ -71,6 +71,9 @@ internal sealed class SettingsService
                 settings = new AppSettings();
                 return false;
             }
+            // Clamp out-of-range numeric values from a corrupted or hand-edited
+            // file so they cannot break the UI (invisible text, zero tab, etc.).
+            loaded.Normalize();
             settings = loaded;
             return true;
         }
@@ -81,6 +84,13 @@ internal sealed class SettingsService
         }
         catch (IOException)
         {
+            settings = new AppSettings();
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // A permission problem on settings.json must not crash launch (Save
+            // already swallows the same); fall back to defaults for the session.
             settings = new AppSettings();
             return false;
         }

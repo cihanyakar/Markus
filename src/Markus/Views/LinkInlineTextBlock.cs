@@ -30,7 +30,11 @@ internal sealed class LinkInlineTextBlock : SelectableTextBlock
         {
             return;
         }
-        Cursor = LinkAt(e.GetPosition(this)) is null ? Cursor.Default : HandCursor;
+        // Only show the hand cursor when the link would actually do something on
+        // click (launchable URL or in-document anchor). A non-actionable link
+        // such as a relative file path keeps the default cursor, so the
+        // affordance matches reality.
+        Cursor = LinkAt(e.GetPosition(this)) is { IsActionable: true } ? HandCursor : Cursor.Default;
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -45,7 +49,10 @@ internal sealed class LinkInlineTextBlock : SelectableTextBlock
         {
             return;
         }
-        if (LinkAt(e.GetPosition(this)) is not { } link)
+        // Ignore clicks on non-actionable links (e.g. a relative file path that
+        // is neither launchable nor an anchor) so the event is not swallowed
+        // without any navigation or feedback.
+        if (LinkAt(e.GetPosition(this)) is not { IsActionable: true } link)
         {
             return;
         }
@@ -84,12 +91,13 @@ internal sealed class LinkInlineTextBlock : SelectableTextBlock
 
     internal readonly struct LinkRange
     {
-        public LinkRange(int start, int length, string target, bool isAnchor)
+        public LinkRange(int start, int length, string target, bool isAnchor, bool isActionable)
         {
             Start = start;
             Length = length;
             Target = target;
             IsAnchor = isAnchor;
+            IsActionable = isActionable;
         }
 
         public int Start { get; }
@@ -99,5 +107,10 @@ internal sealed class LinkInlineTextBlock : SelectableTextBlock
         public string Target { get; }
 
         public bool IsAnchor { get; }
+
+        // True when a click will be acted upon (an in-document anchor or a
+        // launchable URL). False for links that would otherwise show a hand
+        // cursor but do nothing, such as relative or file targets.
+        public bool IsActionable { get; }
     }
 }

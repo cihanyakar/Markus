@@ -304,9 +304,11 @@ public sealed class SettingsServiceTests : IDisposable
         var dir = Path.Combine(_tempDir, "debounce");
         var sut = CreateService(dir);
 
+        // LastScrollLine is the round-trip probe here (it survives load
+        // unchanged); FontSize would be clamped to its valid range on load.
         for (var i = 0; i < 25; i++)
         {
-            sut.SaveDebounced(new AppSettings { FontSize = 10 + i }, TimeSpan.FromMilliseconds(50));
+            sut.SaveDebounced(new AppSettings { LastScrollLine = i }, TimeSpan.FromMilliseconds(50));
         }
         // Before the debounce delay elapses no write should have happened.
         File.Exists(Path.Combine(dir, "settings.json")).ShouldBeFalse();
@@ -314,7 +316,7 @@ public sealed class SettingsServiceTests : IDisposable
         await Task.Delay(200, TestContext.Current.CancellationToken);
 
         // After the delay, exactly one write reflects the last call.
-        sut.Load().FontSize.ShouldBe(10 + 24);
+        sut.Load().LastScrollLine.ShouldBe(24);
     }
 
     [Fact]
@@ -326,10 +328,10 @@ public sealed class SettingsServiceTests : IDisposable
         var dir = Path.Combine(_tempDir, "flush");
         var sut = CreateService(dir);
 
-        sut.SaveDebounced(new AppSettings { FontSize = 99 }, TimeSpan.FromSeconds(60));
+        sut.SaveDebounced(new AppSettings { FontSize = 24 }, TimeSpan.FromSeconds(60));
         sut.FlushPendingSave();
 
-        sut.Load().FontSize.ShouldBe(99);
+        sut.Load().FontSize.ShouldBe(24);
     }
 
     [Fact]

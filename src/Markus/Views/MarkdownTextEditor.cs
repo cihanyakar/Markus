@@ -515,26 +515,58 @@ internal sealed class MarkdownTextEditor : TextEditor
 
     private bool HandleMarkdownShortcut(KeyEventArgs e)
     {
-        if (!e.KeyModifiers.HasFlag(KeyModifiers.Meta) || e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        // Bold/Italic/Select Line are rebindable in Settings -> Shortcuts, so the
+        // live gesture must come from the key-binding service instead of hardcoded
+        // keys. GetGesture falls back to each action's DefaultGesture, so a fresh
+        // install still answers to Cmd+B/I/L from the catalog.
+        var keys = Markus.Services.ServiceLocator.Keys;
+        if (keys.GetGesture(Markus.Services.ShortcutActions.Bold)?.Matches(e) == true)
         {
-            return false;
+            WrapSelection("**");
+            e.Handled = true;
+            return true;
         }
-        switch (e.Key)
+        if (keys.GetGesture(Markus.Services.ShortcutActions.Italic)?.Matches(e) == true)
         {
-            case Key.B:
-                WrapSelection("**");
-                e.Handled = true;
-                return true;
-            case Key.I:
-                WrapSelection("*");
-                e.Handled = true;
-                return true;
-            case Key.L:
-                SelectCurrentLine();
-                e.Handled = true;
-                return true;
+            WrapSelection("*");
+            e.Handled = true;
+            return true;
+        }
+        if (keys.GetGesture(Markus.Services.ShortcutActions.SelectLine)?.Matches(e) == true)
+        {
+            SelectCurrentLine();
+            e.Handled = true;
+            return true;
+        }
+        if (keys.GetGesture(Markus.Services.ShortcutActions.Link)?.Matches(e) == true)
+        {
+            InsertLink();
+            e.Handled = true;
+            return true;
         }
         return false;
+    }
+
+    private void InsertLink()
+    {
+        var sel = TextArea.Selection;
+        if (sel.IsEmpty)
+        {
+            // [|]() so the caret lands in the link-text brackets first.
+            Document.Insert(CaretOffset, "[]()");
+            CaretOffset -= 3;
+            return;
+        }
+        var seg = sel.SurroundingSegment;
+        if (seg is null)
+        {
+            return;
+        }
+        var inner = Document.GetText(seg.Offset, seg.Length);
+        var replacement = $"[{inner}]()";
+        Document.Replace(seg.Offset, seg.Length, replacement);
+        // Caret between the parens so the user types the URL straight away.
+        CaretOffset = seg.Offset + replacement.Length - 1;
     }
 
     private void WrapSelection(string marker)
@@ -699,10 +731,10 @@ internal sealed class MarkdownTextEditor : TextEditor
 
     private void TryReflowOnCaretLeave()
     {
-        // Re-entry guard. Setting Document.Text below triggers TextChanged and a
+        // Re-entry guard. The Document.Replace below triggers TextChanged and a
         // follow-up CaretPositionChanged that re-enters this method; the second
-        // run would short-circuit on the IsCaretInTable check anyway, but the
-        // explicit guard keeps the contract local to this method.
+        // run would short-circuit on the table check anyway, but the explicit
+        // guard keeps the contract local to this method.
         if (_suppressTableReflow)
         {
             return;
@@ -710,6 +742,14 @@ internal sealed class MarkdownTextEditor : TextEditor
         var caretLine = TextArea.Caret.Line;
         var previousLine = _lastCaretLineForTableReflow;
         _lastCaretLineForTableReflow = caretLine;
+        // A reflow rewrites the table text, which would clear an in-progress
+        // selection (e.g. Shift+selecting out of a table). Skip while a selection
+        // is active so the user's selection is never eaten. The caret-line cache
+        // above stays current so the next caret-only move still reflows.
+        if (!TextArea.Selection.IsEmpty)
+        {
+            return;
+        }
         if (previousLine < 0 || previousLine == caretLine)
         {
             return;
@@ -734,7 +774,7 @@ internal sealed class MarkdownTextEditor : TextEditor
 
         var source = Document.Text;
         var previousOffset = Document.GetOffset(previousLine, 1);
-        if (!Markus.Services.TableCellNavigator.IsCaretInTable(source, previousOffset))
+        if (!Markus.Services.TableCellNavigator.TryFindTableAt(source, previousOffset, out var region))
         {
             return;
         }
@@ -744,13 +784,28 @@ internal sealed class MarkdownTextEditor : TextEditor
             return;
         }
 
-        ApplyTableReflow(source);
+        ApplyTableReflow(region);
     }
 
-    private void ApplyTableReflow(string source)
+    private void ApplyTableReflow(Markus.Services.TableRegion region)
     {
-        var formatted = Markus.Services.MarkdownTableFormatter.Format(source);
-        if (string.Equals(formatted, source, StringComparison.Ordinal))
+        // Replace only the table's line range rather than the whole document, so
+        // a selection/caret outside the table survives and the edit lands as one
+        // tight undo entry. TableRegion lines are 0-based (split on '\n'); the
+        // document numbers lines from 1, so add 1 to map across.
+        var startLineNumber = region.StartLine + 1;
+        var endLineNumber = region.EndLine + 1;
+        if (startLineNumber < 1 || endLineNumber > Document.LineCount)
+        {
+            return;
+        }
+        var startLine = Document.GetLineByNumber(startLineNumber);
+        var endLine = Document.GetLineByNumber(endLineNumber);
+        var replaceOffset = startLine.Offset;
+        var replaceLength = endLine.EndOffset - replaceOffset;
+        var tableText = Document.GetText(replaceOffset, replaceLength);
+        var formatted = Markus.Services.MarkdownTableFormatter.Format(tableText);
+        if (string.Equals(formatted, tableText, StringComparison.Ordinal))
         {
             return;
         }
@@ -758,17 +813,19 @@ internal sealed class MarkdownTextEditor : TextEditor
         _suppressTableReflow = true;
         try
         {
-            using (Document.RunUpdate())
-            {
-                Document.Text = formatted;
-            }
+            Document.Replace(replaceOffset, replaceLength, formatted);
         }
         finally
         {
             _suppressTableReflow = false;
         }
-        // Clamp caret to remain valid after reformat (lengths may shift).
-        CaretOffset = Math.Clamp(caretOffsetBefore, 0, Document.TextLength);
+        // Keep the caret put when it sits at or before the table; otherwise shift
+        // it by the table's length change so it tracks the same text below.
+        var newCaret =
+            caretOffsetBefore <= replaceOffset
+                ? caretOffsetBefore
+                : caretOffsetBefore + (formatted.Length - replaceLength);
+        CaretOffset = Math.Clamp(newCaret, 0, Document.TextLength);
     }
 
     // Mirrors TableCellNavigator's table-row test (first non-whitespace char is

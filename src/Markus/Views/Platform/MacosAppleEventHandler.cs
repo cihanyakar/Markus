@@ -69,6 +69,21 @@ internal static unsafe class MacosAppleEventHandler
         var imp = (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, void>)&WillTerminateTrampoline;
 #pragma warning restore SA1011
         InstallOrSwap(cls, ObjC.Sel("applicationWillTerminate:"), imp, "v@:@");
+
+        // Belt and suspenders: AppKit caches a delegate's respondsToSelector:
+        // for notification methods when the delegate is set, so the method added
+        // above can be skipped when the WillTerminate notification fires (seen as
+        // a SIGABRT in the AvaloniaNative dispatcher's atexit teardown under long
+        // uptime / memory pressure). An explicit NSNotificationCenter observer is
+        // not subject to that caching, so the _exit fires reliably on quit.
+        var willTerminateSel = ObjC.Sel("markusWillTerminate:");
+        InstallOrSwap(cls, willTerminateSel, imp, "v@:@");
+        var center = ObjC.SendId(ObjC.GetClass("NSNotificationCenter"), ObjC.Sel("defaultCenter"));
+        var name = ObjC.MakeString("NSApplicationWillTerminateNotification");
+        if (center != IntPtr.Zero && name != IntPtr.Zero)
+        {
+            ObjC.Send4(center, ObjC.Sel("addObserver:selector:name:object:"), del, willTerminateSel, name, IntPtr.Zero);
+        }
         _terminationGuardInstalled = true;
     }
 
@@ -223,6 +238,19 @@ internal static unsafe class MacosAppleEventHandler
         [DllImport(Lib, EntryPoint = "objc_msgSend")]
         public static extern IntPtr SendIdLong(IntPtr receiver, IntPtr selector, long arg);
 
+        [DllImport(Lib, EntryPoint = "objc_msgSend")]
+        public static extern IntPtr SendIdPtr(IntPtr receiver, IntPtr selector, IntPtr arg);
+
+        [DllImport(Lib, EntryPoint = "objc_msgSend")]
+        public static extern void Send4(
+            IntPtr receiver,
+            IntPtr selector,
+            IntPtr arg1,
+            IntPtr arg2,
+            IntPtr arg3,
+            IntPtr arg4
+        );
+
         [DllImport(
             Lib,
             EntryPoint = "class_addMethod",
@@ -241,5 +269,24 @@ internal static unsafe class MacosAppleEventHandler
 
         [DllImport("/usr/lib/libSystem.dylib", EntryPoint = "_exit")]
         public static extern void Exit(int status);
+
+        public static IntPtr MakeString(string value)
+        {
+            var cls = GetClass("NSString");
+            if (cls == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+            // UTF-8 so the value round-trips intact through stringWithUTF8String:.
+            var ptr = Marshal.StringToCoTaskMemUTF8(value);
+            try
+            {
+                return SendIdPtr(cls, Sel("stringWithUTF8String:"), ptr);
+            }
+            finally
+            {
+                Marshal.FreeCoTaskMem(ptr);
+            }
+        }
     }
 }

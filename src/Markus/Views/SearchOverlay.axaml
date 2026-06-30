@@ -53,7 +53,7 @@
         </Button>
 
         <ToggleButton Grid.Column="5" Classes="tool" Name="ReplaceToggle"
-                      ToolTip.Tip="Toggle replace (⌘⌥F)"
+                      ToolTip.Tip="Toggle replace"
                       Padding="6,4" MinHeight="24"
                       IsVisible="{Binding #Root.SupportsReplace}"
                       IsChecked="{Binding #Root.IsReplaceVisible, Mode=TwoWay}">

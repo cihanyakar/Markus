@@ -30,6 +30,7 @@ internal sealed partial class UpdateViewModel : ViewModelBase
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
     private bool _isBusy;
 
     public UpdateViewModel(
@@ -158,7 +159,12 @@ internal sealed partial class UpdateViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private bool CanDownload()
+    {
+        return !IsBusy;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDownload))]
     private async Task DownloadAsync()
     {
         if (_release is null)
@@ -168,6 +174,7 @@ internal sealed partial class UpdateViewModel : ViewModelBase
 
         if (_asset is null)
         {
+            StatusMessage = "No installer for this platform; opening the release page.";
             _launcher.OpenReleasePage(_release.HtmlUrl);
             return;
         }

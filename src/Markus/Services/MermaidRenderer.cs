@@ -1,10 +1,19 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace Markus.Services;
 
 internal static class MermaidRenderer
 {
+    private const int CacheCap = 64;
+
     private static readonly string? MmdrPath = FindMmdr();
+
+    // SVG output depends only on the diagram source (mmdr args are fixed and the
+    // preview theme is applied later by the control), so identical diagrams can
+    // be cached. Without this, every debounced preview rebuild re-spawns mmdr
+    // for unchanged diagrams.
+    private static readonly ConcurrentDictionary<string, string> SvgCache = new(StringComparer.Ordinal);
 
     public static bool IsAvailable => MmdrPath is not null;
 
@@ -13,6 +22,11 @@ internal static class MermaidRenderer
         if (MmdrPath is null)
         {
             return null;
+        }
+
+        if (SvgCache.TryGetValue(mermaidSource, out var cached))
+        {
+            return cached;
         }
 
         using var process = new Process
@@ -44,7 +58,23 @@ internal static class MermaidRenderer
             return null;
         }
 
-        return await DrainSvgAsync(process, mermaidSource, ct);
+        var svg = await DrainSvgAsync(process, mermaidSource, ct);
+        if (svg is not null)
+        {
+            StoreInCache(mermaidSource, svg);
+        }
+        return svg;
+    }
+
+    private static void StoreInCache(string source, string svg)
+    {
+        // Best-effort bounded cache: clear wholesale at the cap rather than
+        // tracking LRU, since a preview touches only a handful of diagrams.
+        if (SvgCache.Count >= CacheCap)
+        {
+            SvgCache.Clear();
+        }
+        SvgCache[source] = svg;
     }
 
     private static async Task<string?> DrainSvgAsync(Process process, string mermaidSource, CancellationToken ct)

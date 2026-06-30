@@ -689,7 +689,13 @@ internal static class MarkdownRenderer
             ctx.Offset += fallback.Length;
         }
         target.Add(span);
-        ctx.Links.Add(new Markus.Views.LinkInlineTextBlock.LinkRange(start, ctx.Offset - start, dest, isAnchor));
+        // An anchor always navigates within the document; any other link is only
+        // acted upon when it is a launchable URL. Relative or file targets are
+        // recorded as non-actionable so the view shows no clickable affordance.
+        var isActionable = isAnchor || IsLaunchableUrl(link.Url);
+        ctx.Links.Add(
+            new Markus.Views.LinkInlineTextBlock.LinkRange(start, ctx.Offset - start, dest, isAnchor, isActionable)
+        );
     }
 
     // Links are plain runs (styled, not embedded controls) so they share the
@@ -704,7 +710,10 @@ internal static class MarkdownRenderer
     )
     {
         target.Add(new Run(label) { Foreground = _accent, TextDecorations = TextDecorations.Underline });
-        ctx.Links.Add(new Markus.Views.LinkInlineTextBlock.LinkRange(ctx.Offset, label.Length, dest, isAnchor));
+        var isActionable = isAnchor || IsLaunchableUrl(dest);
+        ctx.Links.Add(
+            new Markus.Views.LinkInlineTextBlock.LinkRange(ctx.Offset, label.Length, dest, isAnchor, isActionable)
+        );
         ctx.Offset += label.Length;
     }
 

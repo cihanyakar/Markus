@@ -36,8 +36,11 @@ internal sealed partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.ShutdownRequested += (_, _) => ShutdownCts.Cancel();
-
+            // Do NOT cancel ShutdownCts here. ShutdownRequested fires before the
+            // window's Closing handler runs its close-time Save, and that Save
+            // links its write to ShutdownToken; cancelling now would abort the
+            // write and silently drop the user's edits. Forced kills are still
+            // covered by the SIGINT/SIGTERM registrations above.
             var vm = new MainWindowViewModel();
             Services.StartupTrace.Mark("viewmodel-constructed");
             desktop.MainWindow = new MainWindow { DataContext = vm };
@@ -186,7 +189,10 @@ internal static class FileOpenRouter
                 return;
             case FileOpenDecision.LoadInCurrent:
                 _hasInitialDoc = true;
-                Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
+                // A user-initiated open into the current window: guard the load
+                // so unsaved edits in a dirty scratch/welcome buffer prompt
+                // before being discarded.
+                Dispatcher.UIThread.Post(() => _ = LoadFileGuardedAsync(vm, path));
                 return;
             default:
                 if (TrySpawnNewInstance(path))
@@ -194,8 +200,8 @@ internal static class FileOpenRouter
                     return;
                 }
                 // Fallback (non-macOS, missing bundle): load in current as a
-                // graceful degradation.
-                Dispatcher.UIThread.Post(() => _ = LoadFileAsync(vm, path, App.ShutdownToken));
+                // graceful degradation. Guard it for the same reason as above.
+                Dispatcher.UIThread.Post(() => _ = LoadFileGuardedAsync(vm, path));
                 return;
         }
     }
@@ -349,6 +355,31 @@ internal static class FileOpenRouter
         try
         {
             await vm.LoadFileAsync(path, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown or signal interrupted the read.
+        }
+        catch (System.IO.IOException)
+        {
+            vm.StatusText = $"{System.IO.Path.GetFileName(path)} • read failed";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            vm.StatusText = $"{System.IO.Path.GetFileName(path)} • permission denied";
+        }
+    }
+
+    // Same as LoadFileAsync but routes through the view-model's discard guard so
+    // a user-initiated open into the current window prompts before overwriting
+    // unsaved edits. The guard's own LoadFileAsync still links its read to
+    // App.ShutdownToken, so shutdown cancellation is preserved without a ct here.
+    private static async System.Threading.Tasks.Task LoadFileGuardedAsync(MainWindowViewModel vm, string path)
+    {
+        vm.IsAwaitingInitialDocument = false;
+        try
+        {
+            await vm.LoadFileGuardedAsync(path);
         }
         catch (OperationCanceledException)
         {
