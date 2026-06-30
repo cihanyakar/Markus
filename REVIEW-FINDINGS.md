@@ -10,7 +10,9 @@ and records the larger or riskier findings here for later.
 - OS-capability + best-practice + code-robustness sweep (partly fixed).
 - Markdown authoring ergonomics.
 - Performance & responsiveness.
-- Settings validation & resilience (this pass).
+- Settings validation & resilience.
+- macOS quit-crash diagnosis + guard hardening.
+- Error handling & user-facing feedback (this pass).
 
 ---
 
@@ -136,6 +138,23 @@ itself was untouched).
   this. Effort S.
 - No **settings schema versioning / migration**: a renamed or removed field
   silently orphans the old value. Low priority while the schema is additive.
+
+### Error handling & user-facing feedback (this pass)
+
+- Reviewed: error surfacing is solid overall. The view's `async void` event
+  handlers (`OnOpenRequested`, `OnSettingsRequested`, `OnDrop`, reload) wrap the
+  awaited work in try/catch and report `"... failed: {message}"` via the status
+  bar; the view-model's load/save/reload/recent paths catch typed exceptions
+  (IO / UnauthorizedAccess / cancellation) and set a clear status. No obvious
+  fix needed this pass.
+- WATCH (minor): `MainWindowViewModel.LoadFileAsync` has no internal try/catch
+  and relies on every caller to wrap it. Today all callers do (the view's open
+  handler, drag-drop, and App's guarded loaders), but a future caller could
+  forget and let an open failure escape. Optional hardening: surface the error
+  inside a `LoadFileGuardedAsync`-style wrapper so callers cannot miss it.
+- WATCH (minor): when `mmdr` is unavailable, mermaid blocks silently render as
+  plain code with no hint that diagram rendering is disabled. A one-time status
+  note ("Mermaid CLI not found; showing source") would explain the difference.
 
 ### P4 — Robustness / fidelity (needs care)
 
