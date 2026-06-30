@@ -8,7 +8,8 @@ and records the larger or riskier findings here for later.
 
 - Behavioral UX dead-ends and data-loss paths (fixed in batch).
 - OS-capability + best-practice + code-robustness sweep (partly fixed).
-- Markdown authoring ergonomics (this pass).
+- Markdown authoring ergonomics.
+- Performance & responsiveness (this pass).
 
 ---
 
@@ -61,6 +62,25 @@ and records the larger or riskier findings here for later.
   for ordered/unordered list, Cmd+1..6 conflict with view modes so pick others;
   toggle `- [ ]` / `- [x]`). Smart-list continuation already exists. Effort S-M.
 - **Block helpers**: wrap selection in a fenced code block / blockquote. Effort S.
+
+### Performance & responsiveness (this pass)
+
+- DONE: **Mermaid SVG is now cached by source.** Each debounced preview rebuild
+  re-attached a fresh `MermaidControl`, which re-spawned the `mmdr` subprocess
+  for unchanged diagrams; now identical diagrams return a cached SVG.
+  (fixed this pass)
+- Overall the perf-sensitive paths are already solid: the preview render is
+  debounced (120 ms) + force-timed with generation counters, streamed into a
+  pending tree, and serialized; the outline rebuild is debounced (200 ms) on the
+  thread pool. No changes needed there.
+- WATCH: `WordCount = CountWords(value)` runs synchronously on the UI thread on
+  every keystroke (`MainWindowViewModel.OnSourceTextChanged`), an O(n) scan of
+  the whole buffer. Fine for normal docs; for a multi-MB file it adds per-key
+  latency. Ties to the large-file guard (P4). Debouncing it would lag the live
+  count, so leave until the large-file work.
+- Math (CSharpMath) rendering was not audited for caching this pass; if a doc
+  has many identical inline formulas, check whether they re-render on each
+  preview rebuild and apply the same source-keyed cache if so.
 
 ### P4 — Robustness / fidelity (needs care)
 
