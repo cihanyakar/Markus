@@ -127,9 +127,11 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string Markus.icns" "$APP_DIR/Contents/Info.plist" || true
           fi
 
-          # Quarantine attribute that GitHub-downloaded files get is applied
-          # client-side; we cannot strip it here. Users right-click → Open
-          # the first time on macOS Gatekeeper.
+          # Remove build artifacts that have no place in a release bundle and
+          # that cause codesign to reject the bundle when signing with
+          # hardened runtime (non-Mach-O files in Contents/MacOS/).
+          rm -f "$APP_DIR/Contents/MacOS/Markus.xml"
+          rm -rf "$APP_DIR/Contents/MacOS/Markus.dSYM"
 
       - name: Import Developer ID certificate (macOS)
         if: matrix.bundle == 'app'
@@ -157,10 +159,12 @@ jobs:
           SIGN_ID=$(security find-identity -v -p codesigning build.keychain \
             | grep "Developer ID Application" | head -1 | awk '{print $2}')
 
-          # Sign every dylib individually first so library validation
-          # accepts each sibling at load time.
-          find "$APP_DIR/Contents/MacOS" -name '*.dylib' -exec \
-            codesign --sign "$SIGN_ID" --force --options runtime --timestamp {} \;
+          # Sign every Mach-O binary individually first (dylibs and bundled
+          # tools like mmdr) so library validation accepts each at load time.
+          find "$APP_DIR/Contents/MacOS" -type f | while read f; do
+            file "$f" | grep -q "Mach-O" && \
+              codesign --sign "$SIGN_ID" --force --options runtime --timestamp "$f"
+          done
 
           # Seal the bundle with hardened runtime and a secure timestamp so
           # the notary service accepts it. All dylibs are now team-ID-signed
