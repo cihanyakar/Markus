@@ -131,22 +131,42 @@ jobs:
           # client-side; we cannot strip it here. Users right-click → Open
           # the first time on macOS Gatekeeper.
 
-      - name: Ad-hoc sign bundle (macOS)
+      - name: Import Developer ID certificate (macOS)
+        if: matrix.bundle == 'app'
+        shell: bash
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERTIFICATE }}
+          CERT_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+        run: |
+          KP=$(openssl rand -base64 32)
+          security create-keychain -p "$KP" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KP" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          echo "$CERT_P12" | base64 --decode | security import /dev/stdin \
+            -k build.keychain -P "$CERT_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KP" build.keychain
+          echo "KEYCHAIN_PWD=$KP" >> "$GITHUB_ENV"
+
+      - name: Sign bundle (macOS)
         if: matrix.bundle == 'app'
         shell: bash
         run: |
           APP_DIR="Markus.app"
-          # Sign each Mach-O inside individually so library validation
-          # accepts the sibling dylibs at load time. Without this, the
-          # bundle-wide --deep pass alone leaves dylibs with the linker's
-          # original automatic ad-hoc signature, which Gatekeeper rejects
-          # on machines other than the build host.
-          find "$APP_DIR/Contents/MacOS" -name '*.dylib' -exec codesign --sign - --force {} \;
-          # Seal the bundle without hardened runtime: --options=runtime
-          # would require notarized or team-id-signed dylibs and reject
-          # ad-hoc-signed ones, causing SkiaPlatform's static initializer
-          # to abort on first launch.
-          codesign --sign - --deep --force "$APP_DIR"
+          ENTITLEMENTS="src/Markus/Build/entitlements.plist"
+          SIGN_ID=$(security find-identity -v -p codesigning build.keychain \
+            | grep "Developer ID Application" | head -1 | awk '{print $2}')
+
+          # Sign every dylib individually first so library validation
+          # accepts each sibling at load time.
+          find "$APP_DIR/Contents/MacOS" -name '*.dylib' -exec \
+            codesign --sign "$SIGN_ID" --force --options runtime --timestamp {} \;
+
+          # Seal the bundle with hardened runtime and a secure timestamp so
+          # the notary service accepts it. All dylibs are now team-ID-signed
+          # so library validation no longer rejects them.
+          codesign --sign "$SIGN_ID" --force --options runtime --timestamp \
+            --entitlements "$ENTITLEMENTS" "$APP_DIR"
           codesign --verify --verbose=2 "$APP_DIR" 2>&1 | tail -5
 
       - name: Archive macOS .app (dmg)
@@ -171,9 +191,11 @@ jobs:
             -fs HFS+ \
             "$ARCHIVE_NAME"
 
-          # Ad-hoc sign the DMG too so Gatekeeper at least sees a consistent
-          # signature on the container even though .app inside is what matters.
-          codesign --sign - --force "$ARCHIVE_NAME"
+          # Sign the DMG with the same Developer ID so Gatekeeper sees a
+          # consistent signature on the container.
+          SIGN_ID=$(security find-identity -v -p codesigning build.keychain \
+            | grep "Developer ID Application" | head -1 | awk '{print $2}')
+          codesign --sign "$SIGN_ID" --force --timestamp "$ARCHIVE_NAME"
           echo "ARTIFACT=$ARCHIVE_NAME" >> "$GITHUB_ENV"
 
       # --- Linux: plain tar.gz ---
@@ -195,6 +217,21 @@ jobs:
         run: |
           Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath "$env:ARCHIVE_NAME"
           "ARTIFACT=$env:ARCHIVE_NAME" >> $env:GITHUB_ENV
+
+      - name: Notarize and staple DMG (macOS)
+        if: matrix.bundle == 'app'
+        shell: bash
+        env:
+          APPLE_ID: ${{ secrets.NOTARIZE_APPLE_ID }}
+          TEAM_ID: ${{ secrets.NOTARIZE_TEAM_ID }}
+          APP_PWD: ${{ secrets.NOTARIZE_APP_PASSWORD }}
+        run: |
+          xcrun notarytool submit "$ARTIFACT" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APP_PWD" \
+            --wait
+          xcrun stapler staple "$ARTIFACT"
 
       # --- SHA256 ---
       - name: Compute SHA256 (Linux/macOS)
