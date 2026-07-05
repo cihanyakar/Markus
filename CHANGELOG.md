@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/cihanyakar/Markus/compare/v0.10.0...v0.11.0) (2026-07-05)
+
+
+### Features
+
+* **preview:** add left-align option and fix outline panel sizing ([e5228d3](https://github.com/cihanyakar/Markus/commit/e5228d3ead08895d989609a923c91e8abde4a93d))
+
+
+### Continuous Integration
+
+* **deps:** Bump actions/cache from 5 to 6 ([ca8344b](https://github.com/cihanyakar/Markus/commit/ca8344b78f867888eceb66550ddfd58cd3f789bf))
+* **release:** fix bundle signing for mmdr and remove non-Mach-O artifacts ([af10ca4](https://github.com/cihanyakar/Markus/commit/af10ca45428966b2f664ec8403097e47ec8bb86f))
+* **release:** sign macOS builds with Developer ID and notarize ([cce0157](https://github.com/cihanyakar/Markus/commit/cce01579300d5589401f5a5d6a81fa0352b97855))
+
 ## [0.10.0](https://github.com/cihanyakar/Markus/compare/v0.9.4...v0.10.0) (2026-06-30)
 
 
