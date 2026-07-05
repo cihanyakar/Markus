@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/cihanyakar/Markus/compare/v0.11.0...v0.11.1) (2026-07-05)
+
+
+### Continuous Integration
+
+* **release:** decode Developer ID cert to a file before import ([7164c23](https://github.com/cihanyakar/Markus/commit/7164c23eb90b4a62cbed6eba7619e338a9b499ce))
+
 ## [0.11.0](https://github.com/cihanyakar/Markus/compare/v0.10.0...v0.11.0) (2026-07-05)
 
 
