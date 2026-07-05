@@ -145,8 +145,15 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "$KP" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
-          echo "$CERT_P12" | base64 --decode | security import /dev/stdin \
+          # security import cannot reliably sniff the PKCS12 format from a
+          # non-seekable stream like /dev/stdin (fails with "Unknown format
+          # in import." even for a valid, correctly-passworded .p12) -
+          # decode to a real file first.
+          CERT_PATH="$RUNNER_TEMP/developer_id.p12"
+          echo "$CERT_P12" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" \
             -k build.keychain -P "$CERT_PWD" -T /usr/bin/codesign
+          rm -f "$CERT_PATH"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KP" build.keychain
           echo "KEYCHAIN_PWD=$KP" >> "$GITHUB_ENV"
 
