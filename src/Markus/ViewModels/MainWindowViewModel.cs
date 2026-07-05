@@ -115,6 +115,9 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _previewFullWidth;
 
     [ObservableProperty]
+    private bool _previewLeftAligned;
+
+    [ObservableProperty]
     private string _caretPosition = "Ln 1, Col 1";
 
     [ObservableProperty]
@@ -166,6 +169,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _autoPairBrackets = Settings.AutoPairBrackets;
         _tabWidth = Settings.TabWidth;
         _previewFullWidth = Settings.PreviewFullWidth;
+        _previewLeftAligned = Settings.PreviewLeftAligned;
         _settingsService.Changed += OnSettingsChanged;
 
         Rendering.MarkdownRenderer.MonoFamily = new Avalonia.Media.FontFamily(_monoFontFamily);
@@ -720,6 +724,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private void TogglePreviewLeftAligned()
+    {
+        PreviewLeftAligned = !PreviewLeftAligned;
+    }
+
+    [RelayCommand]
     private void ToggleFocusMode()
     {
         IsFocusMode = !IsFocusMode;
@@ -858,6 +868,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         PreviewInvalidated?.Invoke(this, EventArgs.Empty);
     }
 
+    partial void OnPreviewLeftAlignedChanged(bool value)
+    {
+        Settings.PreviewLeftAligned = value;
+        _settingsService.Save(Settings);
+    }
+
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         // The debounced save timer raises Changed on a thread-pool thread.
@@ -969,6 +985,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         AutoPairBrackets = s.AutoPairBrackets;
         TabWidth = s.TabWidth;
         PreviewFullWidth = s.PreviewFullWidth;
+        PreviewLeftAligned = s.PreviewLeftAligned;
 
         return fontChanged || themeChanged || fontSizeChanged || mermaidChanged || renderTogglesChanged;
     }

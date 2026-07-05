@@ -26,9 +26,16 @@
     </Style>
 
     <!-- Stretch the outline rows across the panel so the click target spans
-         the whole sidebar width, not just the text. -->
+         the whole sidebar width, not just the text. Padding/MinHeight are
+         trimmed from the Fluent theme defaults so more of the heading tree
+         is visible without scrolling. -->
     <Style Selector="TreeView.outline TreeViewItem">
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="Padding" Value="4,0"/>
+      <Setter Property="MinHeight" Value="20"/>
+    </Style>
+    <Style Selector="TreeView.outline TreeViewItem TextBlock">
+      <Setter Property="FontSize" Value="12"/>
     </Style>
 
     <Style Selector="Button.outlineTool:pointerover /template/ ContentPresenter">
@@ -47,37 +54,11 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,Auto,*" ClipToBounds="True">
-
-    <!-- Title (single row). Sienna dot, eyebrow, and the "Outline" wordmark
-         sit on a single baseline and a hairline rule sits just below. The
-         previous magazine-opener stack (eyebrow on top of a 22 px display
-         title) ate too much vertical real estate for what is, functionally,
-         a sidebar header. -->
-    <StackPanel Grid.Row="0" Margin="14,12,14,8" Spacing="6">
-      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <Ellipse Width="5" Height="5"
-                 Fill="{DynamicResource Accent}"
-                 VerticalAlignment="Center"
-                 Opacity="0.9"/>
-        <TextBlock Classes="section"
-                   Text="ON THIS PAGE"
-                   VerticalAlignment="Center"/>
-        <TextBlock Text="Outline"
-                   FontSize="13"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextHigh}"
-                   VerticalAlignment="Center"
-                   Margin="4,0,0,0"/>
-      </StackPanel>
-      <Border Height="1"
-              Background="{DynamicResource GlassDivider}"
-              Margin="0,2,0,0"/>
-    </StackPanel>
+  <Grid RowDefinitions="Auto,*" ClipToBounds="True">
 
     <!-- Toolbar: expand-all / collapse-all / quick search -->
-    <Grid Grid.Row="1"
-          Margin="12,0,12,8"
+    <Grid Grid.Row="0"
+          Margin="12,10,12,8"
           ColumnDefinitions="Auto,Auto,*">
       <Button Grid.Column="0"
               Classes="outlineTool"
@@ -99,7 +80,7 @@
     </Grid>
 
     <!-- Tree -->
-    <TreeView Grid.Row="2"
+    <TreeView Grid.Row="1"
               Name="OutlineTree"
               Classes="outline"
               ItemsSource="{Binding OutlineNodes}"
@@ -128,7 +109,7 @@
     <!-- Drag ghost overlay. Sits on top of every row, never intercepts
          pointer events. Its Canvas.Left/Top are mutated from code-behind to
          track the cursor while a heading is being dragged. -->
-    <Canvas Grid.RowSpan="3"
+    <Canvas Grid.RowSpan="2"
             Name="DragOverlay"
             IsHitTestVisible="False"
             ZIndex="100">

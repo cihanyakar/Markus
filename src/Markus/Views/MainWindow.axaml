@@ -107,6 +107,10 @@
                             ToggleType="CheckBox"
                             IsChecked="{Binding IsPreviewSoftWrap}"
                             Command="{Binding TogglePreviewSoftWrapCommand}"/>
+            <NativeMenuItem Header="Left-Align Preview"
+                            ToggleType="CheckBox"
+                            IsChecked="{Binding PreviewLeftAligned}"
+                            Command="{Binding TogglePreviewLeftAlignedCommand}"/>
             <NativeMenuItemSeparator/>
             <NativeMenuItem Header="Focus Mode" Gesture="Cmd+Shift+M"
                             ToggleType="CheckBox"
@@ -512,12 +516,24 @@
       </Border>
 
       <!-- ============ Content ============ -->
-      <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+      <Grid Grid.Row="2" Name="OutlineContentGrid">
+        <Grid.ColumnDefinitions>
+          <!-- Column 0/4 widths are kept in sync with IsOutlineLeftVisible /
+               IsOutlineRightVisible from code-behind (see
+               SyncOutlineColumnWidth in MainWindow.axaml.cs): GridSplitter
+               rewrites a column's Width to a literal pixel GridLength on
+               first drag, and a Pixel column does not collapse on its own
+               just because the Border inside goes IsVisible="False". -->
+          <ColumnDefinition Width="280"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="280"/>
+        </Grid.ColumnDefinitions>
 
         <!-- Outline on the LEFT (placement = Left). -->
         <Border Grid.Column="0"
                 Classes="glass sidebar"
-                Width="280"
                 IsVisible="{Binding IsOutlineLeftVisible}">
           <views:OutlinePanel Name="OutlineLeft"
                               DataContext="{Binding}"/>
@@ -567,7 +583,8 @@
           <views:MarkdownPreviewControl Name="PreviewOnlyView"
                                          IsVisible="{Binding IsPreviewOnly}"
                                          Source="{Binding SourceText}"
-                                         FullWidth="{Binding PreviewFullWidth}"/>
+                                         FullWidth="{Binding PreviewFullWidth}"
+                                         LeftAligned="{Binding PreviewLeftAligned}"/>
 
           <!-- Split vertical -->
           <Grid ColumnDefinitions="*,4,*" IsVisible="{Binding IsSplitVerticalActive}">
@@ -587,7 +604,8 @@
             <views:MarkdownPreviewControl Grid.Column="2"
                                            Name="SplitVPreviewView"
                                            Source="{Binding SourceText}"
-                                         FullWidth="{Binding PreviewFullWidth}"/>
+                                         FullWidth="{Binding PreviewFullWidth}"
+                                         LeftAligned="{Binding PreviewLeftAligned}"/>
           </Grid>
 
           <!-- Split horizontal -->
@@ -608,7 +626,8 @@
             <views:MarkdownPreviewControl Grid.Row="2"
                                            Name="SplitHPreviewView"
                                            Source="{Binding SourceText}"
-                                         FullWidth="{Binding PreviewFullWidth}"/>
+                                         FullWidth="{Binding PreviewFullWidth}"
+                                         LeftAligned="{Binding PreviewLeftAligned}"/>
           </Grid>
 
 
@@ -622,7 +641,6 @@
         <!-- Outline on the RIGHT (placement = Right). -->
         <Border Grid.Column="4"
                 Classes="glass sidebar"
-                Width="280"
                 IsVisible="{Binding IsOutlineRightVisible}">
           <views:OutlinePanel Name="OutlineRight"
                               DataContext="{Binding}"/>

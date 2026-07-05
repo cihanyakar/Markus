@@ -34,6 +34,12 @@ internal sealed partial class MainWindow : Window
     // so its Closed handler doesn't mistake it for the user closing the window.
     private bool _closingPreviewProgrammatically;
 
+    // Last non-zero width the outline columns were dragged to, so hiding the
+    // panel (via SyncOutlineColumnWidth) can restore it instead of reopening
+    // at the XAML default every time.
+    private GridLength? _outlineLeftRestoreWidth;
+    private GridLength? _outlineRightRestoreWidth;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -98,6 +104,52 @@ internal sealed partial class MainWindow : Window
         {
             right.NodeSelected += OnOutlineNodeSelected;
         }
+    }
+
+    // GridSplitter rewrites its target ColumnDefinition.Width to a literal
+    // pixel GridLength the first time it is dragged (Avalonia.Controls.
+    // GridSplitter.SetLengths). Once that happens the column is no longer
+    // "Auto" and stops collapsing on its own when the Border inside goes
+    // IsVisible="False", so the panel keeps reserving its last dragged width.
+    // Drive the column width from visibility explicitly instead, remembering
+    // the last non-zero width so re-showing restores it.
+    private void SyncOutlineColumnWidth(int columnIndex, bool isVisible, ref GridLength? restoreWidth)
+    {
+        if (this.FindControl<Grid>("OutlineContentGrid") is not { } grid)
+        {
+            return;
+        }
+        ColumnDefinition column = grid.ColumnDefinitions[columnIndex];
+        if (isVisible)
+        {
+            column.Width = restoreWidth ?? new GridLength(280);
+        }
+        else
+        {
+            if (column.Width.Value > 0)
+            {
+                restoreWidth = column.Width;
+            }
+            column.Width = new GridLength(0);
+        }
+    }
+
+    private void SyncOutlineColumnWidths(MainWindowViewModel vm)
+    {
+        SyncOutlineColumnWidth(0, vm.IsOutlineLeftVisible, ref _outlineLeftRestoreWidth);
+        SyncOutlineColumnWidth(4, vm.IsOutlineRightVisible, ref _outlineRightRestoreWidth);
+    }
+
+    private void HandleOutlineVisibilityChanged(string? propertyName)
+    {
+        bool isOutlineProperty =
+            string.Equals(propertyName, nameof(MainWindowViewModel.IsOutlineLeftVisible), StringComparison.Ordinal)
+            || string.Equals(propertyName, nameof(MainWindowViewModel.IsOutlineRightVisible), StringComparison.Ordinal);
+        if (!isOutlineProperty || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+        SyncOutlineColumnWidths(vm);
     }
 
     private void WireScrollSync()
@@ -1165,6 +1217,7 @@ internal sealed partial class MainWindow : Window
             UpdateDetachedWindows(vm);
             RefreshRecentMenu();
             ApplyEditorWordWrap(vm.IsSourceSoftWrap);
+            SyncOutlineColumnWidths(vm);
             // ResolveCommand needs vm; re-run now that DataContext is set.
             ApplyKeyBindings();
         }
@@ -1258,6 +1311,7 @@ internal sealed partial class MainWindow : Window
             ApplyEditorWordWrap(vmWrap.IsSourceSoftWrap);
             return;
         }
+        HandleOutlineVisibilityChanged(e.PropertyName);
         if (
             string.Equals(e.PropertyName, nameof(MainWindowViewModel.CurrentFilePath), StringComparison.Ordinal)
             && DataContext is MainWindowViewModel vmPath

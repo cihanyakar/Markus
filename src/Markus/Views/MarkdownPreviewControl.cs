@@ -49,6 +49,11 @@ internal sealed class MarkdownPreviewControl : UserControl
         bool
     >(nameof(FullWidth));
 
+    public static readonly StyledProperty<bool> LeftAlignedProperty = AvaloniaProperty.Register<
+        MarkdownPreviewControl,
+        bool
+    >(nameof(LeftAligned));
+
     // Idle debounce: coalesce rapid SourceText updates into one render after
     // typing pauses. Force interval: when typing is continuous and idle never
     // fires, repaint at most every <ForceMs> so the preview can't drift more
@@ -171,6 +176,12 @@ internal sealed class MarkdownPreviewControl : UserControl
     {
         get => GetValue(FullWidthProperty);
         set => SetValue(FullWidthProperty, value);
+    }
+
+    public bool LeftAligned
+    {
+        get => GetValue(LeftAlignedProperty);
+        set => SetValue(LeftAlignedProperty, value);
     }
 
     public int MatchCount => _searcher.MatchCount;
@@ -373,6 +384,13 @@ internal sealed class MarkdownPreviewControl : UserControl
         if (change.Property == FullWidthProperty)
         {
             _bufferGrid.MaxWidth = FullWidth ? double.PositiveInfinity : ReadingColumnWidth;
+            return;
+        }
+        if (change.Property == LeftAlignedProperty)
+        {
+            _bufferGrid.HorizontalAlignment = LeftAligned
+                ? Avalonia.Layout.HorizontalAlignment.Left
+                : Avalonia.Layout.HorizontalAlignment.Center;
             return;
         }
         if (change.Property == SearchTermProperty || change.Property == SearchCaseSensitiveProperty)

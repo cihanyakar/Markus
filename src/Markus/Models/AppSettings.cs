@@ -40,6 +40,8 @@ internal sealed class AppSettings
 
     public bool PreviewFullWidth { get; set; }
 
+    public bool PreviewLeftAligned { get; set; }
+
     public bool EnableMath { get; set; } = true;
 
     public bool EnableMermaid { get; set; } = true;
@@ -108,6 +110,7 @@ internal sealed class AppSettings
             IsPreviewSoftWrap = IsPreviewSoftWrap,
             MermaidScale = MermaidScale,
             PreviewFullWidth = PreviewFullWidth,
+            PreviewLeftAligned = PreviewLeftAligned,
             EnableMath = EnableMath,
             EnableMermaid = EnableMermaid,
             RecentFiles = new List<string>(RecentFiles),
