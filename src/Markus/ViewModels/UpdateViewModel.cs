@@ -187,17 +187,33 @@ internal sealed partial class UpdateViewModel : ViewModelBase
             var path = await _downloader
                 .DownloadAndVerifyAsync(_asset, dir, Markus.App.ShutdownToken)
                 .ConfigureAwait(true);
-            _launcher.OpenArtifact(path);
-            StatusMessage = "Opening installer...";
+            if (_launcher.TryOpenArtifact(path))
+            {
+                StatusMessage = "Opening installer...";
+            }
+            else
+            {
+                // The launch never started (Gatekeeper refused, or the OS could
+                // not spawn the opener). Do not leave "Opening installer..." on
+                // screen; fall back to the release page.
+                StatusMessage = "Could not open the installer. Opening the release page instead.";
+                _launcher.OpenReleasePage(_release.HtmlUrl);
+            }
         }
         catch (Exception ex)
             when (ex
                     is HttpRequestException
                         or OperationCanceledException
                         or InvalidOperationException
+                        or IOException
+                        or UnauthorizedAccessException
                         or System.Text.Json.JsonException
             )
         {
+            // IOException/UnauthorizedAccessException surface from the downloader
+            // when the updates directory is full or unwritable; without them here
+            // the exception would escape through AsyncRelayCommand onto the UI
+            // thread and crash the app.
             StatusMessage = "Download failed. Opening the release page instead.";
             _launcher.OpenReleasePage(_release.HtmlUrl);
         }
