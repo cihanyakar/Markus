@@ -37,12 +37,32 @@ internal sealed class MermaidControl : ContentControl
         _source = mermaidSource;
         HorizontalAlignment = HorizontalAlignment.Center;
         Margin = new Thickness(0, 6, 0, 10);
-        Content = BuildLoadingState();
+        Content = MermaidRenderer.IsAvailable ? BuildLoadingState() : BuildUnavailableState();
+    }
+
+    // Pure state decision split out so it can be unit tested without an Avalonia
+    // visual tree. When the renderer is unavailable the control never attempts a
+    // render and shows the "not available" notice instead of spinning forever on
+    // the loading placeholder.
+    internal enum InitialState
+    {
+        Unavailable,
+        Loading,
+    }
+
+    internal static InitialState DecideInitialState(bool rendererAvailable)
+    {
+        return rendererAvailable ? InitialState.Loading : InitialState.Unavailable;
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        if (!MermaidRenderer.IsAvailable)
+        {
+            // Nothing to render; the "not available" notice is already shown.
+            return;
+        }
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         _ = StartRenderAsync(MarkdownRenderer.MermaidScale, _cts.Token);
@@ -66,6 +86,44 @@ internal sealed class MermaidControl : ContentControl
             Foreground = new SolidColorBrush(Color.FromArgb(120, 128, 128, 128)),
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 12),
+        };
+    }
+
+    // Shown when the mmdr binary is not bundled for the current platform (win and
+    // linux release builds). Distinct from the failed-render state so the reader
+    // can tell "no renderer here" apart from "renderer choked on this diagram".
+    private Control BuildUnavailableState()
+    {
+        var label = new TextBlock
+        {
+            Text = "MERMAID — renderer not available on this platform",
+            FontSize = 10,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x55, 0x70)),
+            Margin = new Thickness(0, 0, 0, 6),
+        };
+
+        var raw = new SelectableTextBlock
+        {
+            Text = _source.Trim(),
+            FontFamily = MarkdownRenderer.MonoFamily,
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6E, 0x84)),
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var panel = new StackPanel { Spacing = 0 };
+        panel.Children.Add(label);
+        panel.Children.Add(raw);
+
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(20, 0xFF, 0x3D, 0x55)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(90, 0xFF, 0x3D, 0x55)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(16, 12),
+            Child = panel,
         };
     }
 
@@ -129,7 +187,19 @@ internal sealed class MermaidControl : ContentControl
                 {
                     return;
                 }
-                Content = svg is not null ? BuildSvgDiagram(svg, userScale) : BuildErrorState();
+                try
+                {
+                    Content = svg is not null ? BuildSvgDiagram(svg, userScale) : BuildErrorState();
+                }
+                catch (Exception buildEx) when (buildEx is not OperationCanceledException)
+                {
+                    // The temp-file write or the third-party SVG parse failed on
+                    // the UI side. Without catching here the control would sit on
+                    // "Rendering diagram..." forever; show the visible error state
+                    // instead. Cancellation is re-thrown so the outer handler can
+                    // treat a detach as the no-op it is.
+                    Content = BuildErrorState();
+                }
             });
         }
         catch (OperationCanceledException)
