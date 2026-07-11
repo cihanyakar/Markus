@@ -27,6 +27,11 @@ internal sealed partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         Services.StartupTrace.Mark("framework-init-start");
+        // The dispatcher exists now, so exceptions raised on the UI thread can be
+        // caught here. AppDomain/TaskScheduler hooks are installed once in
+        // Program.Main before Avalonia starts. All three route to CrashHandler,
+        // which logs and dumps unsaved work best-effort without re-throwing.
+        CrashHandler.InstallDispatcherHandler();
         PosixSignalRegistration.Create(PosixSignal.SIGINT, _ => ShutdownCts.Cancel());
         PosixSignalRegistration.Create(PosixSignal.SIGTERM, _ => ShutdownCts.Cancel());
 
@@ -42,6 +47,7 @@ internal sealed partial class App : Application
             // write and silently drop the user's edits. Forced kills are still
             // covered by the SIGINT/SIGTERM registrations above.
             var vm = new MainWindowViewModel();
+            CrashHandler.RegisterViewModel(vm);
             Services.StartupTrace.Mark("viewmodel-constructed");
             desktop.MainWindow = new MainWindow { DataContext = vm };
             Services.StartupTrace.Mark("mainwindow-constructed");
@@ -76,6 +82,124 @@ internal sealed partial class App : Application
 
         Services.StartupTrace.Mark("framework-init-complete");
         base.OnFrameworkInitializationCompleted();
+    }
+}
+
+// Process-wide safety net. Catches otherwise-fatal exceptions from the three
+// channels that can bring the app down (AppDomain, the UI dispatcher, and
+// unobserved tasks), writes a timestamped crash log to the settings directory,
+// and dumps the open document's unsaved buffer to a recovery file. Every step
+// is wrapped so the handler itself can never throw while the process unwinds.
+internal static class CrashHandler
+{
+    private static volatile MainWindowViewModel? _viewModel;
+    private static int _dumpedOnce;
+
+    public static void RegisterViewModel(MainWindowViewModel vm)
+    {
+        _viewModel = vm;
+    }
+
+    // Installed from Program.Main before Avalonia starts. Safe to call without a
+    // dispatcher or SynchronizationContext.
+    public static void InstallProcessHandlers()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            Handle(e.ExceptionObject as Exception, "AppDomain.UnhandledException");
+        System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Handle(e.Exception, "TaskScheduler.UnobservedTaskException");
+            // Mark observed so the finalizer does not escalate it further.
+            e.SetObserved();
+        };
+    }
+
+    // Installed once the Avalonia dispatcher is available.
+    public static void InstallDispatcherHandler()
+    {
+        // Subscribing to the dispatcher event does not itself throw, so no guard
+        // is needed here. Leave e.Handled false so the platform's own logging
+        // still runs and Avalonia decides whether the app can continue. We only
+        // add the best-effort log + recovery dump on the way through.
+        Dispatcher.UIThread.UnhandledException += (_, e) => Handle(e.Exception, "Dispatcher.UnhandledException");
+    }
+
+    private static void Handle(Exception? ex, string source)
+    {
+        // A crash handler that throws would replace the original fault with a
+        // less useful one, so guard every step independently.
+        string? directory = null;
+        try
+        {
+            directory = Services.ServiceLocator.Settings.SettingsDirectory;
+        }
+        catch (Exception settingsEx)
+        {
+            // Settings unavailable; skip the log but still try the recovery dump
+            // below only if we later resolve a directory. With none, give up
+            // silently rather than risk a secondary crash.
+            System.Diagnostics.Debug.WriteLine(settingsEx);
+        }
+
+        if (directory is not null)
+        {
+            TryWriteCrashLog(directory, ex, source);
+        }
+
+        TryDumpRecovery(directory);
+    }
+
+    private static void TryWriteCrashLog(string directory, Exception? ex, string source)
+    {
+        try
+        {
+            Directory.CreateDirectory(directory);
+            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            var logPath = Path.Combine(directory, $"crash-{stamp}.log");
+            var body = $"{DateTimeOffset.Now:O}\nSource: {source}\n\n{ex?.ToString() ?? "(no exception object)"}\n";
+            File.WriteAllText(logPath, body);
+        }
+        catch (Exception logEx)
+        {
+            // Logging is best-effort; a full disk or revoked permission must not
+            // turn a recoverable crash into a handler fault.
+            System.Diagnostics.Debug.WriteLine(logEx);
+        }
+    }
+
+    private static void TryDumpRecovery(string? directory)
+    {
+        var vm = _viewModel;
+        if (vm is null || directory is null)
+        {
+            // No buffer to dump yet (a fault before the window was wired up) or
+            // nowhere to write. Do not consume the once-guard, so a later crash
+            // that does have unsaved work can still recover.
+            return;
+        }
+
+        // Claim the single-dump slot. A cascade of unobserved-task faults must
+        // not spray dozens of recovery files or race the shutdown.
+        if (System.Threading.Interlocked.CompareExchange(ref _dumpedOnce, 1, 0) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!vm.TryDumpRecovery(Path.Combine(directory, "recovery")))
+            {
+                // The buffer was clean, so nothing was written. Re-arm the guard
+                // so a later crash with actual unsaved edits still dumps.
+                System.Threading.Interlocked.Exchange(ref _dumpedOnce, 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            // TryDumpRecovery already swallows internally; this is a final guard.
+            System.Diagnostics.Debug.WriteLine(ex);
+            System.Threading.Interlocked.Exchange(ref _dumpedOnce, 0);
+        }
     }
 }
 

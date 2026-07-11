@@ -12,6 +12,13 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // not parse the whole document on every keystroke.
     private const int OutlineDebounceMs = 200;
 
+    // Files above this size build the whole preview/outline tree synchronously,
+    // which freezes the UI on open. Beyond the threshold we warn the user and
+    // load the raw text without eagerly forcing the heavy render path. 8 MiB is
+    // well past any hand-written markdown yet small enough that the warning
+    // never fires for ordinary documents.
+    private const long LargeFileWarningBytes = 8L * 1024 * 1024;
+
     private readonly SettingsService _settingsService;
     private readonly FileWatcherService _fileWatcher;
     private System.Threading.CancellationTokenSource? _outlineCts;
@@ -249,13 +256,29 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     public async Task LoadFileAsync(string path, CancellationToken ct = default)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, App.ShutdownToken);
+        // A very large file forces a synchronous parse of the whole preview and
+        // outline tree, which freezes the UI. Probe the on-disk size first so we
+        // can warn the user rather than lock up mid-open. The read still
+        // proceeds (the buffer stays raw text), so no document is lost.
+        var isLarge = false;
+        try
+        {
+            isLarge = IsFileTooLargeToOpen(new FileInfo(path).Length);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Size probe failed (permissions, transient IO). Fall through and let
+            // the read below surface any real error.
+        }
         var text = await File.ReadAllTextAsync(path, linked.Token);
         SetSourceTextFromDisk(text);
         CurrentFilePath = path;
         IsScratchBuffer = false;
         DocumentTitle = Path.GetFileName(path);
         LastModifiedText = FormatLastModified(path);
-        StatusText = $"{DocumentTitle} • {text.Length:N0} chars";
+        StatusText = isLarge
+            ? $"{DocumentTitle} • {text.Length:N0} chars • large file, preview may be slow"
+            : $"{DocumentTitle} • {text.Length:N0} chars";
         _fileWatcher.Watch(path);
         AddToRecent(path);
     }
@@ -308,6 +331,41 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsService.Save(Settings);
     }
 
+    // Best-effort crash recovery. Writes the current unsaved buffer to a
+    // recovery file so a global exception handler can preserve the user's work
+    // before the process dies. Returns true if a recovery copy was written.
+    // Never throws, since a crash handler calls this while the app is unwinding.
+    public bool TryDumpRecovery(string recoveryDirectory)
+    {
+        try
+        {
+            // Nothing worth preserving when the buffer is clean or empty.
+            if (!IsDirty)
+            {
+                return false;
+            }
+            var text = SourceText;
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            Directory.CreateDirectory(recoveryDirectory);
+            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            var baseName = string.IsNullOrEmpty(CurrentFilePath)
+                ? "untitled"
+                : Path.GetFileNameWithoutExtension(CurrentFilePath);
+            var recoveryPath = Path.Combine(recoveryDirectory, $"{baseName}.{stamp}.recovered.md");
+            File.WriteAllText(recoveryPath, text);
+            return true;
+        }
+        catch (Exception)
+        {
+            // A crash handler must never fault. Swallow every failure.
+            return false;
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -322,6 +380,32 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         var cts = System.Threading.Interlocked.Exchange(ref _outlineCts, null);
         cts?.Cancel();
         cts?.Dispose();
+    }
+
+    // A file at or above the warning threshold is treated as too large to open
+    // through the normal eager-render path. Pulled out as a pure decision so the
+    // threshold logic can be unit-tested without touching the filesystem.
+    internal static bool IsFileTooLargeToOpen(long lengthBytes)
+    {
+        return lengthBytes >= LargeFileWarningBytes;
+    }
+
+    // True when a watcher event's path refers to the file the watcher is
+    // currently tracking. Debounce plus the UI-thread dispatch hop means an
+    // event posted for the previous file can arrive after the user has already
+    // opened a different one; without this check a stale event would overwrite
+    // the new document with the old file's content. Comparing against the live
+    // WatchedPath (not CurrentFilePath) keeps an external rename followed, since
+    // the watcher advances WatchedPath to the renamed file. Uses the same
+    // canonicalize + case-insensitive comparison the open-router uses for its
+    // own path matching.
+    internal static bool PathMatchesWatched(string? watchedPath, string eventPath)
+    {
+        if (string.IsNullOrEmpty(watchedPath) || string.IsNullOrEmpty(eventPath))
+        {
+            return false;
+        }
+        return string.Equals(CanonicalPath(watchedPath), CanonicalPath(eventPath), StringComparison.OrdinalIgnoreCase);
     }
 
     // Guarded buffer-replacing load: prompts to save unsaved work first, then
@@ -341,16 +425,22 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     // FileSystemWatcher's timing.
     internal async Task HandleExternalChangeAsync(string path, WatcherChangeTypes change)
     {
+        // Runs on the UI thread. A debounced event can still be posted to the UI
+        // queue for a file the user has since closed (they opened a different
+        // document while it was in flight) and would otherwise clobber the new
+        // buffer. Compare against the watcher's live target rather than
+        // CurrentFilePath, so a genuine external rename (which advances
+        // WatchedPath to the new name while CurrentFilePath still holds the old
+        // one) is still followed, while a stale event for a no-longer-watched
+        // file is dropped, for the reload and the delete branch alike.
+        if (!PathMatchesWatched(_fileWatcher.WatchedPath, path))
+        {
+            return;
+        }
+
         if (change == WatcherChangeTypes.Deleted)
         {
-            // The on-disk file vanished, so the buffer is now the only copy and
-            // is unsaved relative to disk. Flag it dirty so the close guard
-            // warns on quit, and clear the stale modified stamp. Keep
-            // CurrentFilePath so a later Save recreates the file at its original
-            // location.
-            IsDirty = true;
-            LastModifiedText = string.Empty;
-            StatusText = $"{DocumentTitle} • file deleted on disk";
+            HandleExternalDeletion();
             return;
         }
 
@@ -377,14 +467,12 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // Disk matches what we last wrote or loaded: this is our own save (or a
-        // spurious event), not an external edit. Refresh metadata only so we
+        // Disk matches what we last wrote or loaded, so this is our own save (or
+        // a spurious event), not an external edit. Refresh metadata only so we
         // never reload over the user's position or prompt about our own write.
         if (string.Equals(diskText, _lastSyncedText, StringComparison.Ordinal))
         {
-            CurrentFilePath = path;
-            DocumentTitle = Path.GetFileName(path);
-            LastModifiedText = FormatLastModified(path);
+            RefreshMetadataAfterOwnWrite(path);
             return;
         }
 
@@ -394,11 +482,19 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        CurrentFilePath = path;
-        DocumentTitle = Path.GetFileName(path);
-        SetSourceTextFromDisk(diskText);
-        LastModifiedText = FormatLastModified(path);
-        StatusText = $"{DocumentTitle} • reloaded • {diskText.Length:N0} chars";
+        ApplyExternalReload(path, diskText);
+    }
+
+    private static string CanonicalPath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch (Exception)
+        {
+            return path;
+        }
     }
 
     private static int CountWords(string? text)
@@ -468,6 +564,37 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             return string.Empty;
         }
+    }
+
+    // The on-disk file vanished while open, so the buffer is now the only copy
+    // and is unsaved relative to disk. Flag it dirty so the close guard warns on
+    // quit and clear the stale modified stamp. Keep CurrentFilePath so a later
+    // Save recreates the file at its original location.
+    private void HandleExternalDeletion()
+    {
+        IsDirty = true;
+        LastModifiedText = string.Empty;
+        StatusText = $"{DocumentTitle} • file deleted on disk";
+    }
+
+    // Refreshes metadata after recognizing an on-disk change as our own save (or
+    // a spurious event), without reloading over the user's cursor position.
+    private void RefreshMetadataAfterOwnWrite(string path)
+    {
+        CurrentFilePath = path;
+        DocumentTitle = Path.GetFileName(path);
+        LastModifiedText = FormatLastModified(path);
+    }
+
+    // Replaces the buffer with an external edit read from disk and refreshes
+    // the document metadata to match.
+    private void ApplyExternalReload(string path, string diskText)
+    {
+        CurrentFilePath = path;
+        DocumentTitle = Path.GetFileName(path);
+        SetSourceTextFromDisk(diskText);
+        LastModifiedText = FormatLastModified(path);
+        StatusText = $"{DocumentTitle} • reloaded • {diskText.Length:N0} chars";
     }
 
     [RelayCommand(CanExecute = nameof(CanReload))]
