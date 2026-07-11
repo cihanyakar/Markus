@@ -18,7 +18,7 @@ A fast, elegant Markdown editor built with .NET 11 and Avalonia, shipped as smal
 
 ## Install
 
-Download the latest build for macOS (arm64/x64), Windows, or Linux from the
+Download the latest build for macOS (Apple Silicon / arm64), Windows, or Linux from the
 [releases page](https://github.com/cihanyakar/Markus/releases/latest).
 
 ## Build and run

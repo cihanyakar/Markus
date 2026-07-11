@@ -483,3 +483,13 @@ $RECYCLE.BIN/
 
 # Local AOT build output
 dist/
+
+# AI tooling working directories and untracked local files
+/.agents/
+/.bug-hunter/
+/.claude/
+/.serena/
+/.playwright-mcp/
+/REVIEW-FINDINGS.md
+/mm.png
+/skills-lock.json

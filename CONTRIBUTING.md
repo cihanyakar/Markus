@@ -4,7 +4,7 @@ Thanks for considering a contribution. This project aims for very high code qual
 
 ## Prerequisites
 
-- .NET SDK 10.0.101 or newer (pinned via `global.json`)
+- .NET 11 SDK (11.0.100-preview.4 or a newer preview; pinned via `global.json`, a prerelease SDK is required)
 - Git 2.40+ (for modern hook support)
 
 ## Bootstrap
@@ -93,7 +93,7 @@ The `commit-msg` hook enforces this.
 3. Review and merge the release PR.
 4. release-please creates a git tag (`vX.Y.Z`) and a GitHub Release.
 5. The `Release binaries` workflow publishes self-contained executables for
-   `win-x64`, `osx-x64`, `osx-arm64`, `linux-x64` and attaches them
+   `win-x64`, `osx-arm64`, `linux-x64` and attaches them
    (with `.sha256` checksums) to the GitHub Release.
 
 ### Hotfix recipe
