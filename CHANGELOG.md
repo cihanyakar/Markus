@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.12.0](https://github.com/cihanyakar/Markus/compare/v0.11.1...v0.12.0) (2026-07-12)
+
+
+### Features
+
+* **settings:** hide the non-functional renderer option ([7f58d63](https://github.com/cihanyakar/Markus/commit/7f58d632ef44f680fc62cadaf9f6f8283b577866))
+
+
+### Bug Fixes
+
+* **app:** add crash recovery and file-open safeguards ([cbd5131](https://github.com/cihanyakar/Markus/commit/cbd5131b7dd6e6e16fed4c01cb88d22c7a8e1f81))
+* **editor:** propagate typed text from empty-start buffers ([dcd0276](https://github.com/cihanyakar/Markus/commit/dcd02767fc4b933f5dd19ac84ff15e9eaca73213))
+* **preview:** wrap long table cells and guard oversized renders ([7e64331](https://github.com/cihanyakar/Markus/commit/7e64331e9722e414d5081f4e8dae32afc6fcb4a7))
+* **updater:** harden failures and verify installer signature ([634918d](https://github.com/cihanyakar/Markus/commit/634918d07792550441b7a079ae585f7ac2d3ce12))
+
+
+### Documentation
+
+* correct build docs and repo hygiene ([c7a0b0f](https://github.com/cihanyakar/Markus/commit/c7a0b0f58089e19874b26f4b476e31a3d1b45422))
+
+
+### Continuous Integration
+
+* pass secrets to the release job and pin actions to SHAs ([d806d24](https://github.com/cihanyakar/Markus/commit/d806d24087298b091b3b6b1de16e329dbfaad775))
+
+
+### Tests
+
+* **viewmodels:** isolate settings from the real config file ([b7570b0](https://github.com/cihanyakar/Markus/commit/b7570b0e3b753e55ef87056cd6ac0e3f7d175379))
+
 ## [0.11.1](https://github.com/cihanyakar/Markus/compare/v0.11.0...v0.11.1) (2026-07-05)
 
 
