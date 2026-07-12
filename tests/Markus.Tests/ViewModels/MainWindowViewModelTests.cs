@@ -1,16 +1,28 @@
 using System.ComponentModel;
 using Markus.Models;
+using Markus.Rendering;
 using Markus.Services;
 using Markus.ViewModels;
 
 namespace Markus.Tests.ViewModels;
 
-public sealed class MainWindowViewModelTests
+public sealed class MainWindowViewModelTests : IDisposable
 {
+    private readonly bool _originalWrapCode = MarkdownRenderer.WrapCode;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        // The MainWindowViewModel constructor writes the global static
+        // MarkdownRenderer.WrapCode from settings, so restore it after every
+        // test to avoid leaking into sibling test classes.
+        MarkdownRenderer.WrapCode = _originalWrapCode;
+    }
+
     [Fact]
     public void DefaultViewMode_FollowsSettings()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
 
         sut.CurrentViewMode.ShouldBe(sut.Settings.DefaultViewMode);
     }
@@ -63,7 +75,7 @@ public sealed class MainWindowViewModelTests
     )
     {
         var mode = (ViewMode)modeInt;
-        var sut = new MainWindowViewModel { CurrentViewMode = mode };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentViewMode = mode };
 
         sut.IsSourceOnly.ShouldBe(sourceOnly);
         sut.IsPreviewOnly.ShouldBe(previewOnly);
@@ -76,7 +88,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void WordCount_CountsWordsNotCharacters()
     {
-        var sut = new MainWindowViewModel { SourceText = "Hello world foo bar" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "Hello world foo bar" };
 
         sut.WordCount.ShouldBe(4);
     }
@@ -84,7 +96,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void WordCount_EmptySource_ReturnsZero()
     {
-        var sut = new MainWindowViewModel { SourceText = string.Empty };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = string.Empty };
 
         sut.WordCount.ShouldBe(0);
     }
@@ -92,7 +104,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void WordCount_WhitespaceOnly_ReturnsZero()
     {
-        var sut = new MainWindowViewModel { SourceText = "   \t  \n  " };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "   \t  \n  " };
 
         sut.WordCount.ShouldBe(0);
     }
@@ -100,7 +112,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void WordCount_MultipleSpaces_NotDoubled()
     {
-        var sut = new MainWindowViewModel { SourceText = "one   two    three" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "one   two    three" };
 
         sut.WordCount.ShouldBe(3);
     }
@@ -108,7 +120,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void WordCount_Newlines_SplitWords()
     {
-        var sut = new MainWindowViewModel { SourceText = "line1\nline2\nline3" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "line1\nline2\nline3" };
 
         sut.WordCount.ShouldBe(3);
     }
@@ -117,7 +129,7 @@ public sealed class MainWindowViewModelTests
     public void WordCount_PunctuationAttachedToWord_CountsAsOneWord()
     {
         // Punctuation glued to text is one "word" (non-whitespace run).
-        var sut = new MainWindowViewModel { SourceText = "hello, world! foo." };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "hello, world! foo." };
 
         sut.WordCount.ShouldBe(3);
     }
@@ -127,7 +139,7 @@ public sealed class MainWindowViewModelTests
     {
         // Markdown heading marker (#) and bold markers (**) are non-whitespace
         // runs, so # counts as a word and **bold** counts as one word.
-        var sut = new MainWindowViewModel { SourceText = "# heading\n**bold** text" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "# heading\n**bold** text" };
 
         sut.WordCount.ShouldBe(4);
     }
@@ -135,7 +147,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void WordCount_SingleWord_ReturnsOne()
     {
-        var sut = new MainWindowViewModel { SourceText = "hello" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "hello" };
 
         sut.WordCount.ShouldBe(1);
     }
@@ -145,7 +157,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void CharCount_MatchesSourceLength()
     {
-        var sut = new MainWindowViewModel { SourceText = "abc" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "abc" };
 
         sut.CharCount.ShouldBe(3);
     }
@@ -153,7 +165,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void CharCount_EmptySource_ReturnsZero()
     {
-        var sut = new MainWindowViewModel { SourceText = string.Empty };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = string.Empty };
 
         sut.CharCount.ShouldBe(0);
     }
@@ -163,7 +175,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void ReadingMinutes_MinimumIsOne()
     {
-        var sut = new MainWindowViewModel { SourceText = "word" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "word" };
 
         sut.ReadingMinutes.ShouldBeGreaterThanOrEqualTo(1);
     }
@@ -172,7 +184,7 @@ public sealed class MainWindowViewModelTests
     public void ReadingMinutes_250Words_IsOneMinute()
     {
         var text = string.Join(' ', Enumerable.Repeat("word", 250));
-        var sut = new MainWindowViewModel { SourceText = text };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = text };
 
         sut.ReadingMinutes.ShouldBe(1);
     }
@@ -181,7 +193,7 @@ public sealed class MainWindowViewModelTests
     public void ReadingMinutes_251Words_IsTwoMinutes()
     {
         var text = string.Join(' ', Enumerable.Repeat("word", 251));
-        var sut = new MainWindowViewModel { SourceText = text };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = text };
 
         sut.ReadingMinutes.ShouldBe(2);
     }
@@ -191,7 +203,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void DocumentStats_ContainsWordCountCharCountAndReadingTime()
     {
-        var sut = new MainWindowViewModel { SourceText = "one two three" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "one two three" };
 
         sut.DocumentStats.ShouldContain("3 words");
         sut.DocumentStats.ShouldContain("13 chars");
@@ -202,7 +214,7 @@ public sealed class MainWindowViewModelTests
     public void DocumentStats_IncludesTildeBeforeMinutes()
     {
         // Catches a mutation that removes the "~" prefix from reading time.
-        var sut = new MainWindowViewModel { SourceText = "word" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "word" };
 
         sut.DocumentStats.ShouldContain("~");
     }
@@ -210,7 +222,11 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void DocumentStats_IncludesLastModifiedWhenSet()
     {
-        var sut = new MainWindowViewModel { SourceText = "word", LastModifiedText = "modified 12:34" };
+        var sut = new MainWindowViewModel(CreateTempSettings())
+        {
+            SourceText = "word",
+            LastModifiedText = "modified 12:34",
+        };
 
         sut.DocumentStats.ShouldContain("modified 12:34");
         sut.DocumentStats.ShouldContain("~");
@@ -220,7 +236,11 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void DocumentStats_OmitsLastModifiedWhenEmpty()
     {
-        var sut = new MainWindowViewModel { SourceText = "word", LastModifiedText = string.Empty };
+        var sut = new MainWindowViewModel(CreateTempSettings())
+        {
+            SourceText = "word",
+            LastModifiedText = string.Empty,
+        };
 
         sut.DocumentStats.ShouldNotContain("modified");
     }
@@ -230,7 +250,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public async Task NewScratch_ClearsSourceText()
     {
-        var sut = new MainWindowViewModel { SourceText = "some content" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "some content" };
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -240,7 +260,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public async Task NewScratch_SetsScratchBufferFlag()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -250,7 +270,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public async Task NewScratch_SetsDocumentTitleToUntitled()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -260,7 +280,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public async Task NewScratch_ClearsLastModifiedText()
     {
-        var sut = new MainWindowViewModel { LastModifiedText = "modified 2024-01-01" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { LastModifiedText = "modified 2024-01-01" };
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -272,7 +292,7 @@ public sealed class MainWindowViewModelTests
     {
         // After NewScratch, IsScratchBuffer is true so IsWelcomeVisible should be false
         // even though CurrentFilePath is null.
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -284,7 +304,7 @@ public sealed class MainWindowViewModelTests
     {
         // A fresh scratch buffer is empty; a preview-only pane would render
         // blank with nowhere to type, so NewScratch drops to the editor.
-        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.Preview };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentViewMode = ViewMode.Preview };
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -295,7 +315,7 @@ public sealed class MainWindowViewModelTests
     public async Task NewScratch_FromSplitVertical_KeepsViewMode()
     {
         // Split views already show the source, so NewScratch leaves them be.
-        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.SplitVertical };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentViewMode = ViewMode.SplitVertical };
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -305,7 +325,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public async Task NewScratch_FromSplitHorizontal_KeepsViewMode()
     {
-        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.SplitHorizontal };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentViewMode = ViewMode.SplitHorizontal };
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -316,7 +336,7 @@ public sealed class MainWindowViewModelTests
     public async Task NewScratch_FromDetached_KeepsViewMode()
     {
         // Detached keeps the source in the main window, so it stays too.
-        var sut = new MainWindowViewModel { CurrentViewMode = ViewMode.Detached };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentViewMode = ViewMode.Detached };
 
         await sut.NewScratchCommand.ExecuteAsync(null);
 
@@ -710,7 +730,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void FormatTables_EmptyBuffer_ReportsNoTables()
     {
-        var sut = new MainWindowViewModel { SourceText = string.Empty };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = string.Empty };
 
         sut.FormatTablesCommand.Execute(null);
 
@@ -720,7 +740,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void FormatTables_NoTableContent_ReportsAlreadyFormatted()
     {
-        var sut = new MainWindowViewModel { SourceText = "# Heading\n\nJust prose, no tables." };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "# Heading\n\nJust prose, no tables." };
 
         sut.FormatTablesCommand.Execute(null);
 
@@ -730,7 +750,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void FormatTables_UnalignedTable_Reformats()
     {
-        var sut = new MainWindowViewModel { SourceText = "|a|bbbb|\n|-|-|\n|111|2|\n" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SourceText = "|a|bbbb|\n|-|-|\n|111|2|\n" };
 
         sut.FormatTablesCommand.Execute(null);
 
@@ -948,7 +968,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void IsWelcomeVisible_TrueWhenNoFileAndNotScratch()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
 
         sut.IsWelcomeVisible.ShouldBeTrue();
     }
@@ -956,7 +976,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void IsWelcomeVisible_FalseWhenFilePathSet()
     {
-        var sut = new MainWindowViewModel { CurrentFilePath = "/some/file.md" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { CurrentFilePath = "/some/file.md" };
 
         sut.IsWelcomeVisible.ShouldBeFalse();
     }
@@ -966,7 +986,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void ToggleOutline_FlipsVisibility()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
         var before = sut.IsOutlineVisible;
 
         sut.ToggleOutlineCommand.Execute(null);
@@ -977,7 +997,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void ToggleOutline_TwiceReturnsToOriginal()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
         var original = sut.IsOutlineVisible;
 
         sut.ToggleOutlineCommand.Execute(null);
@@ -991,7 +1011,11 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void IsOutlineLeftVisible_TrueOnlyWhenVisibleAndLeft()
     {
-        var sut = new MainWindowViewModel { IsOutlineVisible = true, OutlinePlacement = OutlinePlacement.Left };
+        var sut = new MainWindowViewModel(CreateTempSettings())
+        {
+            IsOutlineVisible = true,
+            OutlinePlacement = OutlinePlacement.Left,
+        };
 
         sut.IsOutlineLeftVisible.ShouldBeTrue();
         sut.IsOutlineRightVisible.ShouldBeFalse();
@@ -1000,7 +1024,11 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void IsOutlineRightVisible_TrueOnlyWhenVisibleAndRight()
     {
-        var sut = new MainWindowViewModel { IsOutlineVisible = true, OutlinePlacement = OutlinePlacement.Right };
+        var sut = new MainWindowViewModel(CreateTempSettings())
+        {
+            IsOutlineVisible = true,
+            OutlinePlacement = OutlinePlacement.Right,
+        };
 
         sut.IsOutlineRightVisible.ShouldBeTrue();
         sut.IsOutlineLeftVisible.ShouldBeFalse();
@@ -1009,7 +1037,11 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void OutlinePlacement_NotVisibleWhenOutlineHidden()
     {
-        var sut = new MainWindowViewModel { IsOutlineVisible = false, OutlinePlacement = OutlinePlacement.Left };
+        var sut = new MainWindowViewModel(CreateTempSettings())
+        {
+            IsOutlineVisible = false,
+            OutlinePlacement = OutlinePlacement.Left,
+        };
 
         sut.IsOutlineLeftVisible.ShouldBeFalse();
         sut.IsOutlineRightVisible.ShouldBeFalse();
@@ -1020,7 +1052,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void HasSelection_FalseWhenSelectionStatsEmpty()
     {
-        var sut = new MainWindowViewModel { SelectionStats = string.Empty };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SelectionStats = string.Empty };
 
         sut.HasSelection.ShouldBeFalse();
     }
@@ -1028,7 +1060,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void HasSelection_TrueWhenSelectionStatsNonEmpty()
     {
-        var sut = new MainWindowViewModel { SelectionStats = "3 chars selected" };
+        var sut = new MainWindowViewModel(CreateTempSettings()) { SelectionStats = "3 chars selected" };
 
         sut.HasSelection.ShouldBeTrue();
     }
@@ -1086,7 +1118,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void SettingSourceText_RaisesPropertyChangedForWordCount()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
         var raised = new List<string>();
         ((INotifyPropertyChanged)sut).PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
 
@@ -1098,7 +1130,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void SettingSourceText_RaisesPropertyChangedForCharCount()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
         var raised = new List<string>();
         ((INotifyPropertyChanged)sut).PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
 
@@ -1110,7 +1142,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void SettingSourceText_RaisesPropertyChangedForDocumentStats()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
         var raised = new List<string>();
         ((INotifyPropertyChanged)sut).PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
 
@@ -1122,7 +1154,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void SettingSourceText_RaisesPropertyChangedForReadingMinutes()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
         var raised = new List<string>();
         ((INotifyPropertyChanged)sut).PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
 
@@ -1136,7 +1168,7 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void SettingCurrentViewMode_RaisesPropertyChangedForAllFlags()
     {
-        var sut = new MainWindowViewModel();
+        var sut = new MainWindowViewModel(CreateTempSettings());
         var raised = new List<string>();
         ((INotifyPropertyChanged)sut).PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
 

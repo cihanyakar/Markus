@@ -9,12 +9,6 @@ namespace Markus.ViewModels;
 
 internal sealed partial class SettingsViewModel : ViewModelBase
 {
-    public static readonly IReadOnlyList<RendererKind> AvailableRenderers = new RendererKind[]
-    {
-        RendererKind.Native,
-        RendererKind.Placeholder,
-    };
-
     public static readonly IReadOnlyList<ViewMode> AvailableViewModes = new ViewMode[]
     {
         ViewMode.Source,

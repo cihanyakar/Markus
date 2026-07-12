@@ -11,6 +11,10 @@ internal static class Program
     public static void Main(string[] args)
     {
         Services.StartupTrace.Mark("main-entry");
+        // Install the process-wide crash safety net before anything else runs so
+        // an early fault still writes a crash log and dumps unsaved work. The
+        // dispatcher-thread hook is added later, once Avalonia is up.
+        CrashHandler.InstallProcessHandlers();
         var app = BuildAvaloniaApp();
         Services.StartupTrace.Mark("avalonia-app-built");
         app.StartWithClassicDesktopLifetime(args);

@@ -77,6 +77,7 @@ internal sealed class MarkdownTextEditor : TextEditor
     private SearchPanel? _searchPanel;
     private FoldingManager? _foldingManager;
     private MarkdownFoldingStrategy? _foldingStrategy;
+    private TextDocument? _subscribedDocument;
     private bool _syncing;
     private bool _suppressTypewriter;
     private int _lastCaretLineForTableReflow = -1;
@@ -410,6 +411,13 @@ internal sealed class MarkdownTextEditor : TextEditor
         var next = value ?? string.Empty;
         if (string.Equals(Document.Text, next, StringComparison.Ordinal))
         {
+            // The text already matches, so no document swap is needed. A fresh
+            // empty buffer (new scratch, or the app before any file opens) starts
+            // with the editor's default empty document already equal to the empty
+            // bound text, so this fast path runs on first attach. Without wiring
+            // the change handler here, typed text would never propagate back to
+            // the bound property, leaving the preview blank and saving nothing.
+            SubscribeToDocument();
             return;
         }
         _syncing = true;
@@ -425,12 +433,26 @@ internal sealed class MarkdownTextEditor : TextEditor
         // Replace the document instance the way the official demo does; setting
         // Document.Text alone doesn't always trigger the layout/render pipeline.
         Document = new TextDocument(next);
-        Document.TextChanged += OnDocumentTextChanged;
+        SubscribeToDocument();
         if (hadFolding)
         {
             InstallFolding();
         }
         _syncing = false;
+    }
+
+    // Wires OnDocumentTextChanged to the active document so edits flow back to
+    // the bound property, moving the subscription off any previously-watched
+    // document. Idempotent: re-subscribing the same document is a no-op.
+    private void SubscribeToDocument()
+    {
+        if (ReferenceEquals(_subscribedDocument, Document))
+        {
+            return;
+        }
+        _subscribedDocument?.TextChanged -= OnDocumentTextChanged;
+        Document.TextChanged += OnDocumentTextChanged;
+        _subscribedDocument = Document;
     }
 
     private void OnDocumentTextChanged(object? sender, EventArgs e)

@@ -78,6 +78,55 @@ public sealed class UpdateDownloaderTests
         (await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken)).ShouldBe("abc");
     }
 
+    [Fact]
+    public async Task DownloadAndVerify_RemovesStaleInstallersBeforeWriting()
+    {
+        var dir = NewTargetDir();
+        Directory.CreateDirectory(dir);
+        var stale = Path.Combine(dir, "Markus-old.dmg");
+        await File.WriteAllTextAsync(stale, "old", TestContext.Current.CancellationToken);
+
+        var downloader = new UpdateDownloader(NewClient(payload: "abc", sidecarBody: PayloadHash));
+        var asset = new ReleaseAsset { Name = "Markus.zip", DownloadUrl = new Uri("https://example.com/Markus.zip") };
+
+        var path = await downloader.DownloadAndVerifyAsync(asset, dir, CancellationToken.None);
+
+        File.Exists(stale).ShouldBeFalse();
+        Directory.GetFiles(dir).ShouldBe([path]);
+    }
+
+    [Fact]
+    public void PurgeStaleInstallers_DeletesEverythingButTheKeepFile()
+    {
+        var dir = NewTargetDir();
+        Directory.CreateDirectory(dir);
+        var keep = Path.Combine(dir, "Markus-new.dmg");
+        var stale1 = Path.Combine(dir, "Markus-1.dmg");
+        var stale2 = Path.Combine(dir, "Markus-2.zip");
+        File.WriteAllText(keep, "new");
+        File.WriteAllText(stale1, "1");
+        File.WriteAllText(stale2, "2");
+
+        var removed = UpdateDownloader.PurgeStaleInstallers(dir, keep);
+
+        removed.ShouldContain(stale1);
+        removed.ShouldContain(stale2);
+        removed.ShouldNotContain(keep);
+        File.Exists(keep).ShouldBeTrue();
+        Directory.GetFiles(dir).ShouldBe([keep]);
+    }
+
+    [Fact]
+    public void PurgeStaleInstallers_NoOpWhenDirectoryMissing()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "markus-missing-" + Path.GetRandomFileName());
+
+        var removed = UpdateDownloader.PurgeStaleInstallers(dir, Path.Combine(dir, "x.dmg"));
+
+        removed.ShouldBeEmpty();
+        Directory.Exists(dir).ShouldBeFalse();
+    }
+
     private static string NewTargetDir()
     {
         return Path.Combine(Path.GetTempPath(), "markus-dl-" + Path.GetRandomFileName());

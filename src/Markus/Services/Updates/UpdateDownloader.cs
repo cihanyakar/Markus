@@ -34,8 +34,50 @@ internal sealed class UpdateDownloader : IUpdateDownloader
             throw new InvalidOperationException($"Checksum mismatch for {asset.Name}.");
         }
 
+        // Verified downloads accumulate in the updates directory across releases
+        // and are never small. Drop the stale installers before writing the new
+        // one so the directory holds at most the current download.
+        PurgeStaleInstallers(targetDir, keep: localPath);
+
         await File.WriteAllBytesAsync(localPath, bytes, ct).ConfigureAwait(false);
         return localPath;
+    }
+
+    // Removes every regular file directly inside targetDir except `keep` (the
+    // path about to be written). Best-effort: a file that cannot be deleted (for
+    // example one still open by a running installer) is skipped rather than
+    // failing the download. Returns the paths it removed so the behaviour is
+    // unit-testable.
+    internal static IReadOnlyList<string> PurgeStaleInstallers(string targetDir, string keep)
+    {
+        var removed = new List<string>();
+        if (!Directory.Exists(targetDir))
+        {
+            return removed;
+        }
+
+        var keepFull = Path.GetFullPath(keep);
+        foreach (var file in Directory.EnumerateFiles(targetDir))
+        {
+            if (string.Equals(Path.GetFullPath(file), keepFull, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            try
+            {
+                File.Delete(file);
+                removed.Add(file);
+            }
+            catch (IOException)
+            {
+                // In use or otherwise locked; leave it and move on.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Read-only or permission-denied; skip it.
+            }
+        }
+        return removed;
     }
 
     // The asset name comes from the GitHub release API and is attacker

@@ -58,6 +58,12 @@ internal sealed class MarkdownPreviewControl : UserControl
     // typing pauses. Force interval: when typing is continuous and idle never
     // fires, repaint at most every <ForceMs> so the preview can't drift more
     // than that behind the editor.
+    // Sentinel generation that no real render can have carried, so the loop
+    // condition (HasPendingRender) stays true after a failed render and the next
+    // scheduled render re-attempts instead of the preview being wedged on the
+    // failed source. Internal so the recovery semantics can be unit tested.
+    internal const int FailedGeneration = int.MinValue;
+
     private const int DebounceMs = 120;
     private const int ForceMs = 500;
     private const double ReadingColumnWidth = 1000;
@@ -348,6 +354,21 @@ internal sealed class MarkdownPreviewControl : UserControl
             : PreviewRenderSchedule.Debounced;
     }
 
+    // The render loop keeps painting while this is true. A pending render exists
+    // when the source text differs from what was last rendered, or the generation
+    // counter moved (a forced re-render for theme/font, or the FailedGeneration
+    // sentinel set after a render error so recovery re-attempts even on identical
+    // text). Split out so the recover-after-failure semantics are unit testable.
+    internal static bool HasPendingRender(
+        string pending,
+        string lastRendered,
+        int generation,
+        int lastRenderedGeneration
+    )
+    {
+        return !string.Equals(pending, lastRendered, StringComparison.Ordinal) || generation != lastRenderedGeneration;
+    }
+
     // Brings the block tagged with the given heading id into view. Called by the
     // renderer when an in-document anchor link is clicked, scoped to this
     // preview instance so split-view panes don't all scroll together.
@@ -451,6 +472,44 @@ internal sealed class MarkdownPreviewControl : UserControl
         return best;
     }
 
+    // Error card shown by ShowRenderError when a parse or render throws. Kept
+    // static (it needs no instance state) and placed among the other private
+    // statics so member ordering stays valid.
+    private static Control BuildRenderErrorCard(Exception ex)
+    {
+        var label = new TextBlock
+        {
+            Text = "PREVIEW — render failed",
+            FontSize = 10,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x55, 0x70)),
+            Margin = new Thickness(0, 0, 0, 6),
+        };
+
+        var detail = new SelectableTextBlock
+        {
+            Text = "The preview could not be rendered. Editing will retry automatically.\n" + ex.Message,
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6E, 0x84)),
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var stack = new StackPanel { Spacing = 0 };
+        stack.Children.Add(label);
+        stack.Children.Add(detail);
+
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(20, 0xFF, 0x3D, 0x55)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(90, 0xFF, 0x3D, 0x55)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(16, 12),
+            Margin = new Thickness(0, 6, 0, 10),
+            Child = stack,
+        };
+    }
+
     private int? FirstVisibleSourceLineIn(Dictionary<int, Control> map)
     {
         var offsetY = Scroll.Offset.Y;
@@ -551,16 +610,29 @@ internal sealed class MarkdownPreviewControl : UserControl
         {
             while (
                 !App.ShutdownToken.IsCancellationRequested
-                && (
-                    !string.Equals(_pendingSource, _lastRenderedSource, StringComparison.Ordinal)
-                    || _renderGeneration != _lastRenderedGeneration
-                )
+                && HasPendingRender(_pendingSource, _lastRenderedSource, _renderGeneration, _lastRenderedGeneration)
             )
             {
                 var source = _pendingSource;
                 _lastRenderedSource = source;
                 _lastRenderedGeneration = _renderGeneration;
-                await RenderAsync(source);
+                try
+                {
+                    await RenderAsync(source);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // A parse or render failure must not leave the preview
+                    // silently frozen with no way to recover. Show a visible
+                    // error block and reset the render bookkeeping so the very
+                    // next content change (or a forced re-render) tries again,
+                    // even if the source text is unchanged. Cancellation is not
+                    // caught here so the outer handler treats shutdown as a no-op.
+                    ShowRenderError(ex);
+                    _lastRenderedSource = string.Empty;
+                    _lastRenderedGeneration = FailedGeneration;
+                    break;
+                }
             }
             _forceTimer.Stop();
         }
@@ -572,6 +644,20 @@ internal sealed class MarkdownPreviewControl : UserControl
         {
             _renderBusy = false;
         }
+    }
+
+    // Replaces the visible buffer with a single error card so a failed render is
+    // visible instead of leaving stale (or blank) content on screen. The reset in
+    // the caller lets the next edit re-render normally over the top of this.
+    private void ShowRenderError(Exception ex)
+    {
+        var panel = ActivePanel;
+        panel.Children.Clear();
+        ActiveLineMap.Clear();
+        panel.IsVisible = true;
+        panel.Opacity = 1;
+        panel.IsHitTestVisible = true;
+        panel.Children.Add(BuildRenderErrorCard(ex));
     }
 
     private async System.Threading.Tasks.Task RenderAsync(string source)

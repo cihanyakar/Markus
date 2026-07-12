@@ -439,18 +439,6 @@
         <!-- ====== General ====== -->
         <StackPanel IsVisible="{Binding IsGeneralSelected}" Spacing="0">
           <Grid Classes="row" ColumnDefinitions="160,*">
-            <TextBlock Grid.Column="0" Text="Renderer:" Classes="rowLabel"/>
-            <StackPanel Grid.Column="1" Spacing="6">
-              <ComboBox MinWidth="220"
-                        HorizontalAlignment="Left"
-                        ItemsSource="{x:Static vm:SettingsViewModel.AvailableRenderers}"
-                        SelectedItem="{Binding Renderer}"/>
-              <TextBlock Classes="hint"
-                         Text="The Native renderer parses with Markdig and emits Avalonia controls."/>
-            </StackPanel>
-          </Grid>
-
-          <Grid Classes="row" ColumnDefinitions="160,*">
             <TextBlock Grid.Column="0" Text="Language:" Classes="rowLabel"/>
             <StackPanel Grid.Column="1" Spacing="6">
               <ComboBox MinWidth="220"

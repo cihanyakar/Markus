@@ -104,6 +104,19 @@ public sealed class MarkdownRenderStructureTests
     }
 
     [Fact]
+    public void Table_ColumnsUseStarWidth_SoLongCellsCanWrap()
+    {
+        // Auto-width columns hand each cell an infinite measure width, so long
+        // cell text never soft-wraps. Star columns share the available width,
+        // giving the cell a finite constraint that triggers TextWrapping.Wrap.
+        var grid = (Grid)Render("| a | b |\n|---|---|\n| 1 | 2 |")[0].Control;
+
+        grid.ColumnDefinitions.Count.ShouldBe(2);
+        grid.ColumnDefinitions[0].Width.IsStar.ShouldBeTrue();
+        grid.ColumnDefinitions[1].Width.IsStar.ShouldBeTrue();
+    }
+
+    [Fact]
     public void ThematicBreak_ProducesBorder()
     {
         var blocks = Render("---");

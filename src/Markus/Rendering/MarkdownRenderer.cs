@@ -15,6 +15,15 @@ namespace Markus.Rendering;
 
 internal static class MarkdownRenderer
 {
+    // A markdown document is untrusted content. A table like "|a|" over a header
+    // row of tens of thousands of pipes parses to a Grid with one ColumnDefinition
+    // and one Border per cell, none of it virtualized, so building it can freeze
+    // the UI thread or exhaust memory. Above these thresholds the table is
+    // replaced by a short warning placeholder instead of a real Grid. The limits
+    // are generous enough that any hand-authored table renders normally.
+    internal const int MaxTableColumns = 512;
+    internal const int MaxTableCells = 20000;
+
     private static readonly FontFamily EmojiFamily = new FontFamily(
         "Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji"
     );
@@ -111,6 +120,20 @@ internal static class MarkdownRenderer
             return false;
         }
         return Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" or "mailto";
+    }
+
+    // Pure decision split out so the threshold logic can be unit tested without
+    // building an Avalonia control tree. True means the table is large enough
+    // that rendering it as a real Grid risks freezing the UI or running out of
+    // memory, so a placeholder should be shown instead.
+    internal static bool IsTableTooLarge(int columnCount, int rowCount)
+    {
+        if (columnCount > MaxTableColumns)
+        {
+            return true;
+        }
+        // Multiply as long to avoid overflow when both dimensions are huge.
+        return (long)columnCount * rowCount > MaxTableCells;
     }
 
     // Refreshes the theme-dependent brush cache when the active theme changes.
@@ -404,18 +427,66 @@ internal static class MarkdownRenderer
             return new SelectableTextBlock { Text = "(empty table)" };
         }
 
-        var grid = BuildTableGrid(rows, table.ColumnDefinitions);
+        var columnCount = rows.Max(r => r.Count);
+        if (IsTableTooLarge(columnCount, rows.Count))
+        {
+            return RenderTablePlaceholder(columnCount, rows.Count);
+        }
+
+        var grid = BuildTableGrid(rows, columnCount, table.ColumnDefinitions);
         grid.Margin = new Thickness(0, 6, 0, 10);
         return grid;
     }
 
-    private static Grid BuildTableGrid(List<TableRow> rows, List<TableColumnDefinition> columns)
+    // Shown in place of an oversized table (see IsTableTooLarge). Reuses the
+    // placeholder card styling and states the dimensions so the reader knows why
+    // the table was not rendered.
+    private static Control RenderTablePlaceholder(int columnCount, int rowCount)
+    {
+        var label = new TextBlock
+        {
+            Text = "TABLE — too large to render",
+            FontSize = 10,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = PlaceholderLabelBrush,
+            Margin = new Thickness(0, 0, 0, 6),
+        };
+
+        var detail = new SelectableTextBlock
+        {
+            Text = $"{columnCount} columns x {rowCount} rows exceeds the render limit; showing this notice instead.",
+            FontSize = 12,
+            Foreground = PlaceholderRawBrush,
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var panel = new StackPanel { Spacing = 0 };
+        panel.Children.Add(label);
+        panel.Children.Add(detail);
+
+        return new Border
+        {
+            Background = PlaceholderFillBrush,
+            BorderBrush = PlaceholderBorderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(16, 12),
+            Margin = new Thickness(0, 6, 0, 10),
+            Child = panel,
+        };
+    }
+
+    private static Grid BuildTableGrid(List<TableRow> rows, int columnCount, List<TableColumnDefinition> columns)
     {
         var grid = new Grid();
-        var columnCount = rows.Max(r => r.Count);
         for (int c = 0; c < columnCount; c++)
         {
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            // Star, not Auto: Auto measures each column against infinite width so
+            // a long cell keeps growing and never soft-wraps. Star shares the
+            // finite reading-column width, giving cells the constraint that lets
+            // TextWrapping.Wrap kick in. (When code-wrap is off the preview allows
+            // horizontal scroll, so wide tables still overflow like code blocks.)
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         }
         for (int r = 0; r < rows.Count; r++)
         {
@@ -896,13 +967,10 @@ internal static class MarkdownRenderer
 
     private static Control RenderMermaid(FencedCodeBlock fenced)
     {
-        var source = fenced.Lines.ToString();
-        if (!Services.MermaidRenderer.IsAvailable)
-        {
-            return RenderPlaceholder("mermaid", source);
-        }
-
-        return new MermaidControl(source);
+        // The control decides what to show. When the mmdr binary is not bundled
+        // (current win/linux releases) it renders a distinct "renderer not
+        // available" notice rather than the app silently dropping the diagram.
+        return new MermaidControl(fenced.Lines.ToString());
     }
 
     private static Control RenderMathBlock(MathBlock math)
